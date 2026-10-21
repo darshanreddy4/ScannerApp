@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scanner App – Screen Prototype</title>
+<style>
+  :root{--pri:#2563eb;--pri2:#1e40af;--bg:#f4f6fb;--card:#fff;--txt:#111827;--mut:#6b7280;--ok:#16a34a;--warn:#f59e0b;--ai:#7c3aed}
+  *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,"Segoe UI",Roboto,sans-serif}
+  body{background:#e5e7eb;color:var(--txt);padding:32px}
+  h1{font-size:28px;margin-bottom:4px}
+  .sub{color:var(--mut);margin-bottom:28px}
+  h2{margin:36px 0 6px;font-size:20px}
+  h2 span{font-size:12px;background:var(--pri);color:#fff;border-radius:10px;padding:2px 8px;margin-left:8px;vertical-align:middle}
+  h2 span.p2{background:var(--ai)}
+  .flow{color:var(--mut);font-size:13px;margin-bottom:14px}
+  .row{display:flex;flex-wrap:wrap;gap:28px}
+  figure{width:280px}
+  figcaption{font-size:13px;font-weight:600;margin-top:8px;text-align:center}
+  figcaption small{display:block;font-weight:400;color:var(--mut);margin-top:2px}
+  .phone{width:280px;height:580px;background:#000;border-radius:34px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  .scr{position:relative;width:100%;height:100%;background:var(--bg);border-radius:27px;overflow:hidden;display:flex;flex-direction:column;font-size:12px}
+  .sb{height:22px;display:flex;justify-content:space-between;align-items:center;padding:0 16px;font-size:10px;font-weight:600;flex:none}
+  .dark{background:#0b0f19;color:#fff}
+  .app{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-weight:700;font-size:15px;flex:none}
+  .body{flex:1;padding:8px 14px;overflow:hidden;position:relative}
+  .card{background:var(--card);border-radius:12px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .btn{background:var(--pri);color:#fff;border-radius:10px;padding:10px;text-align:center;font-weight:600}
+  .btn.o{background:#fff;color:var(--pri);border:1.5px solid var(--pri)}
+  .btn.ai{background:var(--ai)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .doc{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:6px}
+  .ln{height:4px;background:#d1d5db;border-radius:2px;margin:4px 0}
+  .ln.s{width:60%}.ln.m{width:80%}
+  .thumb{aspect-ratio:3/4;background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:8px}
+  .nav{height:52px;background:#fff;display:flex;justify-content:space-around;align-items:center;border-top:1px solid #e5e7eb;flex:none;font-size:10px;color:var(--mut)}
+  .nav b{color:var(--pri)}
+  .nav div{text-align:center}.nav i{display:block;font-style:normal;font-size:18px}
+  .ad{height:44px;background:#fef3c7;border-top:1px solid #fcd34d;display:flex;align-items:center;justify-content:center;font-size:10px;color:#92400e;flex:none;gap:6px}
+  .ad em{background:#f59e0b;color:#fff;font-style:normal;padding:1px 4px;border-radius:3px;font-size:9px}
+  .fab{position:absolute;right:14px;bottom:12px;width:50px;height:50px;border-radius:25px;background:var(--pri);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 10px rgba(37,99,235,.5)}
+  .chip{display:inline-block;padding:4px 10px;border-radius:14px;background:#e0e7ff;color:var(--pri2);font-size:11px;margin:0 4px 4px 0}
+  .chip.on{background:var(--pri);color:#fff}
+  .tag{font-size:9px;padding:2px 6px;border-radius:8px;background:#dcfce7;color:var(--ok)}
+  .tag.ai{background:#ede9fe;color:var(--ai)}
+  .tag.w{background:#fef3c7;color:#92400e}
+  .row-i{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9}
+  .ico{width:34px;height:34px;border-radius:8px;background:#e0e7ff;display:flex;align-items:center;justify-content:center;flex:none;font-size:16px}
+  .grow{flex:1;min-width:0}.mut{color:var(--mut);font-size:10px}
+  .bar{height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ai)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:18px 18px 0 0;padding:14px;box-shadow:0 -6px 20px rgba(0,0,0,.25)}
+  .scrim{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+  .cam{flex:1;background:linear-gradient(135deg,#374151,#1f2937);position:relative}
+  .tool{display:flex;justify-content:space-around;padding:10px 4px;background:#111827;color:#fff;font-size:10px;text-align:center;flex:none}
+  .tool i{display:block;font-style:normal;font-size:18px;margin-bottom:2px}
+  .tool .on{color:#60a5fa}
+  .bubble{padding:8px 10px;border-radius:12px;margin-bottom:8px;max-width:88%;line-height:1.4}
+  .me{background:var(--pri);color:#fff;margin-left:auto;border-bottom-right-radius:3px}
+  .bot{background:#fff;border-bottom-left-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .src{border-left:3px solid var(--ai);background:#f5f3ff;padding:4px 6px;margin-top:6px;border-radius:4px;font-size:10px}
+  .input{display:flex;gap:6px;padding:8px 10px;background:#fff;border-top:1px solid #e5e7eb;flex:none}
+  .input div{flex:1;background:#f1f5f9;border-radius:16px;padding:8px 12px;color:var(--mut)}
+  .sw{width:30px;height:16px;border-radius:8px;background:var(--pri);position:relative;flex:none}
+  .sw:after{content:"";position:absolute;right:2px;top:2px;width:12px;height:12px;border-radius:6px;background:#fff}
+  .sw.off{background:#cbd5e1}.sw.off:after{right:auto;left:2px}
+  .rtl{direction:rtl;text-align:right}
+  .legend{background:#fff;border-radius:12px;padding:16px;margin-top:40px;max-width:900px;line-height:1.6;font-size:14px}
+  .legend code{background:#f1f5f9;padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+
+<h1>Scanner App – Screen Prototype</h1>
+<p class="sub">Low-fidelity UI model for Phase 1 (Scanner &amp; Sharing) and Phase 2 (Local AI Agent). 22 screens. Framework-agnostic.</p>
+
+<!-- ============ NAVIGATION MAP ============ -->
+<h2>Navigation Map</h2>
+<div class="legend" style="margin-top:8px">
+<pre style="font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5">
+Splash ─► Onboarding ─► DASHBOARD (Tabs: Home | Library | Ask AI | Settings)
+                          │
+   ┌──────────────────────┼─────────────────────────────┐
+   ▼                      ▼                             ▼
+ [＋] Scan             [＋] Import                  Document Detail
+   │                      │                          │   │   │
+ Camera ◄──────────── Import Picker                  │   │   └─► Share sheet (OS)
+   │ capture               │ pick JPEG/PNG           │   └─► Export sheet (PDF / DOCX)
+   ▼                      ▼                          └─► OCR Text view (Phase 2)
+ Crop (4-corner polygon) ◄─┘
+   ▼
+ Filter / Enhance
+   ▼
+ Page Review (reorder, add page, delete, retake)
+   ▼
+ Save ─► (Free plan) Interstitial Ad ─► Document Detail
+                                  
+ Ask AI tab ─► [Model not installed] ─► Model Setup/Download ─► Chat (RAG, streaming)
+                                         Library tab ─► Index Status / Ingest files (.txt/.csv)
+ Settings ─► Plan &amp; Upgrade │ Privacy │ AI Model │ Storage
+</pre>
+</div>
+
+<!-- ============ PHASE 1 ============ -->
+<h2>Phase 1 – Core Scanner <span>Phase 1</span></h2>
+<div class="flow">Onboarding → Home → Capture → Crop → Filter → Review → Save → Export/Share</div>
+<div class="row">
+
+<!-- 1 Splash -->
+<figure><div class="phone"><div class="scr" style="background:linear-gradient(160deg,#2563eb,#1e3a8a);color:#fff;align-items:center;justify-content:center">
+  <div style="font-size:60px">📄</div><div style="font-size:24px;font-weight:700;margin-top:8px">ScanVault</div>
+  <div style="opacity:.8;margin-top:4px">Scan. Share. Stay private.</div>
+</div></div><figcaption>1. Splash<small>Init DB, ads SDK, plan check</small></figcaption></figure>
+
+<!-- 2 Onboarding -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="body" style="text-align:center;padding-top:40px">
+    <div style="font-size:70px">🔒</div>
+    <div style="font-size:18px;font-weight:700;margin:14px 0 6px">100% on-device</div>
+    <div class="mut" style="font-size:12px;padding:0 10px">Documents, OCR text and AI chats never leave your phone.</div>
+    <div style="margin-top:20px">● ○ ○</div>
+    <div style="margin-top:40px" class="btn">Allow camera access</div>
+    <div class="mut" style="margin-top:12px">Skip</div>
+  </div>
+</div></div><figcaption>2. Onboarding &amp; Permissions<small>Camera + storage rationale</small></figcaption></figure>
+
+<!-- 3 Dashboard -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>My Documents</span><span>🔍</span></div>
+  <div class="body">
+    <div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+      <div><b>Free Plan</b><div class="mut">Ads enabled</div></div><span class="tag w">Upgrade</span></div>
+    <div style="margin-bottom:6px"><span class="chip on">All</span><span class="chip">Recent</span><span class="chip">PDF</span><span class="chip">DOCX</span></div>
+    <div class="grid2">
+      <div><div class="thumb"><div class="ln"></div><div class="ln m"></div><div class="ln s"></div><div class="ln"></div></div><div style="margin-top:4px;font-weight:600">Invoice_Oct</div><div class="mut">3 pages · Today</div></div>
+      <div><div class="thumb"><div class="ln"></div><div class="ln s"></div><div class="ln m"></div></div><div style="margin-top:4px;font-weight:600">ID Card</div><div class="mut">1 page · Yesterday</div></div>
+    </div>
+    <div class="fab">📷</div>
+  </div>
+  <div class="ad"><em>AD</em> Banner 320×50 (Free users only)</div>
+  <div class="nav"><div><i>🏠</i><b>Home</b></div><div><i>📚</i>Library</div><div><i>✨</i>Ask AI</div><div><i>⚙️</i>Settings</div></div>
+</div></div><figcaption>3. Dashboard (Home)<small>Banner ad hidden for Premium</small></figcaption></figure>
+
+<!-- 4 Add menu -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>My Documents</span><span>🔍</span></div>
+  <div class="body"><div class="grid2"><div class="thumb"></div><div class="thumb"></div></div></div>
+  <div class="scrim"></div>
+  <div class="sheet">
+    <div style="font-weight:700;margin-bottom:6px">New document</div>
+    <div class="row-i"><div class="ico">📷</div><div class="grow"><b>Scan with camera</b><div class="mut">Auto edge detection</div></div></div>
+    <div class="row-i"><div class="ico">🖼️</div><div class="grow"><b>Import image</b><div class="mut">JPEG, PNG</div></div></div>
+    <div class="row-i" style="border:0"><div class="ico">📄</div><div class="grow"><b>Import text file</b><div class="mut">.txt, .csv · for AI</div></div><span class="tag ai">AI</span></div>
+  </div>
+</div></div><figcaption>4. Add Menu (bottom sheet)<small>Scan / Import image / Import text</small></figcaption></figure>
+
+<!-- 5 Camera -->
+<figure><div class="phone"><div class="scr dark">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="cam">
+    <div style="position:absolute;top:10px;left:12px;right:12px;display:flex;justify-content:space-between;font-size:16px"><span>✕</span><span>⚡ Auto</span><span>⚙</span></div>
+    <svg viewBox="0 0 260 400" style="position:absolute;inset:40px 6px 20px 6px;width:calc(100% - 12px);height:calc(100% - 60px)">
+      <polygon points="40,70 215,55 225,330 28,345" fill="rgba(96,165,250,.25)" stroke="#60a5fa" stroke-width="3"/>
+      <g fill="#60a5fa"><circle cx="40" cy="70" r="6"/><circle cx="215" cy="55" r="6"/><circle cx="225" cy="330" r="6"/><circle cx="28" cy="345" r="6"/></g>
+    </svg>
+    <div style="position:absolute;bottom:10px;width:100%;text-align:center"><span class="tag" style="background:#16a34a;color:#fff;padding:4px 10px">Document detected · Hold steady</span></div>
+  </div>
+  <div class="tool" style="padding:14px 10px;align-items:center">
+    <span style="font-size:20px">🖼️</span>
+    <span style="width:54px;height:54px;border-radius:27px;border:4px solid #fff;display:flex;align-items:center;justify-content:center"><span style="width:40px;height:40px;border-radius:20px;background:#fff;display:block"></span></span>
+    <span><i style="font-size:18px">▦</i>Single</span>
+  </div>
+</div></div><figcaption>5. Camera Scanner<small>Live edge-detection overlay, auto-capture</small></figcaption></figure>
+
+<!-- 6 Import -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>✕ Select images</span><span class="mut">2 selected</span></div>
+  <div class="body"><div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:6px">
+    <div class="thumb" style="outline:3px solid var(--pri)"></div><div class="thumb"></div><div class="thumb" style="outline:3px solid var(--pri)"></div>
+    <div class="thumb"></div><div class="thumb"></div><div class="thumb"></div>
+    <div class="thumb"></div><div class="thumb"></div><div class="thumb"></div>
+  </div>
+  <div class="btn" style="position:absolute;left:14px;right:14px;bottom:12px">Continue (2)</div></div>
+</div></div><figcaption>6. Image Import Picker<small>JPEG / PNG; size &amp; type validation</small></figcaption></figure>
+
+<!-- 7 Crop -->
+<figure><div class="phone"><div class="scr dark">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>✕</span><span style="font-size:14px">Crop · Page 1</span><span style="color:#60a5fa">Next ›</span></div>
+  <div class="cam" style="background:#111827">
+    <svg viewBox="0 0 260 400" style="position:absolute;inset:10px;width:calc(100% - 20px);height:calc(100% - 20px)">
+      <rect x="30" y="40" width="200" height="300" fill="#e5e7eb"/>
+      <g fill="#9ca3af"><rect x="50" y="70" width="140" height="6"/><rect x="50" y="90" width="160" height="6"/><rect x="50" y="110" width="110" height="6"/><rect x="50" y="140" width="150" height="6"/></g>
+      <polygon points="45,55 215,50 222,325 38,330" fill="rgba(37,99,235,.15)" stroke="#3b82f6" stroke-width="2.5"/>
+      <g stroke="#3b82f6" stroke-width="1" stroke-dasharray="3"><line x1="132" y1="52" x2="130" y2="328"/></g>
+      <g fill="#fff" stroke="#3b82f6" stroke-width="3"><circle cx="45" cy="55" r="9"/><circle cx="215" cy="50" r="9"/><circle cx="222" cy="325" r="9"/><circle cx="38" cy="330" r="9"/></g>
+      <g fill="#3b82f6"><circle cx="130" cy="52" r="5"/><circle cx="218" cy="188" r="5"/><circle cx="130" cy="328" r="5"/><circle cx="42" cy="192" r="5"/></g>
+    </svg>
+    <div style="position:absolute;top:8px;right:8px;width:58px;height:58px;border-radius:29px;border:2px solid #fff;background:#e5e7eb"></div>
+  </div>
+  <div class="tool"><div><i>⤢</i>Auto</div><div><i>⟲</i>Rotate</div><div><i>▢</i>Full</div><div><i>↺</i>Reset</div></div>
+</div></div><figcaption>7. Polygon Crop<small>4 corner + edge handles, magnifier loupe</small></figcaption></figure>
+
+<!-- 8 Filters -->
+<figure><div class="phone"><div class="scr dark">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>‹</span><span style="font-size:14px">Enhance</span><span style="color:#60a5fa">Done</span></div>
+  <div class="cam" style="background:#111827;display:flex;align-items:center;justify-content:center">
+    <div style="width:70%;height:90%;background:#fff;border-radius:4px;padding:14px"><div class="ln"></div><div class="ln m"></div><div class="ln s"></div><div class="ln"></div><div class="ln m"></div></div>
+  </div>
+  <div style="background:#111827;padding:8px 10px;flex:none">
+    <div style="display:flex;gap:8px;overflow:hidden;margin-bottom:8px;text-align:center;font-size:10px">
+      <div><div style="width:46px;height:46px;background:#9ca3af;border-radius:6px"></div>Original</div>
+      <div><div style="width:46px;height:46px;background:#fff;border-radius:6px;outline:2px solid #60a5fa"></div>Doc B&amp;W</div>
+      <div><div style="width:46px;height:46px;background:linear-gradient(#f59e0b,#ef4444);border-radius:6px"></div>Magic</div>
+      <div><div style="width:46px;height:46px;background:#6b7280;border-radius:6px"></div>Gray</div>
+    </div>
+    <div style="font-size:10px">☀ Brightness <div class="bar" style="margin:3px 0 6px"><i style="width:55%;background:#60a5fa"></i></div>◐ Contrast <div class="bar" style="margin:3px 0"><i style="width:65%;background:#60a5fa"></i></div></div>
+  </div>
+</div></div><figcaption>8. Filters &amp; Adjust<small>Original · Doc B&amp;W · Magic · Gray + sliders</small></figcaption></figure>
+
+<!-- 9 Page review -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>‹ Review</span><span style="color:var(--pri)">Save</span></div>
+  <div class="body">
+    <div class="mut" style="margin-bottom:6px">Long-press to reorder · 3 pages</div>
+    <div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:8px">
+      <div><div class="thumb"><div class="ln"></div><div class="ln s"></div></div><div class="mut" style="text-align:center">1</div></div>
+      <div><div class="thumb" style="box-shadow:0 6px 12px rgba(0,0,0,.3)"><div class="ln"></div></div><div class="mut" style="text-align:center">2 ⠿</div></div>
+      <div><div class="thumb"><div class="ln m"></div></div><div class="mut" style="text-align:center">3</div></div>
+      <div class="thumb" style="display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--pri);border:2px dashed var(--pri)">＋</div>
+    </div>
+    <div class="card" style="margin-top:14px"><div class="mut">Title</div><b>Scan 2026-10-21 09:41</b></div>
+    <div style="display:flex;gap:8px;margin-top:10px"><div class="btn o grow">Retake</div><div class="btn o grow">Delete</div></div>
+  </div>
+</div></div><figcaption>9. Page Review<small>Drag-reorder, add, delete, rename</small></figcaption></figure>
+
+<!-- 10 Save progress / Export sheet -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>Invoice_Oct</span><span>⋮</span></div>
+  <div class="body"><div class="card" style="height:260px"></div></div>
+  <div class="scrim"></div>
+  <div class="sheet">
+    <div style="font-weight:700;margin-bottom:8px">Export as</div>
+    <div class="row-i"><div class="ico">📕</div><div class="grow"><b>PDF</b><div class="mut">Multi-page · Quality: High ▾</div></div><span>◉</span></div>
+    <div class="row-i"><div class="ico">📘</div><div class="grow"><b>DOCX</b><div class="mut">Images in Word document</div></div><span>○</span></div>
+    <div class="mut" style="margin:8px 0 4px">Generating… page 2 of 3</div><div class="bar"><i style="width:66%;background:var(--pri)"></i></div>
+    <div class="btn" style="margin-top:10px">Export &amp; Share</div>
+  </div>
+</div></div><figcaption>10. Export Sheet<small>Format, quality, progress (isolate/background)</small></figcaption></figure>
+
+<!-- 11 Interstitial -->
+<figure><div class="phone"><div class="scr" style="background:#fff">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div style="padding:8px 14px;display:flex;justify-content:space-between;font-size:11px"><span class="mut">Ad · closes in 3s</span><span>✕</span></div>
+  <div style="flex:1;margin:10px;border-radius:12px;background:linear-gradient(135deg,#fde68a,#fb923c);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;text-align:center">Google AdMob<br>Interstitial</div>
+  <div class="mut" style="padding:8px 14px;text-align:center">Shown after save/export · Free plan only · frequency capped</div>
+</div></div><figcaption>11. Interstitial Ad<small>Gate: <code>plan == free</code> &amp; cooldown</small></figcaption></figure>
+
+<!-- 12 Doc detail -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>‹ Invoice_Oct</span><span>⋮</span></div>
+  <div class="body">
+    <div class="card" style="height:230px;position:relative"><div class="ln"></div><div class="ln m"></div><div class="ln s"></div><div class="ln"></div><div class="ln m"></div>
+      <div style="position:absolute;bottom:6px;left:0;right:0;text-align:center" class="mut">Page 1 / 3 ◂ ▸</div></div>
+    <div style="margin:8px 0"><span class="tag">Saved locally</span> <span class="tag ai">Indexed</span></div>
+    <div class="tool" style="background:#fff;color:var(--txt);border-radius:12px;padding:10px 4px">
+      <div><i>📤</i>Share</div><div><i>📕</i>PDF</div><div><i>📘</i>DOCX</div><div><i>🔤</i>Text</div><div><i>🗑️</i>Delete</div>
+    </div>
+    <div class="card" style="margin-top:8px"><div class="mut">Created</div>21 Oct 2026 · 3 pages · 1.8 MB</div>
+  </div>
+</div></div><figcaption>12. Document Detail<small>Pager, actions, metadata</small></figcaption></figure>
+
+<!-- 13 Share -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>Invoice_Oct</span></div>
+  <div class="body"></div>
+  <div class="scrim"></div>
+  <div class="sheet" style="background:#f1f5f9">
+    <div class="row-i"><div class="ico">📕</div><div class="grow"><b>Invoice_Oct.pdf</b><div class="mut">PDF · 1.8 MB</div></div></div>
+    <div style="display:flex;justify-content:space-around;text-align:center;padding:10px 0;font-size:10px"><div><div class="ico" style="margin:auto">✉️</div>Mail</div><div><div class="ico" style="margin:auto">💬</div>Messages</div><div><div class="ico" style="margin:auto">📁</div>Files</div><div><div class="ico" style="margin:auto">☁️</div>Drive</div></div>
+    <div class="mut" style="text-align:center">Native OS share sheet</div>
+  </div>
+</div></div><figcaption>13. Native Share Sheet<small>share_plus / ShareSheet – OS-provided</small></figcaption></figure>
+
+<!-- 14 Library (search) -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>Library</span><span>⇅</span></div>
+  <div class="body">
+    <div class="card" style="margin-bottom:8px;color:var(--mut)">🔍 Search name or text…</div>
+    <div class="row-i"><div class="ico">📄</div><div class="grow"><b>Invoice_Oct</b><div class="mut">3 pages · 21 Oct</div></div><span class="tag ai">Indexed</span></div>
+    <div class="row-i"><div class="ico">🪪</div><div class="grow"><b>ID Card</b><div class="mut">1 page · 20 Oct</div></div><span class="tag w">Pending</span></div>
+    <div class="row-i"><div class="ico">📊</div><div class="grow"><b>sales.csv</b><div class="mut">Imported · 40 KB</div></div><span class="tag ai">Indexed</span></div>
+    <div class="row-i"><div class="ico">📃</div><div class="grow"><b>notes.txt</b><div class="mut">Imported · 3 KB</div></div><span class="tag ai">Indexed</span></div>
+  </div>
+  <div class="ad"><em>AD</em> Banner (Free)</div>
+  <div class="nav"><div><i>🏠</i>Home</div><div><i>📚</i><b>Library</b></div><div><i>✨</i>Ask AI</div><div><i>⚙️</i>Settings</div></div>
+</div></div><figcaption>14. Library<small>List view, search, index status</small></figcaption></figure>
+
+<!-- 15 Settings -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>Settings</span></div>
+  <div class="body">
+    <div class="card" style="background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;margin-bottom:10px"><b>Go Premium</b><div style="opacity:.85">No ads · Unlimited exports</div></div>
+    <div class="row-i"><div class="grow">PDF quality</div><span class="mut">High ›</span></div>
+    <div class="row-i"><div class="grow">Auto-capture</div><div class="sw"></div></div>
+    <div class="row-i"><div class="grow">Save original images</div><div class="sw"></div></div>
+    <div class="row-i"><div class="grow">App lock (biometric)</div><div class="sw off"></div></div>
+    <div class="row-i"><div class="grow">AI model</div><span class="mut">Llama 3.2 3B ›</span></div>
+    <div class="row-i"><div class="grow">Storage used</div><span class="mut">212 MB ›</span></div>
+    <div class="row-i"><div class="grow">Privacy: no cloud upload</div><span class="tag">ON</span></div>
+  </div>
+  <div class="nav"><div><i>🏠</i>Home</div><div><i>📚</i>Library</div><div><i>✨</i>Ask AI</div><div><i>⚙️</i><b>Settings</b></div></div>
+</div></div><figcaption>15. Settings<small>Plan, quality, privacy, model, storage</small></figcaption></figure>
+
+<!-- 16 Paywall -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="body" style="text-align:center;padding-top:26px">
+    <div style="text-align:right">✕</div>
+    <div style="font-size:42px">👑</div><div style="font-size:18px;font-weight:700;margin:6px 0">Upgrade to Premium</div>
+    <div style="text-align:left;margin:14px 8px;line-height:2">✓ Remove all ads<br>✓ Higher-res exports<br>✓ Unlimited AI chats<br>✓ Priority features</div>
+    <div class="card" style="border:2px solid var(--pri);margin-bottom:8px"><b>Yearly</b> · ₹—/yr <span class="tag">Best value</span></div>
+    <div class="card" style="margin-bottom:12px"><b>Monthly</b> · ₹—/mo</div>
+    <div class="btn">Continue</div><div class="mut" style="margin-top:8px">Restore purchases</div>
+  </div>
+</div></div><figcaption>16. Plan / Paywall<small>Toggles <code>PlanStatus</code> → hides all ads</small></figcaption></figure>
+
+</div>
+
+<!-- ============ PHASE 2 ============ -->
+<h2>Phase 2 – Local AI Agent <span class="p2">Phase 2</span></h2>
+<div class="flow">OCR text → Index → Model setup → Chat with documents (RAG, streaming)</div>
+<div class="row">
+
+<!-- 17 OCR view -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>‹ Extracted text</span><span style="color:var(--pri)">Copy</span></div>
+  <div class="body">
+    <div style="margin-bottom:8px"><span class="chip on">English</span><span class="chip">हिन्दी</span><span class="chip">العربية</span></div>
+    <div class="card" style="margin-bottom:8px"><div class="mut">Page 1 · Hindi</div>कुल राशि: ₹ १,२५०<br>धन्यवाद</div>
+    <div class="card rtl" style="margin-bottom:8px"><div class="mut">Page 2 · Arabic (RTL)</div>المجموع: ١٬٢٥٠ ريال<br>شكرا لكم</div>
+    <div class="card"><div class="mut">Math detected</div><code>x² + 5x − 6 = 0</code><br><code>∫ f(x) dx = F(x) + C</code></div>
+  </div>
+</div></div><figcaption>17. OCR Text View<small>Hindi · Arabic RTL · math blocks preserved</small></figcaption></figure>
+
+<!-- 18 Index status -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>‹ Knowledge Index</span></div>
+  <div class="body">
+    <div class="card" style="margin-bottom:10px"><b>18 documents indexed</b><div class="mut">412 chunks · 9.4 MB vector store</div><div class="bar" style="margin-top:6px"><i style="width:85%"></i></div><div class="mut" style="margin-top:3px">Indexing 2 pending…</div></div>
+    <div class="row-i"><div class="grow"><b>Auto-index new scans</b></div><div class="sw"></div></div>
+    <div class="row-i"><div class="grow"><b>Index only while charging</b></div><div class="sw off"></div></div>
+    <div class="btn o" style="margin-top:12px">＋ Ingest .txt / .csv</div>
+    <div class="btn o" style="margin-top:8px;color:#dc2626;border-color:#dc2626">Clear index</div>
+  </div>
+</div></div><figcaption>18. Index &amp; Ingestion<small>Chunking/embedding progress, file ingest</small></figcaption></figure>
+
+<!-- 19 Model setup -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>✨ Ask AI</span></div>
+  <div class="body" style="text-align:center;padding-top:30px">
+    <div style="font-size:54px">🧠</div><div style="font-size:16px;font-weight:700;margin:8px 0">Set up offline AI</div>
+    <div class="mut" style="padding:0 8px">Runs fully on your phone. One-time download. Wi-Fi recommended.</div>
+    <div class="card" style="margin:14px 0;text-align:left"><b>Llama-3.2-3B-Instruct</b> <span class="tag ai">4-bit</span><div class="mut">~1.9 GB · Needs ≥ 6 GB RAM</div></div>
+    <div class="card" style="margin-bottom:14px;text-align:left"><b>Phi-3.5-mini</b> <span class="tag ai">4-bit</span><div class="mut">~2.2 GB · Better reasoning</div></div>
+    <div class="bar"><i style="width:42%"></i></div><div class="mut" style="margin:4px 0 12px">Downloading 42% · verify checksum</div>
+    <div class="btn ai">Pause</div>
+  </div>
+  <div class="nav"><div><i>🏠</i>Home</div><div><i>📚</i>Library</div><div><i>✨</i><b>Ask AI</b></div><div><i>⚙️</i>Settings</div></div>
+</div></div><figcaption>19. AI Model Setup<small>Device check, download, integrity verify</small></figcaption></figure>
+
+<!-- 20 Chat -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>✨ Ask your docs</span><span>🗑</span></div>
+  <div class="body">
+    <div class="mut" style="text-align:center;margin-bottom:6px"><span class="tag ai">On-device · Offline</span> Scope: All docs ▾</div>
+    <div class="bubble me">What was the total on the October invoice?</div>
+    <div class="bubble bot">The total on the October invoice is <b>₹1,250</b>, including 18% GST.
+      <div class="src">📄 Invoice_Oct · p.1 · “कुल राशि: ₹ १,२५०”</div>
+      <div class="src">📄 Invoice_Oct · p.2 · “GST 18%”</div>
+    </div>
+    <div class="bubble me">Summarise sales.csv</div>
+    <div class="bubble bot">Sales rose in Q3, led by the North region<span style="color:var(--ai)">▍</span></div>
+  </div>
+  <div class="input"><div>Ask about your documents…</div><span class="btn ai" style="padding:8px 12px">⏹</span></div>
+</div></div><figcaption>20. Chat (RAG, streaming)<small>Token streaming, tappable source citations, stop</small></figcaption></figure>
+
+<!-- 21 Source viewer -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>‹ Source</span></div>
+  <div class="body">
+    <div class="card" style="margin-bottom:8px"><b>Invoice_Oct · Page 1</b><div class="mut">Similarity 0.87</div></div>
+    <div class="card" style="height:230px;position:relative"><div class="ln"></div><div class="ln m"></div>
+      <div style="background:rgba(124,58,237,.25);border:1.5px solid var(--ai);padding:4px;margin:6px 0;border-radius:4px">कुल राशि: ₹ १,२५०</div>
+      <div class="ln s"></div><div class="ln m"></div></div>
+    <div class="btn o" style="margin-top:10px">Open document</div>
+  </div>
+</div></div><figcaption>21. Citation Viewer<small>Highlights retrieved chunk in page</small></figcaption></figure>
+
+<!-- 22 Errors -->
+<figure><div class="phone"><div class="scr">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="app"><span>My Documents</span></div>
+  <div class="body"><div class="grid2"><div class="thumb"></div><div class="thumb"></div></div></div>
+  <div class="scrim"></div>
+  <div class="card" style="position:absolute;left:20px;right:20px;top:170px;text-align:center">
+    <div style="font-size:30px">⚠️</div><b>Export failed</b>
+    <div class="mut" style="margin:6px 0 10px">Not enough memory for 48 pages at High quality. Try Medium quality or export in parts.</div>
+    <div class="btn" style="margin-bottom:6px">Retry at Medium</div><div class="btn o">Cancel</div>
+  </div>
+</div></div><figcaption>22. Error / Recovery dialog<small>OOM, disk full, permission denied, low RAM for AI</small></figcaption></figure>
+
+</div>
+
+<!-- ============ NOTES ============ -->
+<div class="legend">
+  <b>Design notes</b>
+  <ul style="margin-left:18px">
+    <li><b>Ad gating:</b> Banner on Home (3) and Library (14); Interstitial after Save/Export (11). All controlled by one <code>PlanStatus</code> flag; Premium (16) removes them.</li>
+    <li><b>Privacy:</b> Everything shown is stored locally; no network screens except model download (19) and AdMob.</li>
+    <li><b>RTL:</b> Screen 17 and chat bubbles must mirror layout for Arabic content.</li>
+    <li><b>Long operations</b> (export, OCR, indexing, model download) always show progress and are cancelable.</li>
+  </ul>
+</div>
+</body>
+</html>
