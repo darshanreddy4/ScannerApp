@@ -21,13 +21,7 @@ class RgbBuffer {
     return RgbBuffer(rgb.width, rgb.height, Uint8List.fromList(bytes));
   }
 
-  img.Image toImage() => img.Image.fromBytes(
-        width: width,
-        height: height,
-        bytes: data.buffer,
-        bytesOffset: data.offsetInBytes,
-        numChannels: 3,
-      );
+  img.Image toImage() => img.Image.fromBytes(width: width, height: height, bytes: data.buffer, bytesOffset: data.offsetInBytes, numChannels: 3);
 
   Uint8List encodeJpeg({int quality = 90}) => img.encodeJpg(toImage(), quality: quality);
 
@@ -70,12 +64,10 @@ class RgbBuffer {
 
 /// Perspective correction: maps an arbitrary document quad onto an upright rectangle.
 abstract final class PerspectiveTransform {
-  static const _maxSide = 3000;
+  static const _maxSide = 4000;
 
   static RgbBuffer warp(RgbBuffer src, Quad quad) {
-    final p = [
-      for (final q in quad.points) (q.x * src.width, q.y * src.height),
-    ];
+    final p = [for (final q in quad.points) (q.x * src.width, q.y * src.height)];
 
     double len((double, double) a, (double, double) b) => math.sqrt(math.pow(a.$1 - b.$1, 2) + math.pow(a.$2 - b.$2, 2));
 

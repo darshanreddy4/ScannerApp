@@ -14,6 +14,8 @@
 	<string>ScanVault imports images you choose from your photo library. Images stay on your device.</string>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>ScanVault shares a file directly with a nearby device on your Wi-Fi when you show a QR code. Nothing is uploaded.</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

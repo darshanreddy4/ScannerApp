@@ -29,6 +29,10 @@ class ExportFailure extends Failure {
   const ExportFailure(super.message, {super.cause});
 }
 
+class ImportFailure extends Failure {
+  const ImportFailure(super.message, {super.cause});
+}
+
 class PermissionFailure extends Failure {
   const PermissionFailure(super.message, {super.cause});
 }
@@ -39,4 +43,12 @@ class CameraFailure extends Failure {
 
 class UnexpectedFailure extends Failure {
   const UnexpectedFailure(super.message, {super.cause});
+}
+
+class PasswordFailure extends Failure {
+  const PasswordFailure(super.message, {super.cause});
+}
+
+class OcrFailure extends Failure {
+  const OcrFailure(super.message, {super.cause});
 }

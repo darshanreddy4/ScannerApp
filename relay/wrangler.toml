@@ -1,0 +1,14 @@
+name = "scanvault-share"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "scanvault-share-files"
+
+# Hourly sweep that deletes expired files.
+[triggers]
+crons = ["17 * * * *"]
+
+[vars]
+MAX_BYTES = "26214400"

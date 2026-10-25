@@ -18,8 +18,8 @@ enum ExportQuality {
   final int jpegQuality;
 
   String get label => switch (this) {
-        ExportQuality.high => 'High',
-        ExportQuality.medium => 'Medium',
-        ExportQuality.low => 'Low (smallest file)',
-      };
+    ExportQuality.high => 'High',
+    ExportQuality.medium => 'Medium',
+    ExportQuality.low => 'Low (smallest file)',
+  };
 }

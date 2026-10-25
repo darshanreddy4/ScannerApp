@@ -8,16 +8,18 @@ void showFailure(BuildContext context, Failure failure) {
   final messenger = ScaffoldMessenger.of(context);
   messenger
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      backgroundColor: AppColors.ink,
-      content: Row(
-        children: [
-          const Icon(AppIcons.warning, color: Colors.white, size: 20),
-          const SizedBox(width: AppSpacing.sm + 4),
-          Expanded(child: Text(failure.message)),
-        ],
+    ..showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.ink,
+        content: Row(
+          children: [
+            const Icon(AppIcons.warning, color: Colors.white, size: 20),
+            const SizedBox(width: AppSpacing.sm + 4),
+            Expanded(child: Text(failure.message)),
+          ],
+        ),
       ),
-    ));
+    );
 }
 
 /// Dims the screen and shows a progress card while a long operation runs.
@@ -51,5 +53,43 @@ class BusyOverlay extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Short confirmation message.
+void showMessage(BuildContext context, String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message), persist: false));
+}
+
+/// Runs [task] behind a blocking progress dialog.
+Future<T> runBusy<T>(BuildContext context, String label, Future<T> Function() task) async {
+  final navigator = Navigator.of(context, rootNavigator: true);
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    useRootNavigator: true,
+    builder: (_) => PopScope(
+      canPop: false,
+      child: Dialog(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5)),
+              const SizedBox(width: AppSpacing.md),
+              Flexible(child: Text(label)),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+  try {
+    return await task();
+  } finally {
+    if (navigator.mounted) navigator.pop();
   }
 }

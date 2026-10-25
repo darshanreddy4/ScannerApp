@@ -175,14 +175,8 @@ void main() {
     });
 
     test('cooldown suppresses back-to-back interstitials', () {
-      expect(
-        policy.shouldShowInterstitial(plan: PlanStatus.free, lastShownAt: now.subtract(const Duration(seconds: 30)), now: now),
-        isFalse,
-      );
-      expect(
-        policy.shouldShowInterstitial(plan: PlanStatus.free, lastShownAt: now.subtract(const Duration(minutes: 3)), now: now),
-        isTrue,
-      );
+      expect(policy.shouldShowInterstitial(plan: PlanStatus.free, lastShownAt: now.subtract(const Duration(seconds: 30)), now: now), isFalse);
+      expect(policy.shouldShowInterstitial(plan: PlanStatus.free, lastShownAt: now.subtract(const Duration(minutes: 3)), now: now), isTrue);
     });
   });
 

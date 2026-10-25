@@ -14,19 +14,12 @@ class DocumentDetailState {
   final bool loading;
   final Failure? failure;
 
-  DocumentDetailState copyWith({
-    ScannedDocument? document,
-    bool? exporting,
-    bool? loading,
-    Failure? failure,
-    bool clearFailure = false,
-  }) =>
-      DocumentDetailState(
-        document: document ?? this.document,
-        exporting: exporting ?? this.exporting,
-        loading: loading ?? this.loading,
-        failure: clearFailure ? null : (failure ?? this.failure),
-      );
+  DocumentDetailState copyWith({ScannedDocument? document, bool? exporting, bool? loading, Failure? failure, bool clearFailure = false}) => DocumentDetailState(
+    document: document ?? this.document,
+    exporting: exporting ?? this.exporting,
+    loading: loading ?? this.loading,
+    failure: clearFailure ? null : (failure ?? this.failure),
+  );
 }
 
 class DocumentDetailCubit extends Cubit<DocumentDetailState> {
@@ -37,12 +30,12 @@ class DocumentDetailCubit extends Cubit<DocumentDetailState> {
     required DeleteDocument deleteDocument,
     required ExportDocument exportDocument,
     required ShareFile shareFile,
-  })  : _get = getDocument,
-        _rename = renameDocument,
-        _delete = deleteDocument,
-        _export = exportDocument,
-        _share = shareFile,
-        super(const DocumentDetailState());
+  }) : _get = getDocument,
+       _rename = renameDocument,
+       _delete = deleteDocument,
+       _export = exportDocument,
+       _share = shareFile,
+       super(const DocumentDetailState());
 
   final String documentId;
   final GetDocument _get;
@@ -94,6 +87,16 @@ class DocumentDetailCubit extends Cubit<DocumentDetailState> {
     final shared = await _share(path: path, format: format, subject: doc.title);
     emit(state.copyWith(exporting: false, failure: shared.failureOrNull));
     return true;
+  }
+
+  /// Builds the file without opening the share sheet (used for QR sharing). Returns its path.
+  Future<String?> exportFile(ExportFormat format, ExportQuality quality) async {
+    final doc = state.document;
+    if (doc == null || state.exporting) return null;
+    emit(state.copyWith(exporting: true, clearFailure: true));
+    final built = await _export(document: doc, format: format, quality: quality);
+    emit(state.copyWith(exporting: false, failure: built.failureOrNull));
+    return built.valueOrNull;
   }
 
   void clearFailure() => emit(state.copyWith(clearFailure: true));

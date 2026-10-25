@@ -115,8 +115,8 @@ abstract final class ImageFilters {
     return ((n * 0.5 + s * 0.5) * 255).round().clamp(0, 255);
   }
 
-  static Int64List _integral(Uint8List gray, int w, int h) {
-    final integral = Int64List((w + 1) * (h + 1));
+  static Uint32List _integral(Uint8List gray, int w, int h) {
+    final integral = Uint32List((w + 1) * (h + 1));
     for (var y = 1; y <= h; y++) {
       var row = 0;
       for (var x = 1; x <= w; x++) {
@@ -127,12 +127,9 @@ abstract final class ImageFilters {
     return integral;
   }
 
-  static int _rectSum(Int64List integral, int w, int x0, int y0, int x1, int y1) {
+  static int _rectSum(Uint32List integral, int w, int x0, int y0, int x1, int y1) {
     final stride = w + 1;
-    return integral[(y1 + 1) * stride + (x1 + 1)] -
-        integral[y0 * stride + (x1 + 1)] -
-        integral[(y1 + 1) * stride + x0] +
-        integral[y0 * stride + x0];
+    return integral[(y1 + 1) * stride + (x1 + 1)] - integral[y0 * stride + (x1 + 1)] - integral[(y1 + 1) * stride + x0] + integral[y0 * stride + x0];
   }
 
   static Uint8List _dilateMax(Uint8List src, int w, int h, int r) {

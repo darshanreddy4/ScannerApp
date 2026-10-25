@@ -24,12 +24,7 @@ class Quad extends Equatable {
   static const fullFrame = Quad(NormPoint(0, 0), NormPoint(1, 0), NormPoint(1, 1), NormPoint(0, 1));
 
   /// Slightly inset rectangle used as the initial crop when nothing is detected.
-  static const defaultInset = Quad(
-    NormPoint(0.08, 0.08),
-    NormPoint(0.92, 0.08),
-    NormPoint(0.92, 0.92),
-    NormPoint(0.08, 0.92),
-  );
+  static const defaultInset = Quad(NormPoint(0.08, 0.08), NormPoint(0.92, 0.08), NormPoint(0.92, 0.92), NormPoint(0.08, 0.92));
 
   final NormPoint tl;
   final NormPoint tr;

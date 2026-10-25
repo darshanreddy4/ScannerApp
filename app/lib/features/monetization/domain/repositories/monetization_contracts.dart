@@ -20,8 +20,30 @@ class AdPolicy {
   bool shouldShowBanner(PlanStatus plan) => plan.showsAds;
 }
 
+/// Outcome of offering a rewarded video.
+enum RewardResult {
+  /// Watched to the end: the reward is due.
+  earned,
+
+  /// Closed early, so no reward.
+  dismissed,
+
+  /// No video could be loaded (offline, consent not given, no fill).
+  unavailable,
+
+  /// Today's limit of rewarded videos is used up.
+  limitReached,
+}
+
 abstract interface class AdService {
   Future<void> initialize();
+
+  /// Plays a rewarded video the person chose to watch.
+  Future<RewardResult> showRewarded();
+
+  /// Whether the law requires an entry point where users can change their ad consent.
+  Future<bool> privacyOptionsRequired();
+  Future<void> showPrivacyOptions();
 
   /// Shows an interstitial if [plan] and the frequency cap allow it. Completes when dismissed or skipped.
   Future<void> showInterstitialIfEligible(PlanStatus plan);

@@ -4,146 +4,289 @@ import 'dart:typed_data';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/error/failures.dart';
+import '../../../../core/utils/format.dart';
 import '../../../documents/domain/entities/scanned_document.dart';
 import '../../../documents/domain/usecases/document_usecases.dart';
+import '../../../importer/domain/importer.dart';
+import '../../../markup/domain/markup.dart';
+import '../../../markup/domain/markup_renderer.dart';
 import '../../domain/entities/filter_settings.dart';
 import '../../domain/entities/quad.dart';
+import '../../domain/entities/scan_page.dart';
 import '../../domain/usecases/scanner_usecases.dart';
 
-/// Working state for the image currently being cropped/enhanced.
-class ScanDraft {
-  const ScanDraft({
-    required this.rawPath,
-    required this.rawWidth,
-    required this.rawHeight,
-    required this.quad,
-    required this.autoDetected,
-    this.croppedPath,
-    this.croppedWidth,
-    this.croppedHeight,
-    this.settings = const FilterSettings(),
-    this.preview,
-  });
+enum ScanFlow { camera, import, recrop }
 
-  final String rawPath;
-  final int rawWidth;
-  final int rawHeight;
-  final Quad quad;
-  final bool autoDetected;
-  final String? croppedPath;
-  final int? croppedWidth;
-  final int? croppedHeight;
-  final FilterSettings settings;
-  final Uint8List? preview;
+/// What the crop screen should do after Continue/Retake.
+enum CropOutcome { failed, nextImage, finished }
 
-  ScanDraft copyWith({
-    String? rawPath,
-    int? rawWidth,
-    int? rawHeight,
-    Quad? quad,
-    bool? autoDetected,
-    String? croppedPath,
-    int? croppedWidth,
-    int? croppedHeight,
-    FilterSettings? settings,
-    Uint8List? preview,
-  }) =>
-      ScanDraft(
-        rawPath: rawPath ?? this.rawPath,
-        rawWidth: rawWidth ?? this.rawWidth,
-        rawHeight: rawHeight ?? this.rawHeight,
-        quad: quad ?? this.quad,
-        autoDetected: autoDetected ?? this.autoDetected,
-        croppedPath: croppedPath ?? this.croppedPath,
-        croppedWidth: croppedWidth ?? this.croppedWidth,
-        croppedHeight: croppedHeight ?? this.croppedHeight,
-        settings: settings ?? this.settings,
-        preview: preview ?? this.preview,
-      );
-}
+/// Filters shown as thumbnails in the editor, in display order.
+const thumbFilters = [ScanFilter.original, ScanFilter.documentBw, ScanFilter.magicColor, ScanFilter.grayscale];
 
 class ScanSessionState {
   const ScanSessionState({
     this.pages = const [],
     this.draft,
+    this.draftPreview,
+    this.draftEditIndex,
+    this.flow = ScanFlow.camera,
+    this.pending = const [],
+    this.currentFilter = ScanFilter.magicColor,
+    this.title = '',
+    this.folderId,
+    this.editingDocumentId,
+    this.selected = 0,
+    this.applyToAll = false,
+    this.previews = const {},
+    this.thumbs = const {},
     this.busy = false,
-    this.previewBusy = false,
+    this.busyLabel,
     this.error,
   });
 
-  final List<NewPage> pages;
-  final ScanDraft? draft;
+  final List<ScanPage> pages;
+  final ScanPage? draft;
+
+  /// Filtered preview of the draft's raw image, shown on the crop screen (null = show original).
+  final Uint8List? draftPreview;
+  final int? draftEditIndex;
+  final ScanFlow flow;
+  final List<String> pending;
+  final ScanFilter currentFilter;
+  final String title;
+  final String? folderId;
+
+  /// Set when an already-saved document is being edited; saving then replaces it.
+  final String? editingDocumentId;
+  final int selected;
+  final bool applyToAll;
+  final Map<String, PagePreview> previews;
+  final Map<String, List<Uint8List>> thumbs;
   final bool busy;
-  final bool previewBusy;
+  final String? busyLabel;
   final Failure? error;
 
+  ScanPage? get selectedPage => selected >= 0 && selected < pages.length ? pages[selected] : null;
+
   ScanSessionState copyWith({
-    List<NewPage>? pages,
-    ScanDraft? draft,
+    List<ScanPage>? pages,
+    ScanPage? draft,
     bool clearDraft = false,
+    Uint8List? draftPreview,
+    bool clearDraftPreview = false,
+    int? draftEditIndex,
+    ScanFlow? flow,
+    List<String>? pending,
+    ScanFilter? currentFilter,
+    String? title,
+    int? selected,
+    bool? applyToAll,
+    Map<String, PagePreview>? previews,
+    Map<String, List<Uint8List>>? thumbs,
     bool? busy,
-    bool? previewBusy,
+    String? busyLabel,
     Failure? error,
     bool clearError = false,
-  }) =>
-      ScanSessionState(
-        pages: pages ?? this.pages,
-        draft: clearDraft ? null : (draft ?? this.draft),
-        busy: busy ?? this.busy,
-        previewBusy: previewBusy ?? this.previewBusy,
-        error: clearError ? null : (error ?? this.error),
-      );
+  }) => ScanSessionState(
+    pages: pages ?? this.pages,
+    draft: clearDraft ? null : (draft ?? this.draft),
+    draftPreview: clearDraft || clearDraftPreview ? null : (draftPreview ?? this.draftPreview),
+    draftEditIndex: clearDraft ? null : (draftEditIndex ?? this.draftEditIndex),
+    flow: flow ?? this.flow,
+    pending: pending ?? this.pending,
+    currentFilter: currentFilter ?? this.currentFilter,
+    title: title ?? this.title,
+    folderId: folderId,
+    editingDocumentId: editingDocumentId,
+    selected: selected ?? this.selected,
+    applyToAll: applyToAll ?? this.applyToAll,
+    previews: previews ?? this.previews,
+    thumbs: thumbs ?? this.thumbs,
+    busy: busy ?? this.busy,
+    busyLabel: busy == false ? null : (busyLabel ?? this.busyLabel),
+    error: clearError ? null : (error ?? this.error),
+  );
 }
 
 class ScanSessionCubit extends Cubit<ScanSessionState> {
   ScanSessionCubit({
     required PrepareImage prepareImage,
+    required InspectImage inspectImage,
     required CropDocument cropDocument,
     required RotateImage rotateImage,
     required PreviewFilter previewFilter,
+    required PreviewFilterBatch previewFilterBatch,
     required ApplyFilter applyFilter,
     required SaveDocument saveDocument,
-  })  : _prepareImage = prepareImage,
-        _cropDocument = cropDocument,
-        _rotateImage = rotateImage,
-        _previewFilter = previewFilter,
-        _applyFilter = applyFilter,
-        _saveDocument = saveDocument,
-        super(const ScanSessionState());
+    required UpdateDocument updateDocument,
+    required ImportDocumentFile importDocumentFile,
+    this.clearWorkFiles,
+    MarkupRenderer? markupRenderer,
+  }) : _prepareImage = prepareImage,
+       _inspectImage = inspectImage,
+       _cropDocument = cropDocument,
+       _rotateImage = rotateImage,
+       _previewFilter = previewFilter,
+       _previewBatch = previewFilterBatch,
+       _applyFilter = applyFilter,
+       _saveDocument = saveDocument,
+       _updateDocument = updateDocument,
+       _importFile = importDocumentFile,
+       _markup = markupRenderer,
+       super(const ScanSessionState());
 
   final PrepareImage _prepareImage;
+  final InspectImage _inspectImage;
   final CropDocument _cropDocument;
   final RotateImage _rotateImage;
   final PreviewFilter _previewFilter;
+  final PreviewFilterBatch _previewBatch;
   final ApplyFilter _applyFilter;
   final SaveDocument _saveDocument;
+  final UpdateDocument _updateDocument;
+  final ImportDocumentFile _importFile;
+  final MarkupRenderer? _markup;
+
+  /// Deletes scan working copies up to the given time. Optional so tests need no file system.
+  final Future<void> Function(DateTime cutoff)? clearWorkFiles;
 
   Timer? _debounce;
-  int _previewToken = 0;
+  int _idCounter = 0;
 
-  void reset() {
+  String _newId() => '${DateTime.now().microsecondsSinceEpoch}-${_idCounter++}';
+
+  /// Starts a fresh scan session.
+  void start({required ScanFilter defaultFilter, String? folderId}) {
     _debounce?.cancel();
-    emit(const ScanSessionState());
+    unawaited(clearWorkFiles?.call(DateTime.now()));
+    emit(ScanSessionState(currentFilter: defaultFilter, title: defaultScanTitle(DateTime.now()), folderId: folderId));
   }
 
   void clearError() => emit(state.copyWith(clearError: true));
 
-  /// Loads a captured or imported image into the draft. Returns true on success.
-  Future<bool> beginDraft(String sourcePath) async {
-    emit(state.copyWith(busy: true, clearError: true));
+  /// Opens a saved document in the editor with every page's crop and filter restored.
+  void loadDocument(ScannedDocument doc, {required ScanFilter defaultFilter}) {
+    _debounce?.cancel();
+    emit(
+      ScanSessionState(
+        pages: [for (final p in doc.pages) _pageFromSaved(p)],
+        currentFilter: defaultFilter,
+        title: doc.title,
+        folderId: doc.folderId,
+        editingDocumentId: doc.id,
+      ),
+    );
+  }
+
+  ScanPage _pageFromSaved(DocumentPage p) {
+    final edit = p.edit;
+    if (edit == null) {
+      // Saved before editing existed: the finished image becomes the new source.
+      return ScanPage(
+        id: _newId(),
+        rawPath: p.imagePath,
+        rawWidth: p.width,
+        rawHeight: p.height,
+        quad: Quad.fullFrame,
+        detectedQuad: Quad.fullFrame,
+        croppedPath: p.imagePath,
+        croppedWidth: p.width,
+        croppedHeight: p.height,
+      );
+    }
+    final q = edit.quad;
+    final quad = Quad(NormPoint(q[0], q[1]), NormPoint(q[2], q[3]), NormPoint(q[4], q[5]), NormPoint(q[6], q[7]));
+    return ScanPage(
+      id: _newId(),
+      rawPath: p.rawPath,
+      rawWidth: edit.rawWidth,
+      rawHeight: edit.rawHeight,
+      quad: quad,
+      detectedQuad: quad,
+      croppedPath: edit.croppedPath,
+      croppedWidth: p.width,
+      croppedHeight: p.height,
+      settings: FilterSettings(filter: ScanFilter.values.asNameMap()[edit.filter] ?? ScanFilter.original, brightness: edit.brightness, contrast: edit.contrast),
+    );
+  }
+
+  void setTitle(String title) => emit(state.copyWith(title: title));
+
+  void setApplyToAll(bool value) => emit(state.copyWith(applyToAll: value));
+
+  // Draft (capture / import / re-crop)
+
+  /// Converts a PDF or Word file into pages (no crop step) and adds them to the session.
+  Future<bool> importDocumentFile(ImportKind kind, String path) async {
+    emit(state.copyWith(busy: true, busyLabel: 'Reading document', clearError: true));
+    final result = await _importFile(
+      kind: kind,
+      path: path,
+      onProgress: (done, total) {
+        if (!isClosed) emit(state.copyWith(busyLabel: 'Converting page $done of $total'));
+      },
+    );
+    final doc = result.valueOrNull;
+    if (doc == null) {
+      emit(state.copyWith(busy: false, error: result.failureOrNull));
+      return false;
+    }
+
+    final firstNew = state.pages.length;
+    final keepTitle = state.pages.isNotEmpty;
+    final pages = [...state.pages];
+    for (var i = 0; i < doc.imagePaths.length; i++) {
+      emit(state.copyWith(busyLabel: 'Preparing page ${i + 1} of ${doc.imagePaths.length}'));
+      // Imported pages are already final images: read the size only, no decode or re-encode.
+      final prepared = await _inspectImage(doc.imagePaths[i]);
+      final img = prepared.valueOrNull;
+      if (img == null) {
+        emit(state.copyWith(busy: false, error: prepared.failureOrNull));
+        return false;
+      }
+      pages.add(
+        ScanPage(
+          id: _newId(),
+          rawPath: img.path,
+          rawWidth: img.width,
+          rawHeight: img.height,
+          quad: Quad.fullFrame,
+          detectedQuad: Quad.fullFrame,
+          croppedPath: img.path,
+          croppedWidth: img.width,
+          croppedHeight: img.height,
+          settings: const FilterSettings(),
+        ),
+      );
+    }
+    emit(state.copyWith(busy: false, pages: pages, selected: firstNew, title: keepTitle ? state.title : doc.title));
+    return true;
+  }
+
+  /// Prepares [sourcePath] as the current draft. Returns true on success.
+  Future<bool> beginDraft(String sourcePath, {ScanFlow flow = ScanFlow.camera, List<String> pending = const []}) async {
+    emit(state.copyWith(busy: true, busyLabel: 'Preparing image', clearError: true));
     final result = await _prepareImage(sourcePath);
     return result.when(
       ok: (img) {
-        emit(state.copyWith(
-          busy: false,
-          draft: ScanDraft(
-            rawPath: img.path,
-            rawWidth: img.width,
-            rawHeight: img.height,
-            quad: img.detectedQuad ?? Quad.defaultInset,
-            autoDetected: img.detectedQuad != null,
+        final quad = img.detectedQuad ?? Quad.defaultInset;
+        emit(
+          state.copyWith(
+            busy: false,
+            flow: flow,
+            pending: pending,
+            draft: ScanPage(
+              id: _newId(),
+              rawPath: img.path,
+              rawWidth: img.width,
+              rawHeight: img.height,
+              quad: quad,
+              detectedQuad: quad,
+              settings: FilterSettings(filter: state.currentFilter),
+            ),
           ),
-        ));
+        );
+        refreshDraftPreview();
         return true;
       },
       err: (f) {
@@ -151,6 +294,18 @@ class ScanSessionCubit extends Cubit<ScanSessionState> {
         return false;
       },
     );
+  }
+
+  /// Queues several images; the first becomes the draft.
+  Future<bool> importMany(List<String> paths) async {
+    if (paths.isEmpty) return false;
+    return beginDraft(paths.first, flow: ScanFlow.import, pending: paths.sublist(1));
+  }
+
+  void editPageCrop(int index) {
+    final page = state.pages[index];
+    emit(state.copyWith(draft: page, draftEditIndex: index, flow: ScanFlow.recrop, pending: const [], clearDraftPreview: true));
+    refreshDraftPreview();
   }
 
   void updateQuad(Quad quad) {
@@ -160,136 +315,345 @@ class ScanSessionCubit extends Cubit<ScanSessionState> {
 
   void useFullFrame() => updateQuad(Quad.fullFrame);
 
-  Future<void> rotateRaw() async {
+  void resetToDetected() {
     final d = state.draft;
-    if (d == null || state.busy) return;
-    emit(state.copyWith(busy: true));
-    final result = await _rotateImage(d.rawPath);
-    result.when(
-      ok: (info) => emit(state.copyWith(
-        busy: false,
-        draft: d.copyWith(
-          rawPath: info.path,
-          rawWidth: info.width,
-          rawHeight: info.height,
-          quad: d.quad.rotatedClockwise(),
-        ),
-      )),
-      err: (f) => emit(state.copyWith(busy: false, error: f)),
-    );
+    if (d != null) updateQuad(d.detectedQuad);
   }
 
-  /// Applies the perspective crop. Returns true when the enhance step can open.
-  Future<bool> confirmCrop() async {
+  void setCurrentFilter(ScanFilter filter) {
     final d = state.draft;
-    if (d == null) return false;
-    emit(state.copyWith(busy: true, clearError: true));
-    final result = await _cropDocument(imagePath: d.rawPath, quad: d.quad);
-    final ok = result.when(
-      ok: (info) {
-        emit(state.copyWith(
-          busy: false,
-          draft: d.copyWith(
-            croppedPath: info.path,
-            croppedWidth: info.width,
-            croppedHeight: info.height,
-            settings: const FilterSettings(filter: ScanFilter.documentBw),
-          ),
-        ));
-        return true;
-      },
-      err: (f) {
-        emit(state.copyWith(busy: false, error: f));
-        return false;
-      },
+    emit(
+      state.copyWith(
+        currentFilter: filter,
+        draft: d?.copyWith(settings: d.settings.copyWith(filter: filter)),
+      ),
     );
-    if (ok) await _refreshPreview();
-    return ok;
+    refreshDraftPreview();
   }
 
-  void updateSettings(FilterSettings settings, {bool immediate = false}) {
+  /// Renders the draft's raw image with its current filter so the crop screen shows the real effect.
+  Future<void> refreshDraftPreview() async {
     final d = state.draft;
     if (d == null) return;
-    emit(state.copyWith(draft: d.copyWith(settings: settings)));
+    final s = d.settings;
+    if (s.filter == ScanFilter.original && s.brightness == 0 && s.contrast == 0) {
+      emit(state.copyWith(clearDraftPreview: true));
+      return;
+    }
+    final result = await _previewFilter(imagePath: d.rawPath, settings: s);
+    if (isClosed) return;
+    final current = state.draft;
+    if (current == null || current.rawPath != d.rawPath || current.settings != s) return;
+    final bytes = result.valueOrNull;
+    if (bytes != null) emit(state.copyWith(draftPreview: bytes));
+  }
+
+  Future<void> rotateDraft() async {
+    final d = state.draft;
+    if (d == null || state.busy) return;
+    emit(state.copyWith(busy: true, busyLabel: 'Rotating'));
+    final result = await _rotateImage(d.rawPath);
+    result.when(
+      ok: (info) => emit(
+        state.copyWith(
+          busy: false,
+          draft: d.copyWith(
+            rawPath: info.path,
+            rawWidth: info.width,
+            rawHeight: info.height,
+            quad: d.quad.rotatedClockwise(),
+            detectedQuad: d.detectedQuad.rotatedClockwise(),
+          ),
+          clearDraftPreview: true,
+        ),
+      ),
+      err: (f) => emit(state.copyWith(busy: false, error: f)),
+    );
+    refreshDraftPreview();
+  }
+
+  /// Crops the draft into the page list, then moves to the next queued image if any.
+  Future<CropOutcome> commitDraft() async {
+    final d = state.draft;
+    if (d == null) return CropOutcome.failed;
+    emit(state.copyWith(busy: true, busyLabel: 'Cropping', clearError: true));
+
+    final result = await _cropDocument(imagePath: d.rawPath, quad: d.quad);
+    final failure = result.failureOrNull;
+    final info = result.valueOrNull;
+    if (failure != null || info == null) {
+      emit(state.copyWith(busy: false, error: failure));
+      return CropOutcome.failed;
+    }
+
+    final page = d.copyWith(croppedPath: info.path, croppedWidth: info.width, croppedHeight: info.height, clearPreMarkup: true);
+    final editIndex = state.draftEditIndex;
+    final pages = [...state.pages];
+    int selected;
+    if (editIndex != null) {
+      pages[editIndex] = page;
+      selected = editIndex;
+    } else {
+      pages.add(page);
+      selected = pages.length - 1;
+    }
+    final previews = {...state.previews}..remove(page.id);
+    final thumbs = {...state.thumbs}..remove(page.id);
+
+    emit(state.copyWith(busy: false, pages: pages, selected: selected, previews: previews, thumbs: thumbs, clearDraft: true));
+    return _advanceQueue();
+  }
+
+  /// Skips the current draft (Retake). For queued imports, moves on to the next image.
+  Future<CropOutcome> discardDraft() async {
+    emit(state.copyWith(clearDraft: true));
+    return _advanceQueue();
+  }
+
+  Future<CropOutcome> _advanceQueue() async {
+    var queue = state.pending;
+    while (queue.isNotEmpty) {
+      final next = queue.first;
+      queue = queue.sublist(1);
+      if (await beginDraft(next, flow: ScanFlow.import, pending: queue)) return CropOutcome.nextImage;
+    }
+    emit(state.copyWith(pending: const []));
+    return CropOutcome.finished;
+  }
+
+  /// Crops the draft and every queued image automatically (crop screen disabled in settings).
+  Future<bool> commitAll() async {
+    CropOutcome outcome;
+    do {
+      outcome = await commitDraft();
+    } while (outcome == CropOutcome.nextImage);
+    return outcome == CropOutcome.finished;
+  }
+
+  // Page editing
+
+  /// Marks [index] as the visible page. Only emits when it actually changes.
+  Future<void> selectPage(int index) async {
+    if (index < 0 || index >= state.pages.length) return;
+    if (index != state.selected) emit(state.copyWith(selected: index));
+    await loadPageAssets(index);
+  }
+
+  /// Renders the preview and filter thumbnails for [index] without touching the selection.
+  Future<void> loadPageAssets(int index) => Future.wait([loadPreview(index), loadThumbs(index)]);
+
+  void updateSettings(FilterSettings settings, {bool immediate = false}) {
+    final index = state.selected;
+    if (index >= state.pages.length) return;
+    final pages = [
+      for (var i = 0; i < state.pages.length; i++)
+        if (i == index || state.applyToAll) state.pages[i].copyWith(settings: settings) else state.pages[i],
+    ];
+    emit(state.copyWith(pages: pages));
     _debounce?.cancel();
     if (immediate) {
-      _refreshPreview();
+      loadPreview(index);
     } else {
-      _debounce = Timer(const Duration(milliseconds: 180), _refreshPreview);
+      _debounce = Timer(const Duration(milliseconds: 180), () => loadPreview(index));
     }
   }
 
-  Future<void> _refreshPreview() async {
-    final d = state.draft;
-    final path = d?.croppedPath;
-    if (d == null || path == null) return;
+  Future<void> loadPreview(int index) async {
+    if (index < 0 || index >= state.pages.length) return;
+    final page = state.pages[index];
+    final path = page.croppedPath;
+    if (path == null || state.previews[page.id]?.settings == page.settings) return;
 
-    final token = ++_previewToken;
-    emit(state.copyWith(previewBusy: true));
-    final result = await _previewFilter(imagePath: path, settings: d.settings);
-    if (token != _previewToken || isClosed) return;
-
-    result.when(
-      ok: (bytes) {
-        final current = state.draft;
-        if (current != null) emit(state.copyWith(previewBusy: false, draft: current.copyWith(preview: bytes)));
-      },
-      err: (f) => emit(state.copyWith(previewBusy: false, error: f)),
-    );
+    final result = await _previewFilter(imagePath: path, settings: page.settings);
+    if (isClosed) return;
+    final bytes = result.valueOrNull;
+    if (bytes == null) {
+      emit(state.copyWith(error: result.failureOrNull));
+      return;
+    }
+    final current = state.pages.where((p) => p.id == page.id);
+    if (current.isEmpty || current.first.settings != page.settings) return;
+    emit(state.copyWith(previews: {...state.previews, page.id: PagePreview(page.settings, bytes)}));
   }
 
-  /// Renders the full-resolution result and appends it to the page list.
-  Future<bool> commitDraft() async {
-    final d = state.draft;
-    final cropped = d?.croppedPath;
-    if (d == null || cropped == null) return false;
+  Future<void> loadThumbs(int index) async {
+    if (index < 0 || index >= state.pages.length) return;
+    final page = state.pages[index];
+    final path = page.croppedPath;
+    if (path == null || state.thumbs.containsKey(page.id)) return;
 
-    _debounce?.cancel();
-    emit(state.copyWith(busy: true, clearError: true));
-    final result = await _applyFilter(imagePath: cropped, settings: d.settings);
-    return result.when(
-      ok: (info) {
-        emit(state.copyWith(
-          busy: false,
-          clearDraft: true,
-          pages: [
-            ...state.pages,
-            NewPage(imagePath: info.path, rawPath: d.rawPath, width: info.width, height: info.height),
-          ],
-        ));
-        return true;
-      },
-      err: (f) {
-        emit(state.copyWith(busy: false, error: f));
-        return false;
-      },
+    final result = await _previewBatch(
+      imagePath: path,
+      variants: [for (final f in thumbFilters) FilterSettings(filter: f)],
     );
+    if (isClosed) return;
+    final list = result.valueOrNull;
+    if (list != null) emit(state.copyWith(thumbs: {...state.thumbs, page.id: list}));
   }
 
-  void discardDraft() {
-    _debounce?.cancel();
-    emit(state.copyWith(clearDraft: true));
+  /// Rotates both the cropped result and the raw source so later re-cropping stays aligned.
+  Future<void> rotatePage(int index) async {
+    if (state.busy || index < 0 || index >= state.pages.length) return;
+    final page = state.pages[index];
+    final cropped = page.croppedPath;
+    if (cropped == null) return;
+
+    emit(state.copyWith(busy: true, busyLabel: 'Rotating'));
+    final c = await _rotateImage(cropped);
+    final r = await _rotateImage(page.rawPath);
+    final failure = c.failureOrNull ?? r.failureOrNull;
+    if (failure != null) {
+      emit(state.copyWith(busy: false, error: failure));
+      return;
+    }
+    final ci = c.valueOrNull!, ri = r.valueOrNull!;
+    final pages = [...state.pages];
+    pages[index] = page.copyWith(
+      croppedPath: ci.path,
+      croppedWidth: ci.width,
+      croppedHeight: ci.height,
+      rawPath: ri.path,
+      rawWidth: ri.width,
+      rawHeight: ri.height,
+      quad: page.quad.rotatedClockwise(),
+      detectedQuad: page.detectedQuad.rotatedClockwise(),
+      clearPreMarkup: true,
+    );
+    final previews = {...state.previews}..remove(page.id);
+    final thumbs = {...state.thumbs}..remove(page.id);
+    emit(state.copyWith(busy: false, pages: pages, previews: previews, thumbs: thumbs));
+    await Future.wait([loadPreview(index), loadThumbs(index)]);
+  }
+
+  /// Draws [items] on top of the page as it looks now (colour filter included) and makes that the page picture.
+  Future<bool> applyMarkup(int index, List<MarkupItem> items) async {
+    final markup = _markup;
+    if (markup == null || state.busy || items.isEmpty || index < 0 || index >= state.pages.length) return false;
+    final page = state.pages[index];
+    final cropped = page.croppedPath;
+    if (cropped == null) return false;
+
+    emit(state.copyWith(busy: true, busyLabel: 'Adding markup', clearError: true));
+    final result = await markup.render(imagePath: cropped, settings: page.settings, items: items);
+    if (isClosed) return false;
+    final info = result.valueOrNull;
+    if (info == null) {
+      emit(state.copyWith(busy: false, error: result.failureOrNull));
+      return false;
+    }
+    final pages = [...state.pages];
+    pages[index] = page.copyWith(
+      croppedPath: info.path,
+      croppedWidth: info.width,
+      croppedHeight: info.height,
+      // The colour filter is now part of the picture.
+      settings: const FilterSettings(),
+      preMarkup: page.preMarkup ?? PageSnapshot(croppedPath: cropped, width: page.croppedWidth!, height: page.croppedHeight!, settings: page.settings),
+    );
+    final previews = {...state.previews}..remove(page.id);
+    final thumbs = {...state.thumbs}..remove(page.id);
+    emit(state.copyWith(busy: false, pages: pages, previews: previews, thumbs: thumbs));
+    await Future.wait([loadPreview(index), loadThumbs(index)]);
+    return true;
+  }
+
+  /// Takes the marks drawn in this session off a page.
+  Future<void> removeMarkup(int index) async {
+    if (index < 0 || index >= state.pages.length) return;
+    final page = state.pages[index];
+    final before = page.preMarkup;
+    if (before == null) return;
+    final pages = [...state.pages];
+    pages[index] = page.copyWith(
+      croppedPath: before.croppedPath,
+      croppedWidth: before.width,
+      croppedHeight: before.height,
+      settings: before.settings,
+      clearPreMarkup: true,
+    );
+    final previews = {...state.previews}..remove(page.id);
+    final thumbs = {...state.thumbs}..remove(page.id);
+    emit(state.copyWith(pages: pages, previews: previews, thumbs: thumbs));
+    await Future.wait([loadPreview(index), loadThumbs(index)]);
+  }
+
+  /// Puts back a page removed with [removePage] (used by the Undo action).
+  void restorePage(int index, ScanPage page) {
+    final pages = [...state.pages];
+    pages.insert(index.clamp(0, pages.length), page);
+    emit(state.copyWith(pages: pages, selected: index.clamp(0, pages.length - 1)));
   }
 
   void removePage(int index) {
+    if (index < 0 || index >= state.pages.length) return;
     final pages = [...state.pages]..removeAt(index);
-    emit(state.copyWith(pages: pages));
+    final selected = pages.isEmpty ? 0 : state.selected.clamp(0, pages.length - 1);
+    emit(state.copyWith(pages: pages, selected: selected));
   }
 
   /// [newIndex] is already adjusted for the removed item (ReorderableListView.onReorderItem).
   void reorderPages(int oldIndex, int newIndex) {
     final pages = [...state.pages];
     pages.insert(newIndex, pages.removeAt(oldIndex));
-    emit(state.copyWith(pages: pages));
+    emit(state.copyWith(pages: pages, selected: newIndex));
   }
 
-  Future<ScannedDocument?> save(String title) async {
+  /// Renders every page at full resolution, then stores the document.
+  Future<ScannedDocument?> save() async {
     if (state.pages.isEmpty || state.busy) return null;
-    emit(state.copyWith(busy: true, clearError: true));
-    final result = await _saveDocument(title: title, pages: state.pages);
-    return result.when(
+    final total = state.pages.length;
+    final out = <NewPage>[];
+
+    for (var i = 0; i < total; i++) {
+      emit(state.copyWith(busy: true, busyLabel: 'Rendering page ${i + 1} of $total', clearError: true));
+      final page = state.pages[i];
+      final cropped = page.croppedPath!;
+      final untouched = page.settings.filter == ScanFilter.original && page.settings.brightness == 0 && page.settings.contrast == 0;
+      var imagePath = cropped;
+      var width = page.croppedWidth!;
+      var height = page.croppedHeight!;
+      if (!untouched) {
+        final result = await _applyFilter(imagePath: cropped, settings: page.settings);
+        final info = result.valueOrNull;
+        if (info == null) {
+          emit(state.copyWith(busy: false, error: result.failureOrNull));
+          return null;
+        }
+        imagePath = info.path;
+        width = info.width;
+        height = info.height;
+      }
+      final q = page.quad.points;
+      out.add(
+        NewPage(
+          imagePath: imagePath,
+          rawPath: page.rawPath,
+          width: width,
+          height: height,
+          edit: PageEditInfo(
+            croppedPath: cropped,
+            quad: [
+              for (final pt in q) ...[pt.x, pt.y],
+            ],
+            filter: page.settings.filter.name,
+            brightness: page.settings.brightness,
+            contrast: page.settings.contrast,
+            rawWidth: page.rawWidth,
+            rawHeight: page.rawHeight,
+          ),
+        ),
+      );
+    }
+
+    emit(state.copyWith(busy: true, busyLabel: 'Saving securely'));
+    final editingId = state.editingDocumentId;
+    final saved = editingId != null
+        ? await _updateDocument(id: editingId, title: state.title, pages: out)
+        : await _saveDocument(title: state.title, pages: out, folderId: state.folderId);
+    return saved.when(
       ok: (doc) {
-        emit(const ScanSessionState());
+        unawaited(clearWorkFiles?.call(DateTime.now()));
+        emit(ScanSessionState(currentFilter: state.currentFilter, title: defaultScanTitle(DateTime.now())));
         return doc;
       },
       err: (f) {

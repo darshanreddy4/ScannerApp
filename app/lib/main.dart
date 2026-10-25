@@ -1,13 +1,12 @@
 import 'dart:async';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import 'app/app.dart';
 import 'app/di.dart';
+import 'app/incoming_files.dart';
+import 'features/qr/domain/share_sessions.dart';
+import 'core/storage/temp_files.dart';
+import 'features/documents/data/datasources/document_local_data_source.dart';
 import 'features/monetization/domain/repositories/monetization_contracts.dart';
 
 Future<void> main() async {
@@ -18,24 +17,32 @@ Future<void> main() async {
       debugPrint('Unhandled Flutter error: ${details.exceptionAsString()}');
     };
 
-    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     configureDependencies();
-    await _clearStaleWorkFiles();
+    // Shares keep running outside the app; show the ones that are still active.
+    unawaited(sl<ShareSessions>().restore());
+    await _cleanStorage();
     unawaited(sl<AdService>().initialize());
 
+    WidgetsBinding.instance.addObserver(_CacheTrimmer());
     runApp(const ScanVaultApp());
+    WidgetsBinding.instance.addPostFrameCallback((_) => IncomingFiles.start());
   }, (error, stack) => debugPrint('Uncaught error: $error\n$stack'));
 }
 
-/// Temporary scan/export files from earlier sessions are never needed again.
-Future<void> _clearStaleWorkFiles() async {
+/// The cache and any half-written page folders are rebuilt on demand, so they are cleared at launch.
+Future<void> _cleanStorage() async {
   try {
-    final tmp = (await getTemporaryDirectory()).path;
-    for (final name in const ['scan_work', 'exports']) {
-      final dir = Directory(p.join(tmp, name));
-      if (await dir.exists()) await dir.delete(recursive: true);
-    }
+    await sl<TempFiles>().clearAtStartup();
+    await sl<DocumentLocalDataSource>().removeOrphanFiles();
   } catch (e) {
-    debugPrint('Temp cleanup skipped: $e');
+    debugPrint('Storage cleanup skipped: $e');
+  }
+}
+
+/// Trims shared and exported copies when the app goes to the background.
+class _CacheTrimmer with WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) sl<TempFiles>().pruneStale().ignore();
   }
 }

@@ -66,15 +66,43 @@ class DocumentEdgeDetector {
 
         final s = x + y;
         final d = x - y;
-        if (s < tlVal) { tlVal = s; tlX = x; tlY = y; }
-        if (s > brVal) { brVal = s; brX = x; brY = y; }
-        if (d > trVal) { trVal = d; trX = x; trY = y; }
-        if (d < blVal) { blVal = d; blX = x; blY = y; }
+        if (s < tlVal) {
+          tlVal = s;
+          tlX = x;
+          tlY = y;
+        }
+        if (s > brVal) {
+          brVal = s;
+          brX = x;
+          brY = y;
+        }
+        if (d > trVal) {
+          trVal = d;
+          trX = x;
+          trY = y;
+        }
+        if (d < blVal) {
+          blVal = d;
+          blX = x;
+          blY = y;
+        }
 
-        if (x > 0 && mask[idx - 1] == 1 && visited[idx - 1] == 0) { visited[idx - 1] = 1; stack[sp++] = idx - 1; }
-        if (x < w - 1 && mask[idx + 1] == 1 && visited[idx + 1] == 0) { visited[idx + 1] = 1; stack[sp++] = idx + 1; }
-        if (y > 0 && mask[idx - w] == 1 && visited[idx - w] == 0) { visited[idx - w] = 1; stack[sp++] = idx - w; }
-        if (y < h - 1 && mask[idx + w] == 1 && visited[idx + w] == 0) { visited[idx + w] = 1; stack[sp++] = idx + w; }
+        if (x > 0 && mask[idx - 1] == 1 && visited[idx - 1] == 0) {
+          visited[idx - 1] = 1;
+          stack[sp++] = idx - 1;
+        }
+        if (x < w - 1 && mask[idx + 1] == 1 && visited[idx + 1] == 0) {
+          visited[idx + 1] = 1;
+          stack[sp++] = idx + 1;
+        }
+        if (y > 0 && mask[idx - w] == 1 && visited[idx - w] == 0) {
+          visited[idx - w] = 1;
+          stack[sp++] = idx - w;
+        }
+        if (y < h - 1 && mask[idx + w] == 1 && visited[idx + w] == 0) {
+          visited[idx + w] = 1;
+          stack[sp++] = idx + w;
+        }
       }
 
       if (area < total * minAreaRatio || area > total * 0.97) continue;

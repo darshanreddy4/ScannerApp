@@ -7,11 +7,7 @@ class ExportDocument {
   const ExportDocument(this._repo);
   final ExportRepository _repo;
 
-  Future<Result<String>> call({
-    required ScannedDocument document,
-    required ExportFormat format,
-    required ExportQuality quality,
-  }) =>
+  Future<Result<String>> call({required ScannedDocument document, required ExportFormat format, required ExportQuality quality}) =>
       _repo.export(document: document, format: format, quality: quality);
 }
 

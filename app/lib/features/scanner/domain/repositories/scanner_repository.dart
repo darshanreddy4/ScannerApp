@@ -13,12 +13,15 @@ abstract interface class ScannerRepository {
 
   Future<Result<ImageFileInfo>> rotate90(String imagePath);
 
+  /// Reads dimensions from the file header only (no full decode, no re-encode).
+  Future<Result<ImageFileInfo>> imageInfo(String imagePath);
+
   /// Low-resolution filtered preview as JPEG bytes.
   Future<Result<Uint8List>> previewFilter({required String imagePath, required FilterSettings settings});
 
+  /// Small previews of one image under several filter settings (decodes once).
+  Future<Result<List<Uint8List>>> previewFilterBatch({required String imagePath, required List<FilterSettings> variants, int maxSide = 180});
+
   /// Full-resolution filtered output written to a new working file.
-  Future<Result<ImageFileInfo>> applyFilter({
-    required String imagePath,
-    required FilterSettings settings,
-  });
+  Future<Result<ImageFileInfo>> applyFilter({required String imagePath, required FilterSettings settings});
 }

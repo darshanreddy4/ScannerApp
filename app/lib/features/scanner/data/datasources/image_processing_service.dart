@@ -19,20 +19,21 @@ typedef PrepareResult = ({int width, int height, List<double>? quad});
 class ImageProcessingService {
   const ImageProcessingService();
 
-  static const maxWorkingSide = 2400;
+  static const maxWorkingSide = 4000;
   static const previewSide = 900;
 
-  Future<PrepareResult> prepare(String sourcePath, String outputPath) =>
-      Isolate.run(() => _prepare(sourcePath, outputPath));
+  Future<PrepareResult> prepare(String sourcePath, String outputPath) => Isolate.run(() => _prepare(sourcePath, outputPath));
 
-  Future<ImageResult> crop(String imagePath, List<double> quad, String outputPath) =>
-      Isolate.run(() => _crop(imagePath, quad, outputPath));
+  Future<ImageResult> crop(String imagePath, List<double> quad, String outputPath) => Isolate.run(() => _crop(imagePath, quad, outputPath));
 
-  Future<ImageResult> rotate(String imagePath, String outputPath) =>
-      Isolate.run(() => _rotate(imagePath, outputPath));
+  Future<ImageResult> rotate(String imagePath, String outputPath) => Isolate.run(() => _rotate(imagePath, outputPath));
 
-  Future<Uint8List> preview(String imagePath, FilterSettings settings) =>
-      Isolate.run(() => _preview(imagePath, settings));
+  Future<ImageResult> inspect(String imagePath) => Isolate.run(() => _inspect(imagePath));
+
+  Future<Uint8List> preview(String imagePath, FilterSettings settings) => Isolate.run(() => _preview(imagePath, settings));
+
+  Future<List<Uint8List>> previewBatch(String imagePath, List<FilterSettings> variants, int maxSide) =>
+      Isolate.run(() => _previewBatch(imagePath, variants, maxSide));
 
   Future<ImageResult> applyFilter(String imagePath, FilterSettings settings, String outputPath) =>
       Isolate.run(() => _applyFilter(imagePath, settings, outputPath));
@@ -51,7 +52,7 @@ RgbBuffer _load(String path, {int? maxSide}) {
   return RgbBuffer.fromImage(image);
 }
 
-void _save(RgbBuffer buffer, String path, {int quality = 92}) {
+void _save(RgbBuffer buffer, String path, {int quality = 95}) {
   File(path).writeAsBytesSync(buffer.encodeJpeg(quality: quality), flush: true);
 }
 
@@ -68,7 +69,11 @@ PrepareResult _prepare(String sourcePath, String outputPath) {
   return (
     width: buf.width,
     height: buf.height,
-    quad: quad == null ? null : [for (final p in quad.points) ...[p.x, p.y]],
+    quad: quad == null
+        ? null
+        : [
+            for (final p in quad.points) ...[p.x, p.y],
+          ],
   );
 }
 
@@ -80,6 +85,13 @@ ImageResult _crop(String imagePath, List<double> q, String outputPath) {
   return (width: out.width, height: out.height);
 }
 
+ImageResult _inspect(String imagePath) {
+  final bytes = File(imagePath).readAsBytesSync();
+  final info = img.findDecoderForData(bytes)?.startDecode(bytes);
+  if (info == null) throw const FormatException('Unsupported or corrupted image');
+  return (width: info.width, height: info.height);
+}
+
 ImageResult _rotate(String imagePath, String outputPath) {
   final out = _load(imagePath).rotate90Clockwise();
   _save(out, outputPath);
@@ -89,6 +101,11 @@ ImageResult _rotate(String imagePath, String outputPath) {
 Uint8List _preview(String imagePath, FilterSettings settings) {
   final src = _load(imagePath, maxSide: ImageProcessingService.previewSide);
   return ImageFilters.apply(src, settings).encodeJpeg(quality: 85);
+}
+
+List<Uint8List> _previewBatch(String imagePath, List<FilterSettings> variants, int maxSide) {
+  final src = _load(imagePath, maxSide: maxSide);
+  return [for (final v in variants) ImageFilters.apply(src, v).encodeJpeg(quality: 80)];
 }
 
 ImageResult _applyFilter(String imagePath, FilterSettings settings, String outputPath) {

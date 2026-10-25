@@ -4,18 +4,20 @@ import 'app_colors.dart';
 
 abstract final class AppTheme {
   static ThemeData light() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      brightness: Brightness.light,
-      primary: AppColors.primary,
-      surface: AppColors.surface,
-    );
+    final scheme = ColorScheme.fromSeed(seedColor: AppColors.primary, brightness: Brightness.light, primary: AppColors.primary, surface: AppColors.surface);
     const shape = RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(AppSpacing.radius)));
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: AppColors.background,
+      textTheme: Typography.blackMountainView.apply(bodyColor: AppColors.ink, displayColor: AppColors.ink),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+      ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.ink,
@@ -65,9 +67,7 @@ abstract final class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surface,
         indicatorColor: AppColors.primarySoft,
-        labelTextStyle: WidgetStatePropertyAll(
-          const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-        ),
+        labelTextStyle: WidgetStatePropertyAll(const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
       ),
       snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
       bottomSheetTheme: const BottomSheetThemeData(
