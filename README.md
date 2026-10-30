@@ -1,4 +1,44 @@
-# ScannerApp
+# Doculoom
+
+An offline document app for Android, built with Flutter. Scan and crop pages with live edge detection, apply filters, export PDF and Word, and work with files using on-device tools: lock and unlock, compress, split, sign and redact PDFs, text recognition (OCR), spreadsheets, presentations, passport photos, QR sharing and more. Documents stay on the phone; the only network use is ads and the optional end-to-end encrypted "Anywhere" QR share.
+
+| | |
+|---|---|
+| Package | `com.doculoom.app` |
+| Platform | Android 7.0 (API 24) and newer; iOS project present but not published |
+| Stack | Flutter 3.44 / Dart 3.12, BLoC (`flutter_bloc`), `get_it`, `go_router`, SQLite (`sqflite`), Google ML Kit, Google Mobile Ads |
+| Architecture | Feature-first Clean Architecture (`presentation -> domain <- data`) |
+| Store page | https://play.google.com/store/apps/details?id=com.doculoom.app |
+
+## Quick start
+
+```bash
+git clone https://github.com/darshanreddy4/ScannerApp.git
+cd ScannerApp/app
+flutter pub get
+flutter doctor -v        # Android toolchain must be ticked
+flutter run              # phone or emulator; uses Google test ads
+```
+
+Requirements: Flutter 3.44, JDK 17, Android SDK with command-line tools, a phone or emulator running Android 7.0 or newer.
+
+## Guides
+
+Step-by-step guides are in [`guides/`](guides):
+
+| Guide | Covers |
+|---|---|
+| [01 Getting started](guides/01-getting-started.md) | Tools to install, running on a phone or emulator, building an APK, folder map, troubleshooting |
+| [02 Testing](guides/02-testing.md) | Running all, single and layout-sweep tests, relay tests, checking the release build |
+| [03 App icon](guides/03-app-icon.md) | Changing the launcher, themed and Play Store icons |
+| [04 Configuration](guides/04-configuration.md) | Build-time settings, Gradle properties, package name, version, permissions |
+| [05 Build the .aab and add AdMob IDs](guides/05-build-aab-and-ads.md) | Upload key, signed bundle, where the AdMob IDs go, uploading to Google Play |
+
+The sections below hold the detailed feature status, Play Store checklist, relay deployment and roadmap.
+
+<details>
+<summary>Original project brief</summary>
+
 Act as a Senior Mobile App Developer and Systems Architect. I want you to write the complete blueprint and initial foundational code for a cross-platform mobile scanner and document-intelligence application built using [Flutter / React Native - CHOOSE ONE].
  
 The app must be modular, adhering to Clean Architecture principles, ensuring that Phase 1 features function perfectly before Phase 2 AI features are integrated.
@@ -48,6 +88,8 @@ Please begin by generating the directory structure for this Clean Architecture s
 
 before writing code i want you to design a protype model of all mobile screens and share with me
 
+</details>
+
 ---
 
 # Project Status
@@ -62,8 +104,8 @@ before writing code i want you to design a protype model of all mobile screens a
 cd app
 flutter pub get
 flutter analyze
-flutter test            # 43 unit tests
-flutter run             # needs a simulator or a connected phone
+flutter test            # all tests (see guides/02-testing.md for single files and the slow layout sweep)
+flutter run             # needs an emulator or a connected phone
 ```
 
 The camera needs a real device. Import, crop, filters, save, export and share also work on a simulator.
@@ -150,7 +192,7 @@ app/lib/
 ## Phase 1: left to do
 
 - **Run on a real device** and tune edge-detection thresholds against real photos (low light, patterned backgrounds, white-on-white).
-- **APK build:** debug APK builds successfully (`ScanVault-debug.apk`, git-ignored). Needs the truststore setting above on networks that inspect TLS. `phosphor_flutter` was replaced by Lucide because it does not compile on Flutter 3.44.
+- **APK build:** debug APK builds successfully (`Doculoom-debug.apk`, git-ignored). Needs the truststore setting above on networks that inspect TLS. `phosphor_flutter` was replaced by Lucide because it does not compile on Flutter 3.44.
 - **Remote feature switches:** the owner switch for editing is a local setting shown in debug builds only; move it to remote config (and server-verified entitlements) before release.
 - **Word import fidelity:** layout, fonts, tables and RTL alignment are not reproduced for text; legacy `.doc` is unsupported.
 - **Real purchases:** paywall is a debug-only stub. Until `in_app_purchase` with receipt validation is built, release builds run with `BILLING_ENABLED=false`: no Premium screen, nothing is locked.
@@ -178,8 +220,8 @@ Steps only you can do:
 1. **Developer account** (one-time fee) and an app named per Play's naming rules.
 2. **Upload key:** `keytool -genkey -v -keystore ~/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`, then copy `android/key.properties.example` to `android/key.properties` and fill it in. Never commit either. Enrol in Play App Signing.
 3. **AdMob:** create the app and ad units. Build with the real IDs:
-   `flutter build appbundle --release --dart-define=ADMOB_BANNER_ANDROID=ca-app-pub-.../... --dart-define=ADMOB_INTERSTITIAL_ANDROID=ca-app-pub-.../... --dart-define=ADMOB_REWARDED_ANDROID=ca-app-pub-.../... --dart-define=PRIVACY_POLICY_URL=https://your-site/privacy --dart-define=TERMS_URL=https://your-site/terms --dart-define=SHARE_RELAY_URL=https://scanvault-share.your-name.workers.dev --dart-define=SUPPORT_EMAIL=you@your-site -PadmobAppId=ca-app-pub-...~...`
-   Create the UMP consent message in the AdMob console (Privacy and messaging) or the consent form will not appear.
+   `flutter build appbundle --release --dart-define=ADMOB_BANNER_ANDROID=ca-app-pub-.../... --dart-define=ADMOB_INTERSTITIAL_ANDROID=ca-app-pub-.../... --dart-define=ADMOB_NATIVE_ANDROID=ca-app-pub-.../... --dart-define=ADMOB_REWARDED_ANDROID=ca-app-pub-.../... --dart-define=PRIVACY_POLICY_URL=https://your-site/privacy --dart-define=TERMS_URL=https://your-site/terms --dart-define=SHARE_RELAY_URL=https://doculoom-share.your-name.workers.dev --dart-define=SUPPORT_EMAIL=you@your-site -PadmobAppId=ca-app-pub-...~...`
+   Create the UMP consent message in the AdMob console (Privacy and messaging) or the consent form will not appear. Full walk-through: [guides/05-build-aab-and-ads.md](guides/05-build-aab-and-ads.md).
 4. **Host the privacy policy** on a public URL (same content as the in-app page) and enter it in Play Console > App content. Have a lawyer review the privacy policy and terms (`privacy_page.dart`, `terms_page.dart`) for your country and company name; they are plain-language drafts, not legal advice. Set up a real support mailbox for `SUPPORT_EMAIL`.
 
    **Earning from ads:** create an AdMob account, link payment details, and add `app-ads.txt` to the website listed as your developer website in Play Console (AdMob shows the exact line). Revenue depends on installs and use. Never tap your own live ads (use test devices); invalid traffic gets the account banned. Banners show on the Documents, Tools and Settings tabs and inside folders. Interstitials show after saving or exporting, at most once every 2 minutes.
@@ -198,8 +240,8 @@ One-time setup (free Cloudflare plan is enough to start; R2 needs a payment meth
 
 1. Create a Cloudflare account and install Node.js.
 2. In `relay/` run `npm install`, then `npx wrangler login`.
-3. Create the bucket: `npx wrangler r2 bucket create scanvault-share-files`.
-4. Deploy: `npx wrangler deploy`. Note the address it prints, for example `https://scanvault-share.your-name.workers.dev` (or attach your own domain in the Cloudflare dashboard).
+3. Create the bucket: `npx wrangler r2 bucket create doculoom-share-files`.
+4. Deploy: `npx wrangler deploy`. Note the address it prints, for example `https://doculoom-share.your-name.workers.dev` (or attach your own domain in the Cloudflare dashboard).
 5. Add a rate-limiting rule in Cloudflare (Security > WAF > Rate limiting) for `POST /api/upload`, for example 20 requests per minute per IP, so nobody can fill the bucket.
 6. Build the app with `--dart-define=SHARE_RELAY_URL=<that address>` (no trailing path). Without it the "Anywhere" option shows as not set up.
 7. To try it before deploying, run `npx wrangler dev` in `relay/` and point a test build at your computer's address.
@@ -230,7 +272,7 @@ Do this once the app is live and has users; it is not needed for testing.
 
 ## Open with and Share to
 
-ScanVault appears in "Open with" for PDF, Word (.docx), JPG and PNG files and in other apps' share sheets. PDF and Word open in the reader (edit, save to library, share); images go to the crop and edit flow, or join the scan in progress. Android copies the file into the cache first, so nothing is changed in the original. Files whose type the sending app does not report (shown as a generic file) may not list ScanVault.
+Doculoom appears in "Open with" for PDF, Word (.docx), JPG and PNG files and in other apps' share sheets. PDF and Word open in the reader (edit, save to library, share); images go to the crop and edit flow, or join the scan in progress. Android copies the file into the cache first, so nothing is changed in the original. Files whose type the sending app does not report (shown as a generic file) may not list Doculoom.
 
 ## Enterprise roadmap (proposed)
 

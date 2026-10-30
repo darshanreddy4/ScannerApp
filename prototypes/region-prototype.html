@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Doculoom region prototype</title>
+<style>
+  :root { --primary:#1d4ed8; --ink:#0f172a; --muted:#64748b; --border:#e2e8f0; --bg:#f1f5f9; --ok:#059669; --warn:#d97706; --danger:#dc2626; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#e2e8f0; color:var(--ink); }
+  header.top { position:sticky; top:0; z-index:10; background:#0f172a; color:#fff; padding:14px 24px; display:flex; flex-wrap:wrap; gap:14px 24px; align-items:center; }
+  header.top h1 { font-size:17px; margin:0; font-weight:700; }
+  header.top .note { font-size:12.5px; color:#cbd5e1; flex-basis:100%; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; }
+  .chip { border:1px solid #475569; background:transparent; color:#e2e8f0; padding:7px 14px; border-radius:999px; font-size:13px; cursor:pointer; }
+  .chip.on { background:#fff; color:#0f172a; border-color:#fff; font-weight:700; }
+  label.tg { font-size:13px; display:flex; gap:8px; align-items:center; cursor:pointer; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(380px,1fr)); gap:36px 24px; padding:28px 24px 60px; justify-items:center; }
+  figure { margin:0; width:360px; }
+  figcaption { margin-top:12px; font-size:13px; line-height:1.45; color:#334155; }
+  figcaption b { color:#0f172a; }
+  .phone { width:360px; height:700px; background:var(--bg); border-radius:34px; border:9px solid #0f172a; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 14px 34px rgba(15,23,42,.25); }
+  .status { height:26px; background:#fff; font-size:11px; display:flex; justify-content:space-between; align-items:center; padding:0 18px; color:#334155; flex:none; }
+  .appbar { background:#fff; padding:10px 16px 12px; font-weight:700; font-size:17px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border); flex:none; }
+  .appbar .back { width:22px; height:22px; stroke:#334155; }
+  .body { flex:1; overflow:auto; padding:14px; }
+  .body::-webkit-scrollbar { width:0; }
+  .nav { height:56px; background:#fff; border-top:1px solid var(--border); display:flex; justify-content:space-around; align-items:center; flex:none; font-size:10.5px; color:var(--muted); }
+  .nav div { display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .nav .on { color:var(--primary); font-weight:700; }
+  .nav svg { width:20px; height:20px; }
+  svg.i { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .section { font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin:14px 2px 8px; display:flex; justify-content:space-between; align-items:center; }
+  .section:first-child { margin-top:2px; }
+  .tiles { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .tile { background:#fff; border:1px solid var(--border); border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:8px; min-height:94px; }
+  .tile .badge { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; color:#fff; }
+  .tile b { font-size:13.5px; line-height:1.2; }
+  .tile span { font-size:11.5px; color:var(--muted); line-height:1.3; }
+  .card { background:#fff; border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:10px; }
+  .card h4 { margin:0 0 6px; font-size:14px; }
+  .row { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--border); font-size:14px; }
+  .row:last-child { border-bottom:0; }
+  .row .grow { flex:1; min-width:0; }
+  .row small { display:block; color:var(--muted); font-size:12px; margin-top:2px; }
+  .btn { display:flex; justify-content:center; align-items:center; gap:8px; width:100%; padding:12px; border-radius:12px; border:0; background:var(--primary); color:#fff; font-weight:700; font-size:14px; cursor:pointer; margin-top:8px; }
+  .btn.ghost { background:#fff; color:var(--primary); border:1px solid var(--primary); }
+  .pill { display:inline-block; font-size:11px; padding:3px 9px; border-radius:999px; background:#dbeafe; color:#1e40af; font-weight:600; }
+  .pill.ok { background:#d1fae5; color:#065f46; } .pill.warn { background:#fef3c7; color:#92400e; }
+  .switch { width:42px; height:24px; border-radius:999px; background:#cbd5e1; position:relative; flex:none; cursor:pointer; }
+  .switch::after { content:""; position:absolute; top:3px; inset-inline-start:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:.15s; }
+  .switch.on { background:var(--primary); } .switch.on::after { inset-inline-start:21px; }
+  .radio { width:20px; height:20px; border-radius:50%; border:2px solid #94a3b8; flex:none; position:relative; }
+  .radio.on { border-color:var(--primary); } .radio.on::after { content:""; position:absolute; inset:3px; border-radius:50%; background:var(--primary); }
+  .check { width:22px; height:22px; border-radius:7px; border:2px solid #94a3b8; flex:none; display:grid; place-items:center; color:#fff; cursor:pointer; }
+  .check.on { background:var(--ok); border-color:var(--ok); }
+  .bar { height:8px; background:#e2e8f0; border-radius:999px; overflow:hidden; } .bar i { display:block; height:100%; background:var(--ok); }
+  .kv { display:flex; justify-content:space-between; gap:12px; padding:7px 0; font-size:13.5px; border-bottom:1px dashed var(--border); } .kv:last-child { border:0; } .kv span { color:var(--muted); } .kv b { text-align:end; word-break:break-all; }
+  .finder { background:#0b1220; border-radius:14px; height:170px; display:grid; place-items:center; margin-bottom:12px; }
+  .finder div { width:110px; height:110px; border:3px solid #fff; border-radius:16px; }
+  .sheet { background:#fff; border-radius:18px; border:1px solid var(--border); padding:14px; }
+  .sheet .head { display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+  .sheet .head .badge { width:36px; height:36px; border-radius:50%; background:#dbeafe; color:var(--primary); display:grid; place-items:center; }
+  .doc { background:#fff; border:1px solid var(--border); border-radius:6px; padding:14px; font-size:11px; color:#334155; position:relative; overflow:hidden; line-height:1.5; }
+  .idcard { background:linear-gradient(135deg,#fef3c7,#fde68a); border-radius:12px; padding:14px; position:relative; overflow:hidden; font-size:12px; min-height:150px; }
+  .idcard .num { font-size:20px; letter-spacing:.12em; font-weight:700; margin:12px 0 6px; font-family:ui-monospace,Menlo,monospace; }
+  .wm { position:absolute; inset:0; display:grid; place-items:center; pointer-events:none; }
+  .wm span { transform:rotate(-24deg); font-size:19px; font-weight:800; color:rgba(220,38,38,.5); border:2px solid rgba(220,38,38,.5); padding:2px 10px; border-radius:6px; white-space:nowrap; }
+  .seg { display:flex; background:#e2e8f0; border-radius:10px; padding:3px; margin:10px 0; }
+  .seg button { flex:1; border:0; background:transparent; padding:8px; border-radius:8px; font-size:13px; cursor:pointer; color:#334155; }
+  .seg button.on { background:#fff; font-weight:700; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.12); }
+  .barcode { height:62px; background:repeating-linear-gradient(90deg,#000 0 2px,#fff 2px 4px,#000 4px 5px,#fff 5px 8px,#000 8px 11px,#fff 11px 12px); border-radius:2px; }
+  .qrbox { width:88px; height:88px; background:
+      linear-gradient(90deg,#000 50%,transparent 50%) 0 0/10px 10px,
+      linear-gradient(#000 50%,transparent 50%) 0 0/10px 10px; opacity:.85; border:6px solid #fff; outline:2px solid #000; }
+  .stamp-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stampcell { background:#fff; border:1px solid var(--border); border-radius:14px; height:110px; display:grid; place-items:center; position:relative; }
+  .stampcell em { position:absolute; bottom:6px; font-style:normal; font-size:11px; color:var(--muted); }
+  .seal { width:64px; height:64px; border-radius:50%; border:3px double #1d4ed8; color:#1d4ed8; display:grid; place-items:center; font-size:8px; font-weight:800; text-align:center; transform:rotate(-8deg); }
+  .tag { font-weight:900; font-size:17px; border:3px solid; padding:2px 10px; border-radius:6px; transform:rotate(-10deg); letter-spacing:.06em; }
+  .rtl .chev { transform:scaleX(-1); }
+  .small { font-size:12px; color:var(--muted); line-height:1.4; }
+  .words { font-size:15px; line-height:1.5; background:#f8fafc; border:1px solid var(--border); border-radius:10px; padding:10px; margin-top:8px; }
+  .amount { font-size:26px; font-weight:800; }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Doculoom: region-specific prototype</h1>
+  <div class="chips" id="regionChips"></div>
+  <label class="tg"><span class="switch" id="rtlSwitch"></span> Mirror layout (right to left)</label>
+  <div class="note">Click around. Nothing here works for real. Sizes, limits and dates are sample values to verify before building. Changing the region re-orders the tools and changes the examples in every screen.</div>
+</header>
+<main class="grid" id="grid"></main>
+
+<script>
+const REGIONS = {
+  IN:   { name:'India',          countries:['India'],                         paper:'A4',     date:'DD/MM/YYYY' },
+  US:   { name:'United States',  countries:['United States'],                 paper:'Letter', date:'MM/DD/YYYY' },
+  EU:   { name:'Europe and UK',  countries:['Germany','France','United Kingdom'], paper:'A4', date:'DD.MM.YYYY' },
+  GULF: { name:'Gulf (Arabic)',  countries:['Saudi Arabia','United Arab Emirates','Qatar'], paper:'A4', date:'DD/MM/YYYY + Hijri' }
+};
+const state = { region:'IN', rtl:false, showAll:false, otherOpen:false, checks:{}, idAfter:true, hijri:false, pickedPortal:0 };
+
+const ICONS = {
+  scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/>',
+  id:'<path d="M5 4h14a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3zM9 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM5.5 16a3.5 3.5 0 0 1 7 0M15 9h4M15 13h4"/>',
+  pdf:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6"/>',
+  qr:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v1"/>',
+  shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  upload:'<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>',
+  receipt:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/>',
+  text:'<path d="M4 6h16M4 12h10M4 18h13"/>',
+  heart:'<path d="M12 20s-8-5-8-11a4.5 4.5 0 0 1 8-2.5A4.5 4.5 0 0 1 20 9c0 6-8 11-8 11z"/>',
+  key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/>',
+  archive:'<rect x="3" y="4" width="18" height="4"/><path d="M5 8v11h14V8M10 12h4"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+  calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/>',
+  ocr:'<path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 9h8M8 13h8M8 17h5"/>',
+  sign:'<path d="M3 17c3-6 5-9 7-9s0 8 3 8 3-4 8-5M3 21h18"/>',
+  merge:'<path d="M6 3v6a6 6 0 0 0 6 6h6M18 15l-3-3M18 15l-3 3M6 21v-6"/>',
+  chev:'<path d="M9 6l6 6-6 6"/>',
+  back:'<path d="M15 6l-6 6 6 6"/>',
+  check:'<path d="M5 12l5 5 9-10"/>',
+  star:'<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+  card:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  list:'<path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>',
+  stamp:'<path d="M5 21h14M6 17h12v-3a3 3 0 0 0-3-3h-1V7a2 2 0 1 0-4 0v4H9a3 3 0 0 0-3 3z"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
+  home:'<path d="M4 11l8-7 8 7v9H4z"/>',
+  tools:'<path d="M14 6l4 4-9 9H5v-4zM13 7l4 4"/>',
+  folder:'<path d="M3 6a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  plane:'<path d="M3 13l18-9-6 17-3-7z"/>',
+  wifi:'<path d="M2 9a15 15 0 0 1 20 0M5 13a10 10 0 0 1 14 0M8.5 16.5a5 5 0 0 1 7 0M12 20h.01"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>'
+};
+const ic = (n, cls='i') => `<svg class="${cls}" viewBox="0 0 24 24">${ICONS[n]||''}</svg>`;
+const COLORS = ['#2563eb','#0f766e','#d97706','#7c3aed','#e11d48','#0284c7','#059669','#475569'];
+
+const EVERYDAY = [
+  ['Scan a document','Camera, auto-crop','scan'], ['Passport and ID photos','Right size, clean background','id'],
+  ['Read PDF or Word','Open, zoom and read','pdf'], ['Text from photo','Copy and translate','ocr'],
+  ['Signature','Draw once, use anywhere','sign'], ['Merge and split PDFs','Pages in any order','merge']
+];
+const REGION_TOOLS = {
+  IN:[['UPI payment QR','Payee, amount, app','qr'],['Aadhaar masked copy','Hide first 8 digits','shield'],['Portal-ready files','Passport Seva, DigiLocker','upload'],['GST invoice','GSTIN, HSN, tax split','receipt'],['Rupees in words','Lakh and crore','text']],
+  US:[['Tax-season receipts','Category export to CSV','receipt'],['Medical wallet','Insurance, vaccines','heart'],['W-9 and lease forms','Fill and sign','pdf'],['Portal-ready files','USCIS, DMV, school','upload'],['SSN-safe copy','Hide all but last 4','shield']],
+  EU:[['Payment QR (SEPA)','Girocode, QR-bill','qr'],['E-invoice viewer','Factur-X, XRechnung','receipt'],['Sign with certificate','.p12 file or eID','key'],['PDF/A archive','Long-term format','archive'],['Europass CV','Standard layout','user']],
+  GULF:[['Hijri dates','Expiry in both calendars','calendar'],['Amount in words','Arabic and English','text'],['Letter templates','NOC, salary, leave','pdf'],['Tax invoice QR','Saudi e-invoice','qr'],['Gulf ID copy','Iqama, Emirates ID','shield']]
+};
+
+function tile(t, i) {
+  return `<div class="tile"><div class="badge" style="background:${COLORS[i % COLORS.length]}">${ic(t[2])}</div><b>${t[0]}</b><span>${t[1]}</span></div>`;
+}
+function phone(title, body, o = {}) {
+  const nav = o.nav ? `<div class="nav">
+      <div class="${o.nav==='home'?'on':''}">${ic('home')}Home</div><div class="${o.nav==='tools'?'on':''}">${ic('tools')}Tools</div>
+      <div>${ic('folder')}Files</div><div class="${o.nav==='set'?'on':''}">${ic('gear')}Settings</div></div>` : '';
+  const back = o.noBack ? '' : ic('back', 'i back chev');
+  return `<div class="phone ${state.rtl ? 'rtl' : ''}" dir="${state.rtl ? 'rtl' : 'ltr'}"><div class="status"><span>9:41</span><span>offline</span></div>
+    <div class="appbar">${back}${title}</div><div class="body">${body}</div>${nav}</div>`;
+}
+const fig = (html, cap) => `<figure>${html}<figcaption>${cap}</figcaption></figure>`;
+const R = () => REGIONS[state.region];
+
+/* 1 Tools page */
+function screenTools() {
+  const mine = REGION_TOOLS[state.region];
+  const others = Object.keys(REGION_TOOLS).filter(k => k !== state.region);
+  const count = others.length * 5;
+  const open = state.showAll || state.otherOpen;
+  let b = `<div class="section">For ${R().name}</div><div class="tiles">${mine.map(tile).join('')}</div>
+    <div class="section">Everyday tools</div><div class="tiles">${EVERYDAY.map(tile).join('')}</div>
+    <div class="card" data-act="otherOpen" style="margin-top:14px;cursor:pointer"><div class="row" style="padding:0;border:0">
+      <div class="grow"><b>Tools for other countries</b><small>${count} tools, shown last</small></div>
+      <span class="pill">${open ? 'Hide' : 'Show'}</span></div></div>`;
+  if (open) {
+    b += others.map(k => `<div class="section">${REGIONS[k].name}</div><div class="tiles">${REGION_TOOLS[k].slice(0,4).map(tile).join('')}</div>`).join('');
+  }
+  return fig(phone('Tools', b, { nav:'tools', noBack:true }),
+    '<b>1. Tools page.</b> Your region first, everyday tools next, other countries collapsed at the bottom. Tap the grey card to expand. Switch the region at the top of the page to see it change.');
+}
+/* 2 Settings region */
+function screenSettings() {
+  const list = Object.entries(REGIONS).flatMap(([k, r]) => r.countries.map(c => ({ c, k })));
+  let b = `<div class="card"><div class="row"><div class="grow">Country<small>${list.find(x => x.k === state.region).c}</small></div>${ic('chev','i chev')}</div>
+      <div class="row"><div class="grow">Paper size<small>${R().paper}</small></div>${ic('chev','i chev')}</div>
+      <div class="row"><div class="grow">Date format<small>${R().date}</small></div>${ic('chev','i chev')}</div>
+      <div class="row"><div class="grow">Show tools for all countries<small>Off: other countries' tools are collapsed, never removed.</small></div><div class="switch ${state.showAll?'on':''}" data-act="showAll"></div></div></div>
+    <div class="section">Choose your country</div><div class="card">${list.map(x => `<div class="row" data-region="${x.k}" style="cursor:pointer"><div class="grow">${x.c}</div><div class="radio ${x.k===state.region?'on':''}"></div></div>`).join('')}</div>
+    <p class="small">Your country sets the paper size, date format and which tools come first. Everything still works for every country.</p>`;
+  return fig(phone('Region', b, { nav:'set' }), '<b>2. Settings › Region.</b> One place to change the country. The switch brings every tool back without having to change country. Tap a country.');
+}
+/* 3 Portal-ready */
+const PORTALS = {
+  IN:[['Passport Seva photo','JPG','≤ 300 KB','Photo'],['DigiLocker upload','PDF','≤ 10 MB','Documents'],['Income-tax attachment','PDF','≤ 5 MB','Documents'],['Bank KYC upload','JPG or PDF','≤ 2 MB','Documents']],
+  US:[['USCIS evidence','PDF','≤ 6 MB','Documents'],['DMV / REAL ID','PDF','≤ 5 MB','Documents'],['College application','PDF','≤ 2 MB','Documents'],['Rental application','PDF','≤ 5 MB','Documents']],
+  EU:[['Schengen visa centre','PDF','≤ 2 MB, 300 dpi','Documents'],['Residence permit','PDF','≤ 5 MB','Documents'],['Tax office upload','PDF','≤ 10 MB','Documents'],['Job application','PDF','≤ 3 MB','Documents']],
+  GULF:[['Saudi Absher / Muqeem','JPG','≤ 500 KB','Photo'],['UAE ICP','PDF','≤ 2 MB','Documents'],['Qatar Metrash','PDF','≤ 5 MB','Documents'],['Visa application centre','PDF','≤ 2 MB','Documents']]
+};
+function screenPortal() {
+  const list = PORTALS[state.region], sel = list[state.pickedPortal] || list[0];
+  let b = `<p class="small" style="margin-top:0">Pick where the file is going. Doculoom sets the size, format and quality for you.</p>
+    <div class="card">${list.map((p, i) => `<div class="row" data-portal="${i}" style="cursor:pointer"><div class="grow"><b>${p[0]}</b><small>${p[1]} · ${p[2]}</small></div><div class="radio ${p===sel?'on':''}"></div></div>`).join('')}</div>
+    <div class="card"><h4>Your file</h4><div class="kv"><span>Source</span><b>Passport scan, 2 pages</b></div><div class="kv"><span>Result</span><b>${sel[1]}, ${sel[3]==='Photo' ? '1 image' : '2 pages'}</b></div><div class="kv"><span>Size</span><b>212 KB <span class="pill ok">fits ${sel[2].split(',')[0]}</span></b></div></div>
+    <button class="btn">Make ready and share</button>
+    <p class="small">Limits are sample values; each real preset would be checked against the portal before release.</p>`;
+  return fig(phone('Portal-ready files', b), '<b>3. Portal-ready files.</b> A list of portals for your country; the file is resized and compressed to fit. The list changes with the region.');
+}
+/* 4 Scanner result */
+function screenScan() {
+  const cards = {
+    IN:{ title:'UPI payment', sub:'QR code', rows:[['Pay to','Sharma General Store'],['UPI ID','sharmastore@upi'],['Amount','₹ 450.00'],['Note','Invoice 2291']], btns:['Open in UPI app','Copy UPI ID'] },
+    US:{ title:'Boarding pass', sub:'PDF417 barcode', rows:[['Passenger','A. MORGAN'],['Flight','UA 482'],['Route','SFO to ORD'],['Seat','14C, Gate B22']], btns:['Add reminder','Save to Travel pack'] },
+    EU:{ title:'SEPA transfer', sub:'EPC QR (Girocode)', rows:[['Recipient','Muster GmbH'],['IBAN','DE89 3704 0044 0532 0130 00'],['Amount','€ 120.50'],['Reference','RE-2024-118']], btns:['Copy IBAN','Copy reference'] },
+    GULF:{ title:'Tax invoice', sub:'Saudi e-invoice QR', rows:[['Seller','Al Noor Trading'],['VAT number','3000XXXXXXXX003'],['Date','2027-03-15 14:20'],['Total / VAT','SAR 1,150.00 / 150.00']], btns:['Save to expenses','Copy details'] }
+  }[state.region];
+  let b = `<div class="finder"><div></div></div>
+    <div class="sheet"><div class="head"><div class="badge">${ic('qr')}</div><div><b style="font-size:16px">${cards.title}</b><div class="small">${cards.sub}</div></div></div>
+      ${cards.rows.map(r => `<div class="kv"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('')}
+      <button class="btn">${cards.btns[0]}</button><button class="btn ghost">${cards.btns[1]}</button></div>
+    <p class="small">Reads happen on the phone. Nothing is sent anywhere, and no payment is made by Doculoom.</p>`;
+  return fig(phone('Scan QR or barcode', b), '<b>4. Smart scanner result.</b> The scanner already knows links, Wi-Fi and contacts. This adds the code types people actually meet in each country: UPI (India), boarding pass (US), SEPA (Europe), e-invoice (Gulf).');
+}
+/* 5 Safe ID copy */
+function screenId() {
+  const cfg = {
+    IN:{ name:'Aadhaar masked copy', before:'4821 7365 9028', after:'XXXX XXXX 9028', label:'Hides the first 8 digits', wm:'For bank KYC only' },
+    US:{ name:'SSN-safe copy', before:'512-48-3076', after:'XXX-XX-3076', label:'Hides all but the last 4 digits', wm:'For rental application only' },
+    EU:{ name:'ID number cover', before:'T220001293', after:'T22XXXXX93', label:'Hides the middle of the number', wm:'Only for visa application' },
+    GULF:{ name:'ID copy with purpose', before:'784-1990-1234567-1', after:'784-1990-1234567-1', label:'Adds a purpose stamp across the copy', wm:'For visa renewal only' }
+  }[state.region];
+  const showMask = state.region !== 'GULF';
+  let b = `<div class="seg"><button class="${!state.idAfter?'on':''}" data-act="idBefore">Before</button><button class="${state.idAfter?'on':''}" data-act="idAfter">After</button></div>
+    <div class="idcard"><b>${state.region==='GULF'?'RESIDENT IDENTITY CARD':'IDENTITY CARD'}</b><div style="margin-top:4px">Name: A. Morgan</div>
+      <div class="num">${state.idAfter ? cfg.after : cfg.before}</div><div>Date of birth: 14/03/1990</div>
+      ${state.idAfter ? `<div class="wm"><span>${cfg.wm}</span></div>` : ''}</div>
+    <div class="card" style="margin-top:12px"><h4>${cfg.name}</h4><div class="small">${cfg.label}${showMask ? ', then adds a purpose line.' : '.'}</div></div>
+    <div class="row" style="padding:6px 0;border:0"><div class="grow">Purpose line<small>${cfg.wm}</small></div>${ic('chev','i chev')}</div>
+    <div class="row" style="padding:6px 0;border:0"><div class="grow">Both sides on one page</div><div class="switch on"></div></div>
+    <button class="btn">Save and share</button>`;
+  return fig(phone('Safe ID copy', b), '<b>5. Safe ID copy.</b> The same tool with the right rule for each country: Aadhaar masking in India, last-4 SSN in the US, number cover in Europe, purpose stamp in the Gulf. Tap Before / After.');
+}
+/* 6 Amount in words */
+function screenWords() {
+  const c = {
+    IN:{ sym:'₹', num:'12,50,000.00', lang:'English (Indian)', words:'Rupees twelve lakh fifty thousand only' },
+    US:{ sym:'$', num:'1,250.50', lang:'English', words:'One thousand two hundred fifty dollars and fifty cents' },
+    EU:{ sym:'€', num:'1.250,50', lang:'Deutsch', words:'Eintausendzweihundertfünfzig Euro und fünfzig Cent' },
+    GULF:{ sym:'SAR', num:'3,500.00', lang:'العربية / English', words:'<span dir="rtl">ثلاثة آلاف وخمسمائة ريال سعودي فقط لا غير</span><br><span class="small">Three thousand five hundred Saudi riyals only</span>' }
+  }[state.region];
+  let b = `<div class="card"><div class="small">Amount</div><div class="amount">${c.sym} ${c.num}</div>
+      <div class="seg"><button class="on">Cheque</button><button>Invoice</button><button>Receipt</button></div>
+      <div class="small">Language: ${c.lang}</div><div class="words">${c.words}</div></div>
+    <button class="btn">Copy words</button><button class="btn ghost">Add to a cheque or invoice</button>
+    <p class="small">Useful where cheques and invoices need the amount written out. Works offline.</p>`;
+  return fig(phone('Amount in words', b), '<b>6. Amount in words.</b> Follows each country: lakh and crore in India, German or English in Europe, Arabic and English in the Gulf.');
+}
+/* 7 Hijri */
+function screenHijri() {
+  const hj = state.hijri;
+  let b = `<div class="card"><h4>Residence permit</h4><div class="small">Expires on</div>
+      <div class="seg"><button class="${!hj?'on':''}" data-act="greg">Gregorian</button><button class="${hj?'on':''}" data-act="hijri">Hijri</button></div>
+      <div style="font-size:24px;font-weight:800">${hj ? '6 Shawwal 1448' : '15 March 2027'}</div>
+      <div class="small" style="margin-top:4px">${hj ? 'Same day: 15 March 2027' : 'Same day in Hijri: 6 Shawwal 1448'} (sample dates)</div></div>
+    <div class="card"><div class="row" style="padding-top:0"><div class="grow">Remind me<small>90, 30 and 7 days before</small></div><div class="switch on"></div></div>
+      <div class="row" style="border:0"><div class="grow">Show both calendars everywhere</div><div class="switch ${state.region==='GULF'?'on':''}"></div></div></div>
+    <button class="btn">Save reminder</button>
+    <p class="small">Many Gulf documents state expiry in Hijri, so the reminder follows the date on the card.</p>`;
+  return fig(phone('Document reminder', b), '<b>7. Hijri dates.</b> Expiry reminders in either calendar, with the other shown next to it. On by default for Gulf countries, an option elsewhere. Tap the calendar buttons.');
+}
+/* 8 Packet builder */
+const PACKS = {
+  IN:['Bank KYC pack',['PAN card','Aadhaar (masked)','Address proof'],'Bank KYC only'],
+  US:['Rental application',['Two pay stubs','Photo ID (last-4 SSN)','Bank statement'],'Rental application only'],
+  EU:['Visa application',['Passport copy','Travel insurance','Bank statement'],'Visa application only'],
+  GULF:['Residency renewal',['Passport copy','Iqama / Emirates ID','Employment contract'],'Residency renewal only']
+};
+function screenPacket() {
+  const p = PACKS[state.region];
+  let b = `<div class="card"><h4>${p[0]}</h4><div class="small">Pick documents. Each one gets the safe settings you choose.</div></div>
+    <div class="card">${p[1].map((d, i) => { const k = 'pk' + i; const on = state.checks[k] !== false; return `<div class="row"><div class="check ${on?'on':''}" data-check="${k}" data-def="1">${on?ic('check'):''}</div><div class="grow">${d}<small>${i===1?'Hide numbers':'Hide account numbers'}</small></div>${ic('chev','i chev')}</div>`; }).join('')}
+      <div class="row"><div class="grow" style="color:var(--primary);font-weight:600">+ Add another document</div></div></div>
+    <div class="card"><div class="kv"><span>Watermark</span><b>${p[2]}</b></div><div class="kv"><span>Target size</span><b>≤ 5 MB</b></div><div class="kv"><span>Password</span><b>Ask when sharing</b></div></div>
+    <button class="btn">Build one PDF</button>`;
+  return fig(phone('Application packet', b), '<b>8. Application packet builder.</b> Merges documents, hides sensitive numbers, adds a purpose watermark, keeps to a size and can add a password. Uses tools the app already has. The pack names follow the region.');
+}
+/* 9 Stamp library */
+function screenStamps() {
+  let b = `<div class="stamp-grid">
+      <div class="stampcell"><div class="seal">YOUR<br>COMPANY<br>SEAL</div><em>Round seal</em></div>
+      <div class="stampcell"><div class="tag" style="color:#dc2626;border-color:#dc2626">PAID</div><em>Paid</em></div>
+      <div class="stampcell"><div class="tag" style="color:#059669;border-color:#059669">APPROVED</div><em>Approved</em></div>
+      <div class="stampcell"><div class="tag" style="color:#1d4ed8;border-color:#1d4ed8;transform:rotate(-4deg)">RECEIVED</div><em>Received</em></div></div>
+    <button class="btn">Add from a photo of a stamp</button><button class="btn ghost">Make a text stamp</button>
+    <div class="section">Preview on a page</div>
+    <div class="doc">Invoice 2291 · Total 450.00<br>Thank you for your business.<br><br><br>
+      <div style="position:absolute;inset-inline-end:16px;bottom:14px" class="seal">YOUR<br>COMPANY<br>SEAL</div></div>
+    <p class="small">Stamps are kept like signatures: saved on the phone, placed and resized on any PDF.</p>`;
+  return fig(phone('Stamps', b), '<b>9. Stamp library.</b> Company seals and status stamps. A stamp can be lifted from a photo, the same way a signature is. Useful in the Gulf, India and Germany; shown for every region.');
+}
+/* 10 Loyalty cards */
+const CARDS = { IN:['Supermarket card','Pharmacy card','Airline miles'], US:['Grocery rewards','Pharmacy card','Library card'], EU:['Supermarket card','Drugstore card','Rail discount card'], GULF:['Hypermarket card','Pharmacy card','Airline miles'] };
+function screenCards() {
+  const l = CARDS[state.region];
+  let b = `<div class="card">${l.map((c, i) => `<div class="row"><div class="badge tile" style="width:38px;min-height:0;height:38px;padding:0;border:0;display:grid;place-items:center;background:${COLORS[i]};color:#fff;border-radius:10px">${ic('card')}</div><div class="grow">${c}<small>Last used ${i+2} days ago</small></div>${ic('chev','i chev')}</div>`).join('')}</div>
+    <div class="card" style="text-align:center;background:#fff"><b>${l[0]}</b><div class="small" style="margin:4px 0 12px">Member 4821 7365</div><div class="barcode"></div><div class="small" style="margin-top:8px">Screen is at full brightness while this is open</div></div>
+    <button class="btn">Scan a new card</button>
+    <p class="small">The card number and barcode are saved on this phone only.</p>`;
+  return fig(phone('My cards', b), '<b>10. Loyalty and membership cards.</b> Scan the barcode once, show it at the till later. Card names here are generic; people would add their own.');
+}
+/* 11 Checklists */
+const LISTS = {
+  IN:[['Apply for a passport',['Proof of address','Proof of birth','Passport photos','Appointment slot','Fee receipt']],['Bank KYC',['PAN card','Aadhaar (masked)','Address proof']]],
+  US:[['Get a REAL ID',['Proof of identity','Social Security proof','Two address proofs','Appointment']],['Rent an apartment',['Pay stubs','Photo ID','Bank statement','References']]],
+  EU:[['Register your address',['Passport or ID','Rental contract','Landlord confirmation','Registration form']],['Yearly tax return',['Income statements','Receipts','Insurance letters']]],
+  GULF:[['Renew residency',['Passport copy','Current ID','Medical test','Employer letter','Fee receipt']],['Family visa',['Marriage certificate','Salary certificate','Tenancy contract']]]
+};
+function screenLists() {
+  const [t, items] = LISTS[state.region][0];
+  const done = items.filter((_, i) => state.checks['l' + state.region + i]).length;
+  let b = `<div class="section" style="margin-top:0">Starting points</div><div class="card">${LISTS[state.region].map((l, i) => `<div class="row"><div class="grow">${l[0]}<small>${l[1].length} documents</small></div>${ic('chev','i chev')}</div>`).join('')}</div>
+    <div class="section">${t}</div>
+    <div class="card"><div class="bar"><i style="width:${Math.round(done / items.length * 100)}%"></i></div><div class="small" style="margin:6px 0 4px">${done} of ${items.length} scanned</div>
+      ${items.map((d, i) => { const k = 'l' + state.region + i; const on = !!state.checks[k]; return `<div class="row"><div class="check ${on?'on':''}" data-check="${k}">${on?ic('check'):''}</div><div class="grow" style="${on?'text-decoration:line-through;color:var(--muted)':''}">${d}</div>${on?'<span class="pill ok">scanned</span>':'<span class="pill">Scan</span>'}</div>`; }).join('')}</div>
+    <p class="small">Fixed checklists, no guessing. Each item opens the scanner and files the page in this folder.</p>`;
+  return fig(phone('Life events', b), '<b>11. Life-event checklists.</b> A list of the papers a common task needs, with progress as they are scanned. Tick the boxes. The tasks follow the region.');
+}
+/* 12 Invoice */
+function screenInvoice() {
+  const c = {
+    IN:{ h:'GST invoice', id:'GSTIN 29ABCDE1234F1Z5', lines:['CGST 9%  ₹ 81.00','SGST 9%  ₹ 81.00'], total:'₹ 1,062.00', extra:'HSN code per item' },
+    US:{ h:'Invoice', id:'EIN 12-3456789', lines:['Sales tax 8.25%  $ 74.25'], total:'$ 974.25', extra:'Net 30 terms' },
+    EU:{ h:'Rechnung / Invoice', id:'USt-IdNr. DE123456789', lines:['MwSt 19%  € 171.00'], total:'€ 1,071.00', extra:'IBAN and payment QR (EPC)' },
+    GULF:{ h:'فاتورة ضريبية / Tax invoice', id:'VAT 3000XXXXXXXX003', lines:['VAT 15%  SAR 150.00'], total:'SAR 1,150.00', extra:'E-invoice QR, Arabic and English' }
+  }[state.region];
+  let b = `<div class="doc"><b style="font-size:13px">${c.h}</b><br>${c.id}<br>Invoice 2291 · ${R().date.split(' ')[0]}<hr style="border:0;border-top:1px solid #e2e8f0">
+      Design work ............ 900.00<br>${c.lines.join('<br>')}<hr style="border:0;border-top:1px solid #e2e8f0"><b>Total ${c.total}</b>
+      <div style="display:flex;justify-content:space-between;align-items:end;margin-top:10px"><span class="small">${c.extra}</span>${['EU','GULF'].includes(state.region) ? '<div class="qrbox"></div>' : ''}</div></div>
+    <div class="card" style="margin-top:12px"><div class="kv"><span>Customer</span><b>Add or pick</b></div><div class="kv"><span>Items</span><b>1</b></div><div class="kv"><span>Signature and stamp</span><b>From library</b></div></div>
+    <button class="btn">Save as PDF</button>`;
+  return fig(phone('New invoice', b), '<b>12. Invoice maker.</b> The same screen with each country\'s tax fields: GST in India, sales tax in the US, VAT and payment QR in Europe, bilingual VAT invoice with QR in the Gulf.');
+}
+
+function render() {
+  const screens = [screenTools, screenSettings, screenPortal, screenScan, screenId, screenWords, screenHijri, screenPacket, screenStamps, screenCards, screenLists, screenInvoice];
+  document.getElementById('grid').innerHTML = screens.map(f => f()).join('');
+  document.getElementById('regionChips').innerHTML = Object.entries(REGIONS).map(([k, r]) => `<button class="chip ${k===state.region?'on':''}" data-region="${k}">${r.name}</button>`).join('');
+  document.getElementById('rtlSwitch').className = 'switch' + (state.rtl ? ' on' : '');
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-region],[data-act],[data-check],[data-portal],#rtlSwitch');
+  if (!t) return;
+  if (t.id === 'rtlSwitch') state.rtl = !state.rtl;
+  else if (t.dataset.region) { state.region = t.dataset.region; state.pickedPortal = 0; state.otherOpen = false; }
+  else if (t.dataset.portal) state.pickedPortal = +t.dataset.portal;
+  else if (t.dataset.check) { const k = t.dataset.check; state.checks[k] = t.dataset.def ? state.checks[k] === false : !state.checks[k]; }
+  else switch (t.dataset.act) {
+    case 'showAll': state.showAll = !state.showAll; break;
+    case 'otherOpen': state.otherOpen = !state.otherOpen; break;
+    case 'idBefore': state.idAfter = false; break;
+    case 'idAfter': state.idAfter = true; break;
+    case 'hijri': state.hijri = true; break;
+    case 'greg': state.hijri = false; break;
+  }
+  const y = window.scrollY; render(); window.scrollTo(0, y);
+});
+render();
+</script>
+</body>
+</html>
