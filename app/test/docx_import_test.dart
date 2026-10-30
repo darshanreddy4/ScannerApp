@@ -4,10 +4,10 @@ import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/features/export/data/document_builders.dart';
-import 'package:scanvault/features/export/domain/entities/export_options.dart';
-import 'package:scanvault/features/importer/data/docx_parser.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/features/export/data/document_builders.dart';
+import 'package:doculoom/features/export/domain/entities/export_options.dart';
+import 'package:doculoom/features/importer/data/docx_parser.dart';
 
 String _docxWithText(String dir, List<String> paragraphs) {
   final body = paragraphs.map((t) => '<w:p><w:r><w:t>$t</w:t></w:r></w:p>').join();
@@ -23,7 +23,7 @@ String _docxWithText(String dir, List<String> paragraphs) {
 void main() {
   late Directory tmp;
 
-  setUp(() => tmp = Directory.systemTemp.createTempSync('scanvault_docx'));
+  setUp(() => tmp = Directory.systemTemp.createTempSync('doculoom_docx'));
   tearDown(() => tmp.deleteSync(recursive: true));
 
   test('extracts images from a DOCX produced by the exporter, in order', () {

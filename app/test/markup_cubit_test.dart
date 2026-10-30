@@ -1,8 +1,8 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/features/markup/domain/markup.dart';
-import 'package:scanvault/features/markup/presentation/markup_cubit.dart';
+import 'package:doculoom/features/markup/domain/markup.dart';
+import 'package:doculoom/features/markup/presentation/markup_cubit.dart';
 
 void main() {
   const page = Size(1000, 1400);

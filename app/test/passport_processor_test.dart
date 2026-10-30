@@ -3,12 +3,12 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/features/photo_tools/data/background_cleaner.dart';
-import 'package:scanvault/features/photo_tools/data/passport_processor.dart';
-import 'package:scanvault/features/photo_tools/domain/passport_maker.dart';
-import 'package:scanvault/features/photo_tools/domain/photo_compressor.dart';
-import 'package:scanvault/features/photo_tools/domain/photo_specs.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/features/photo_tools/data/background_cleaner.dart';
+import 'package:doculoom/features/photo_tools/data/passport_processor.dart';
+import 'package:doculoom/features/photo_tools/domain/passport_maker.dart';
+import 'package:doculoom/features/photo_tools/domain/photo_compressor.dart';
+import 'package:doculoom/features/photo_tools/domain/photo_specs.dart';
 
 /// A head-and-shoulders stand-in: a grey wall with a dark head and shoulders in the middle.
 img.Image _portrait(int w, int h, {int wall = 150, bool gradient = false}) {

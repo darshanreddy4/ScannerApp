@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:scanvault/app/router_observer.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/features/documents/domain/entities/scanned_document.dart';
-import 'package:scanvault/features/documents/domain/repositories/document_repository.dart';
-import 'package:scanvault/features/documents/domain/usecases/document_usecases.dart';
-import 'package:scanvault/features/documents/presentation/bloc/documents_cubit.dart';
-import 'package:scanvault/features/documents/presentation/widgets/refresh_on_return.dart';
+import 'package:doculoom/app/router_observer.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/features/documents/domain/entities/scanned_document.dart';
+import 'package:doculoom/features/documents/domain/repositories/document_repository.dart';
+import 'package:doculoom/features/documents/domain/usecases/document_usecases.dart';
+import 'package:doculoom/features/documents/presentation/bloc/documents_cubit.dart';
+import 'package:doculoom/features/documents/presentation/widgets/refresh_on_return.dart';
 
 class _Repo implements DocumentRepository, FolderRepository {
   final List<ScannedDocument> docs = [];

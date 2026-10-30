@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 import '../../../core/theme/app_icons.dart';
 import 'markup_color_sheet.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 const markupEmojiGroups = <(String, List<String>)>[
   ('Marks', ['✅', '❌', '✔️', '✖️', '⭕', '❗', '❓', '⚠️', '⛔', '🚫', '💯', '🆗']),
@@ -77,7 +79,7 @@ class _EmojiSheetState extends State<_EmojiSheet> {
                         style: const TextStyle(color: Colors.white, fontSize: 18),
                         decoration: InputDecoration(
                           isDense: true,
-                          hintText: 'Type or paste your own',
+                          hintText: tr('Type or paste your own'),
                           hintStyle: const TextStyle(color: Colors.white54, fontSize: 14),
                           filled: true,
                           fillColor: Colors.white12,
@@ -87,14 +89,14 @@ class _EmojiSheetState extends State<_EmojiSheet> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    IconButton.filled(tooltip: 'Use', onPressed: _useCustom, icon: const Icon(AppIcons.check, size: 20)),
+                    IconButton.filled(tooltip: tr('Use'), onPressed: _useCustom, icon: const Icon(AppIcons.check, size: 20)),
                   ],
                 ),
               ),
               const SizedBox(height: 8),
               Flexible(
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
                   children: [
                     for (final group in markupEmojiGroups) ...[
                       Padding(

@@ -1,29 +1,31 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/features/documents/domain/entities/scanned_document.dart';
-import 'package:scanvault/features/documents/domain/repositories/document_repository.dart';
-import 'package:scanvault/features/documents/domain/usecases/document_usecases.dart';
-import 'package:scanvault/features/importer/domain/importer.dart';
-import 'package:scanvault/features/scanner/domain/entities/filter_settings.dart';
-import 'package:scanvault/features/scanner/domain/entities/prepared_image.dart';
-import 'package:scanvault/features/scanner/domain/entities/quad.dart';
-import 'package:scanvault/features/scanner/domain/repositories/scanner_repository.dart';
-import 'package:scanvault/features/scanner/domain/usecases/scanner_usecases.dart';
-import 'package:scanvault/features/scanner/presentation/bloc/scan_session_cubit.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/features/documents/domain/entities/scanned_document.dart';
+import 'package:doculoom/features/documents/domain/repositories/document_repository.dart';
+import 'package:doculoom/features/documents/domain/usecases/document_usecases.dart';
+import 'package:doculoom/features/importer/domain/importer.dart';
+import 'package:doculoom/features/scanner/domain/entities/filter_settings.dart';
+import 'package:doculoom/features/scanner/domain/entities/prepared_image.dart';
+import 'package:doculoom/features/scanner/domain/entities/quad.dart';
+import 'package:doculoom/features/scanner/domain/entities/scan_mode.dart';
+import 'package:doculoom/features/scanner/domain/repositories/scanner_repository.dart';
+import 'package:doculoom/features/scanner/domain/usecases/scanner_usecases.dart';
+import 'package:doculoom/features/scanner/presentation/bloc/scan_session_cubit.dart';
 
 class _FakeScanner implements ScannerRepository {
   int counter = 0;
   final Set<String> failing = {};
+  bool detects = true;
 
   String _next() => '/tmp/fake_${counter++}.jpg';
 
   @override
   Future<Result<PreparedImage>> prepareImage(String sourcePath) async {
     if (failing.contains(sourcePath)) return const Err(ImageProcessingFailure('bad image'));
-    return Ok(PreparedImage(path: _next(), width: 100, height: 200, detectedQuad: Quad.defaultInset));
+    return Ok(PreparedImage(path: _next(), width: 100, height: 200, detectedQuad: detects ? Quad.defaultInset : null));
   }
 
   @override
@@ -174,6 +176,106 @@ void main() {
     await cubit.commitDraft();
     await cubit.beginDraft('/b.jpg');
     expect(cubit.state.draft!.settings.filter, ScanFilter.documentBw);
+  });
+
+  group('scan modes', () {
+    test('a mode renames a fresh scan and never changes the look of the photos', () async {
+      cubit.start(defaultFilter: ScanFilter.original);
+      for (final mode in ScanMode.values) {
+        cubit.setMode(mode);
+        expect(cubit.state.currentFilter, ScanFilter.original, reason: mode.name);
+        await cubit.beginDraft('/a.jpg');
+        expect(cubit.state.draft!.settings, const FilterSettings(), reason: '${mode.name}: original colours, no contrast change');
+        await cubit.discardDraft();
+      }
+      cubit.setMode(ScanMode.whiteboard);
+      expect(cubit.state.title, startsWith('Whiteboard '));
+    });
+
+    test('the filter picked in Settings still applies in every mode', () async {
+      cubit.start(defaultFilter: ScanFilter.grayscale);
+      cubit.setMode(ScanMode.receipt);
+      await cubit.beginDraft('/a.jpg');
+      expect(cubit.state.draft!.settings.filter, ScanFilter.grayscale);
+    });
+
+    test('switching mode after pages exist keeps the name the user may rely on', () async {
+      await cubit.beginDraft('/a.jpg');
+      await cubit.commitDraft();
+      final title = cubit.state.title;
+      cubit.setMode(ScanMode.receipt);
+      expect(cubit.state.title, title);
+    });
+
+    test('a card mode crops to the viewfinder frame when no outline is found', () async {
+      scanner.detects = false;
+      cubit.setMode(ScanMode.id);
+      await cubit.beginDraft('/a.jpg'); // fake image is 100 x 200
+      final quad = cubit.state.draft!.quad;
+      expect(quad, ScanMode.id.guideQuad(0.5));
+      expect((quad.tl.x + quad.br.x) / 2, closeTo(0.5, 1e-9));
+      expect((quad.tl.y + quad.br.y) / 2, closeTo(0.5, 1e-9));
+      final pixelsW = (quad.br.x - quad.tl.x) * 100;
+      final pixelsH = (quad.br.y - quad.tl.y) * 200;
+      expect(pixelsW / pixelsH, closeTo(1.586, 1e-6));
+    });
+
+    test('an outline that is not card-shaped is ignored in a card mode, in favour of the frame', () async {
+      cubit.setMode(ScanMode.id);
+      await cubit.beginDraft('/a.jpg'); // the fake finds the 0.08..0.92 inset, far bigger than a card on a 100 x 200 picture
+      expect(cubit.state.draft!.quad, ScanMode.id.guideQuad(0.5));
+    });
+
+    test('without an outline a plain scan starts with the whole picture, not a trimmed edge', () async {
+      scanner.detects = false;
+      cubit.setMode(ScanMode.document);
+      await cubit.beginDraft('/b.jpg');
+      expect(cubit.state.draft!.quad, Quad.fullFrame);
+    });
+
+    test('the frame stays inside the picture in any shape', () {
+      for (final aspect in [0.3, 0.5625, 0.75, 1.0, 1.78, 3.0]) {
+        for (final mode in [ScanMode.card, ScanMode.id]) {
+          final q = mode.guideQuad(aspect)!;
+          expect(q.tl.x, greaterThanOrEqualTo(0));
+          expect(q.tl.y, greaterThanOrEqualTo(0));
+          expect(q.br.x, lessThanOrEqualTo(1));
+          expect(q.br.y, lessThanOrEqualTo(1));
+          expect((q.br.x - q.tl.x) * aspect / (q.br.y - q.tl.y), closeTo(mode.cardAspect!, 1e-6));
+        }
+      }
+      expect(ScanMode.document.guideQuad(0.5), isNull);
+      expect(ScanMode.book.guideQuad(0.5), isNull);
+    });
+
+    test('Book splits a spread into a left and a right page; one crop each', () async {
+      cubit.setMode(ScanMode.book);
+      await cubit.beginDraft('/a.jpg');
+      expect(await cubit.commitDraft(), CropOutcome.finished);
+      expect(cubit.state.pages.length, 2);
+      expect(cubit.state.pages[0].id, isNot(cubit.state.pages[1].id));
+      expect(cubit.state.pages[0].quad.tr.x, closeTo((Quad.defaultInset.tl.x + Quad.defaultInset.tr.x) / 2, 1e-9));
+      expect(cubit.state.pages[1].quad.tl, cubit.state.pages[0].quad.tr);
+      expect(cubit.state.selected, 0);
+    });
+
+    test('recropping one page of a book does not split it again', () async {
+      cubit.setMode(ScanMode.book);
+      await cubit.beginDraft('/a.jpg');
+      await cubit.commitDraft();
+      cubit.editPageCrop(1);
+      await cubit.commitDraft();
+      expect(cubit.state.pages.length, 2);
+    });
+
+    test('saving goes back to Document mode and the Settings filter', () async {
+      cubit.setMode(ScanMode.receipt);
+      await cubit.beginDraft('/a.jpg');
+      await cubit.commitDraft();
+      await cubit.save();
+      expect(cubit.state.mode, ScanMode.document);
+      expect(cubit.state.currentFilter, ScanFilter.magicColor);
+    });
   });
 
   test('crop screen shows the filtered preview and clears it for Original', () async {

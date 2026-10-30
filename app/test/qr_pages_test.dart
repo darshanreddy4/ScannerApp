@@ -5,21 +5,22 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:scanvault/app/di.dart';
-import 'package:scanvault/core/theme/app_icons.dart';
+import 'package:doculoom/app/di.dart';
+import 'package:doculoom/core/theme/app_icons.dart';
 import 'support/coins_fakes.dart';
-import 'package:scanvault/features/monetization/domain/repositories/monetization_contracts.dart' show RewardResult;
-import 'package:scanvault/features/rewards/presentation/coins_cubit.dart';
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/features/monetization/domain/entities/plan_status.dart';
-import 'package:scanvault/features/monetization/domain/repositories/monetization_contracts.dart';
-import 'package:scanvault/features/monetization/presentation/plan_cubit.dart';
-import 'package:scanvault/features/qr/domain/local_share.dart';
-import 'package:scanvault/features/qr/domain/share_options.dart';
-import 'package:scanvault/features/qr/domain/share_sessions.dart';
-import 'package:scanvault/features/qr/presentation/qr_share_page.dart';
-import 'package:scanvault/features/tools/presentation/tools_view.dart';
+import 'package:doculoom/features/rewards/domain/coin_rules.dart';
+import 'package:doculoom/features/monetization/domain/repositories/monetization_contracts.dart' show RewardResult;
+import 'package:doculoom/features/rewards/presentation/coins_cubit.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/features/monetization/domain/entities/plan_status.dart';
+import 'package:doculoom/features/monetization/domain/repositories/monetization_contracts.dart';
+import 'package:doculoom/features/monetization/presentation/plan_cubit.dart';
+import 'package:doculoom/features/qr/domain/local_share.dart';
+import 'package:doculoom/features/qr/domain/share_options.dart';
+import 'package:doculoom/features/qr/domain/share_sessions.dart';
+import 'package:doculoom/features/qr/presentation/qr_share_page.dart';
+import 'package:doculoom/features/tools/presentation/tools_view.dart';
 
 class _Handle implements ShareHandle {
   _Handle(this.url, {Duration ttl = const Duration(minutes: 5)}) : expiresAt = DateTime.now().add(ttl);
@@ -329,12 +330,14 @@ void main() {
       MemoryWallet? wallet,
       int? dailyAdCap,
       Failure? serverFailure,
+      bool freeUsed = true,
     }) async {
       final server = _Server(failure: serverFailure);
       sl
         ..registerSingleton<LocalShareServer>(server)
         ..registerSingleton<RemoteShareService>(_Remote());
       final w = wallet ?? MemoryWallet(balance: coins);
+      if (freeUsed) w.freeUsed.add(CoinFeature.qrShare.id);
       final cubit = coinsCubit(wallet: w, ads: ScriptedAds(videos), dailyAdCap: dailyAdCap);
       await tester.runAsync(cubit.load);
       await open(tester, plan: plan, billing: true, rewards: true, coins: cubit);
@@ -344,7 +347,7 @@ void main() {
     testWidgets('a Free user without coins is offered a video, and walking away starts no share', (tester) async {
       final server = await setUp(tester);
       expect(find.text('Not enough coins'), findsOneWidget);
-      expect(find.textContaining('costs 2 coins and you have 0'), findsOneWidget);
+      expect(find.textContaining('costs 1 coin and you have 0'), findsOneWidget);
       expect(find.text('Watch video (+10)'), findsOneWidget);
 
       await tester.tap(find.text('Cancel'));
@@ -353,22 +356,22 @@ void main() {
       expect(find.text('OPEN'), findsOneWidget, reason: 'back on the screen before');
     });
 
-    testWidgets('every new share costs 2 coins, and its time can then be changed at no extra cost', (tester) async {
+    testWidgets('every new share costs 1 coin, and its time can then be changed at no extra cost', (tester) async {
       final wallet = MemoryWallet(balance: 5);
       final server = await setUp(tester, wallet: wallet);
-      expect(find.text('Use 2 coins?'), findsOneWidget);
-      await tester.tap(find.text('Use 2 coins'));
+      expect(find.text('Use 1 coin?'), findsOneWidget);
+      await tester.tap(find.text('Use 1 coin'));
       await tester.pumpAndSettle();
 
       expect(server.ttls, [const Duration(minutes: 5)]);
-      expect(wallet.balance, 3);
+      expect(wallet.balance, 4);
       expect(find.byIcon(AppIcons.lock), findsNothing, reason: 'the time chips are no longer locked');
 
       await tester.tap(find.text('1 hour'));
       await tester.pumpAndSettle();
-      expect(find.text('Use 2 coins?'), findsNothing);
+      expect(find.text('Use 1 coin?'), findsNothing);
       expect(server.ttls.last, const Duration(hours: 1));
-      expect(wallet.balance, 3);
+      expect(wallet.balance, 4);
     });
 
     testWidgets('declining to spend the coins starts no share and keeps the coins', (tester) async {
@@ -387,10 +390,10 @@ void main() {
       await tester.tap(find.text('Watch video (+10)'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Use 2 coins?'), findsOneWidget, reason: 'now affordable, so it asks to spend');
-      await tester.tap(find.text('Use 2 coins'));
+      expect(find.text('Use 1 coin?'), findsOneWidget, reason: 'now affordable, so it asks to spend');
+      await tester.tap(find.text('Use 1 coin'));
       await tester.pumpAndSettle();
-      expect(wallet.balance, 8);
+      expect(wallet.balance, 9);
       expect(wallet.adsToday, 1);
       expect(server.ttls, [const Duration(minutes: 5)]);
     });
@@ -421,7 +424,7 @@ void main() {
     testWidgets('coins are given back when the share could not start', (tester) async {
       final wallet = MemoryWallet(balance: 5);
       final server = await setUp(tester, wallet: wallet, serverFailure: const ExportFailure('Connect to Wi-Fi first.'));
-      await tester.tap(find.text('Use 2 coins'));
+      await tester.tap(find.text('Use 1 coin'));
       await tester.pumpAndSettle();
       expect(server.ttls, isEmpty);
       expect(wallet.balance, 5, reason: 'nothing was shared, so nothing was paid');
@@ -430,9 +433,9 @@ void main() {
     testWidgets('opening a file that is already being shared shows the same share and costs nothing', (tester) async {
       final wallet = MemoryWallet(balance: 5);
       final server = await setUp(tester, wallet: wallet);
-      await tester.tap(find.text('Use 2 coins'));
+      await tester.tap(find.text('Use 1 coin'));
       await tester.pumpAndSettle();
-      expect(wallet.balance, 3);
+      expect(wallet.balance, 4);
       expect(server.handles.length, 1);
 
       await tester.pageBack();
@@ -443,20 +446,20 @@ void main() {
         await tester.tap(find.text('OPEN'));
         await tester.pumpAndSettle();
         expect(find.byKey(const ValueKey('already-sharing')), findsOneWidget);
-        expect(find.text('Use 2 coins?'), findsNothing);
+        expect(find.text('Use 1 coin?'), findsNothing);
         expect(find.byType(QrImageView), findsOneWidget);
         await tester.pageBack();
         await tester.pumpAndSettle();
       }
       expect(server.handles.length, 1, reason: 'no second share was started');
       expect(sl<ShareSessions>().shares.value.length, 1);
-      expect(wallet.balance, 3);
+      expect(wallet.balance, 4);
     });
 
     testWidgets('after Stop sharing, sharing the file again is a new share that is paid for again', (tester) async {
       final wallet = MemoryWallet(balance: 5);
       final server = await setUp(tester, wallet: wallet);
-      await tester.tap(find.text('Use 2 coins'));
+      await tester.tap(find.text('Use 1 coin'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Stop sharing'));
       await tester.pumpAndSettle();
@@ -464,11 +467,11 @@ void main() {
 
       await tester.tap(find.text('OPEN'));
       await tester.pumpAndSettle();
-      expect(find.text('Use 2 coins?'), findsOneWidget);
-      await tester.tap(find.text('Use 2 coins'));
+      expect(find.text('Use 1 coin?'), findsOneWidget);
+      await tester.tap(find.text('Use 1 coin'));
       await tester.pumpAndSettle();
       expect(server.handles.length, 2);
-      expect(wallet.balance, 1);
+      expect(wallet.balance, 3);
     });
 
     testWidgets('with no daily limit the video is offered however many were watched', (tester) async {
@@ -631,7 +634,13 @@ void main() {
       'Lock or unlock PDF',
       'Split and number PDF',
       'Signature',
+      'Fill a PDF form',
+      'Hide text in a PDF',
+      'Crop PDF pages',
+      'PDF to pictures',
+      'Flatten PDF',
       'Spreadsheets (Excel and CSV)',
+      'Table to Excel',
       'Presentations (PowerPoint)',
       'Passport and ID photos',
       'ID card copy',
@@ -643,5 +652,21 @@ void main() {
       await tester.scrollUntilVisible(find.text(title), 200);
       expect(find.text(title), findsOneWidget, reason: title);
     }
+  });
+
+  testWidgets('Table to Excel asks whether to scan or choose a photo, and closing the question does nothing', (tester) async {
+    tester.view.physicalSize = const Size(400 * 3, 800 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: ToolsView())));
+    await tester.scrollUntilVisible(find.text('Table to Excel'), 200);
+    await tester.tap(find.text('Table to Excel'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('table-camera')), findsOneWidget);
+    expect(find.byKey(const ValueKey('table-gallery')), findsOneWidget);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('table-camera')), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 }

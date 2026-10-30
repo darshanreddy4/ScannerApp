@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/features/office/sheets/data/sheet_renderer.dart';
-import 'package:scanvault/features/office/sheets/data/xlsx_reader.dart';
-import 'package:scanvault/features/office/sheets/domain/formula.dart';
+import 'package:doculoom/features/office/sheets/data/sheet_renderer.dart';
+import 'package:doculoom/features/office/sheets/data/xlsx_reader.dart';
+import 'package:doculoom/features/office/sheets/domain/formula.dart';
 
 void main() {
   testWidgets('a workbook renders to pages and a PDF', (tester) async {

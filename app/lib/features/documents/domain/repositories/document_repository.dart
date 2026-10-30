@@ -12,8 +12,17 @@ abstract interface class DocumentRepository {
   Future<Result<ScannedDocument>> updateDocument({required String id, required String title, required List<NewPage> pages});
   Future<Result<void>> moveDocument(String id, String? folderId);
 
-  /// Changes only the given fields. [date] sets the document's created and updated time.
-  Future<Result<ScannedDocument>> updateMeta(String id, {bool? favorite, bool? pinned, bool? locked, List<String>? tags, DateTime? date});
+  /// Changes only the given fields. [date] sets the document's created and updated time; [expires] sets when it stops being valid and [clearExpiry] removes that.
+  Future<Result<ScannedDocument>> updateMeta(
+    String id, {
+    bool? favorite,
+    bool? pinned,
+    bool? locked,
+    List<String>? tags,
+    DateTime? date,
+    DateTime? expires,
+    bool clearExpiry = false,
+  });
 
   Future<Result<ScannedDocument>> duplicateDocument(String id);
 

@@ -2,9 +2,9 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/features/office/slides/data/pptx_package.dart';
-import 'package:scanvault/features/office/slides/data/slide_painter.dart';
-import 'package:scanvault/features/office/slides/data/slide_reader.dart';
+import 'package:doculoom/features/office/slides/data/pptx_package.dart';
+import 'package:doculoom/features/office/slides/data/slide_painter.dart';
+import 'package:doculoom/features/office/slides/data/slide_reader.dart';
 
 void main() {
   testWidgets('slides draw to pictures', (tester) async {

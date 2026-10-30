@@ -2,13 +2,13 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/app/di.dart';
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/core/theme/app_theme.dart';
-import 'package:scanvault/features/photo_tools/domain/photo_compressor.dart';
-import 'package:scanvault/features/photo_tools/presentation/compress_cubit.dart';
-import 'package:scanvault/features/photo_tools/presentation/compress_photo_page.dart';
+import 'package:doculoom/app/di.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/photo_tools/domain/photo_compressor.dart';
+import 'package:doculoom/features/photo_tools/presentation/compress_cubit.dart';
+import 'package:doculoom/features/photo_tools/presentation/compress_photo_page.dart';
 
 class _Fake implements PhotoCompressor {
   final calls = <CompressOptions>[];

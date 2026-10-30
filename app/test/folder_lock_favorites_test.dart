@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:scanvault/features/documents/data/datasources/document_local_data_source.dart';
-import 'package:scanvault/features/documents/data/repositories/document_repository_impl.dart';
-import 'package:scanvault/features/documents/domain/entities/scanned_document.dart';
-import 'package:scanvault/features/documents/presentation/bloc/documents_cubit.dart';
+import 'package:doculoom/features/documents/data/datasources/document_local_data_source.dart';
+import 'package:doculoom/features/documents/data/repositories/document_repository_impl.dart';
+import 'package:doculoom/features/documents/domain/entities/scanned_document.dart';
+import 'package:doculoom/features/documents/presentation/bloc/documents_cubit.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -52,7 +52,7 @@ void main() {
   });
 
   test('a version 4 database gains folder columns with safe defaults', () async {
-    final path = p.join(root.path, 'scanvault.db');
+    final path = p.join(root.path, 'doculoom.db');
     final v4 = await openDatabase(
       path,
       version: 4,

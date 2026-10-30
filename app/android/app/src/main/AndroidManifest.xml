@@ -1,5 +1,7 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- The camera plugin declares it for video; the app never records sound. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <!-- Keeps a QR share running while the app is minimised or closed. -->
@@ -7,13 +9,14 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
     <application
-        android:label="ScanVault"
+        android:label="Doculoom"
         android:allowBackup="false"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
@@ -42,6 +45,10 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Long-press shortcuts on the app icon: Scan, ID photo, Read PDF, QR scan. -->
+            <meta-data
+              android:name="android.app.shortcuts"
+              android:resource="@xml/shortcuts"/>
             <!-- Appears in "Open with" for PDF, Word, Excel, CSV, PowerPoint and image files. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
@@ -79,6 +86,44 @@
                 <data android:mimeType="application/pdf"/>
             </intent-filter>
         </activity>
+        <!-- Home-screen widget with one-tap buttons. -->
+        <receiver android:name=".QuickWidgetProvider" android:exported="true" android:label="@string/qa_scan_long">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/quick_widget_info"/>
+        </receiver>
+        <!-- Quick-settings tiles; the person adds them from the tile editor. -->
+        <service
+            android:name=".ScanTile"
+            android:exported="true"
+            android:icon="@drawable/ic_qa_scan"
+            android:label="@string/qa_scan_short"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+        </service>
+        <service
+            android:name=".IdPhotoTile"
+            android:exported="true"
+            android:icon="@drawable/ic_qa_id"
+            android:label="@string/qa_id_short"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+        </service>
+        <service
+            android:name=".ReadPdfTile"
+            android:exported="true"
+            android:icon="@drawable/ic_qa_pdf"
+            android:label="@string/qa_pdf_short"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+        </service>
         <service
             android:name=".ShareService"
             android:exported="false"
@@ -92,6 +137,16 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Reminders: document expiry and yearly Hijri dates. -->
+        <receiver android:name=".ReminderReceiver" android:exported="false"/>
+        <receiver android:name=".ReminderBootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -102,6 +157,12 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
+    <queries>
+        <!-- Lets the app find the phone's text-to-speech engine for Read aloud. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
         </intent>
     </queries>
 </manifest>

@@ -1,0 +1,137 @@
+/// Text of the UPI payment tools. Offered in Hindi, Marathi and Kannada; in the other languages it is shown in English, or in the European languages where another tool has it already.
+library;
+
+const Map<String, String> hiUpi = {
+  'UPI payment': 'UPI भुगतान',
+  'UPI ID': 'UPI आईडी',
+  'A valid UPI ID': 'एक मान्य UPI आईडी',
+  'Enter the UPI ID.': 'UPI आईडी डालें।',
+  'A UPI ID looks like name@bank or 9876543210@upi: letters, numbers, dots or dashes, then @ and the bank.':
+      'UPI आईडी ऐसी दिखती है: name@bank या 9876543210@upi — अक्षर, अंक, बिंदु या डैश, फिर @ और बैंक।',
+  'This bank handle is not one Doculoom knows. Check the spelling: a UPI app only accepts its own handles.':
+      'यह बैंक हैंडल Doculoom को पता नहीं है। वर्तनी जाँचें: UPI ऐप केवल अपने हैंडल स्वीकार करता है।',
+  'The amount is not valid. Use numbers such as 250 or 250.50.': 'राशि मान्य नहीं है। 250 या 250.50 जैसी संख्याएँ लिखें।',
+  'UPI does not allow more than 5,00,000 rupees in one payment.': 'UPI एक भुगतान में 5,00,000 रुपये से अधिक की अनुमति नहीं देता।',
+  'Most UPI apps allow up to 1,00,000 rupees in one payment. Tax, hospital and education payments can be more.':
+      'ज़्यादातर UPI ऐप एक भुगतान में 1,00,000 रुपये तक की अनुमति देते हैं। कर, अस्पताल और शिक्षा के भुगतान इससे अधिक हो सकते हैं।',
+  'The note is too long (50 characters at most).': 'नोट बहुत लंबा है (अधिकतम 50 अक्षर)।',
+  'The name is too long (50 letters at most).': 'नाम बहुत लंबा है (अधिकतम 50 अक्षर)।',
+  'Pay with a UPI app': 'UPI ऐप से भुगतान करें',
+  'Copy UPI ID': 'UPI आईडी कॉपी करें',
+  'UPI ID copied': 'UPI आईडी कॉपी हो गई',
+  'No UPI app was found on this phone.': 'इस फ़ोन पर कोई UPI ऐप नहीं मिला।',
+  'This UPI ID is not valid. Do not pay before you have checked it.': 'यह UPI आईडी मान्य नहीं है। जाँचे बिना भुगतान न करें।',
+  'Scan a UPI code only to pay. You never enter your UPI PIN to receive money: if someone asks for it, it is a scam.':
+      'UPI कोड केवल भुगतान करने के लिए स्कैन करें। पैसे पाने के लिए आपको कभी UPI पिन नहीं डालना पड़ता: कोई माँगे तो वह धोखाधड़ी है।',
+  'Note': 'नोट',
+  'Check it by scanning it with your UPI app before you share it.': 'साझा करने से पहले इसे अपने UPI ऐप से स्कैन करके जाँच लें।',
+  'A code that UPI apps such as Google Pay, PhonePe and Paytm read to pay you. The payer confirms with their own UPI PIN; nobody is paid until then.':
+      'ऐसा कोड जिसे Google Pay, PhonePe और Paytm जैसे UPI ऐप आपको भुगतान करने के लिए पढ़ते हैं। भुगतान करने वाला अपने UPI पिन से पुष्टि करता है; तब तक किसी को भुगतान नहीं होता।',
+  'Find it in your UPI app, under your profile or QR code.': 'इसे अपने UPI ऐप में प्रोफ़ाइल या QR कोड के नीचे देखें।',
+  'The name the payer sees before they pay.': 'भुगतान से पहले भुगतानकर्ता को दिखने वाला नाम।',
+  'Amount in rupees (optional)': 'राशि रुपये में (वैकल्पिक)',
+  'Shown to the payer, for example an order or invoice number.': 'भुगतानकर्ता को दिखता है, जैसे ऑर्डर या इनवॉइस नंबर।',
+  'Example filled in. The UPI ID is made up: do not pay it.': 'उदाहरण भर दिया गया। UPI आईडी नकली है: इसे भुगतान न करें।',
+  'UPI payment QR': 'UPI भुगतान QR',
+  'Make a code to get paid; scanner reads it': 'पैसे पाने के लिए कोड बनाएँ; स्कैनर इसे पढ़ता है',
+  'Who is paid': 'भुगतान किसे',
+  'Enter who is paid.': 'बताएँ किसे भुगतान करना है।',
+  'Payment': 'भुगतान',
+  'Note (optional)': 'नोट (वैकल्पिक)',
+  'Who gets the money': 'पैसा किसे मिलता है',
+  'Leave empty to let the payer type the amount.': 'खाली छोड़ें ताकि भुगतानकर्ता खुद राशि डाले।',
+  'Before the code can be made:': 'कोड बनाने से पहले:',
+  'The payer types it': 'भुगतानकर्ता डालेगा',
+  'Fill in an example': 'उदाहरण भरें',
+  'Not given': 'दिया नहीं गया',
+};
+
+const Map<String, String> mrUpi = {
+  'UPI payment': 'UPI पेमेंट',
+  'UPI ID': 'UPI आयडी',
+  'A valid UPI ID': 'वैध UPI आयडी',
+  'Enter the UPI ID.': 'UPI आयडी टाका.',
+  'A UPI ID looks like name@bank or 9876543210@upi: letters, numbers, dots or dashes, then @ and the bank.':
+      'UPI आयडी असा दिसतो: name@bank किंवा 9876543210@upi — अक्षरे, अंक, टिंब किंवा डॅश, मग @ आणि बँक.',
+  'This bank handle is not one Doculoom knows. Check the spelling: a UPI app only accepts its own handles.':
+      'हा बँक हँडल Doculoom ला माहीत नाही. स्पेलिंग तपासा: UPI अॅप फक्त स्वतःचे हँडल स्वीकारतो.',
+  'The amount is not valid. Use numbers such as 250 or 250.50.': 'रक्कम वैध नाही. 250 किंवा 250.50 सारखे आकडे वापरा.',
+  'UPI does not allow more than 5,00,000 rupees in one payment.': 'UPI एका पेमेंटमध्ये 5,00,000 रुपयांपेक्षा जास्त परवानगी देत नाही.',
+  'Most UPI apps allow up to 1,00,000 rupees in one payment. Tax, hospital and education payments can be more.':
+      'बहुतेक UPI अॅप्स एका पेमेंटमध्ये 1,00,000 रुपयांपर्यंत परवानगी देतात. कर, रुग्णालय आणि शिक्षणाचे पेमेंट यापेक्षा जास्त असू शकतात.',
+  'The note is too long (50 characters at most).': 'टीप खूप मोठी आहे (जास्तीत जास्त 50 अक्षरे).',
+  'The name is too long (50 letters at most).': 'नाव खूप मोठे आहे (जास्तीत जास्त 50 अक्षरे).',
+  'Pay with a UPI app': 'UPI अॅपने पेमेंट करा',
+  'Copy UPI ID': 'UPI आयडी कॉपी करा',
+  'UPI ID copied': 'UPI आयडी कॉपी झाला',
+  'No UPI app was found on this phone.': 'या फोनवर UPI अॅप सापडले नाही.',
+  'This UPI ID is not valid. Do not pay before you have checked it.': 'हा UPI आयडी वैध नाही. तपासल्याशिवाय पेमेंट करू नका.',
+  'Scan a UPI code only to pay. You never enter your UPI PIN to receive money: if someone asks for it, it is a scam.':
+      'UPI कोड फक्त पेमेंट करण्यासाठी स्कॅन करा. पैसे मिळवण्यासाठी तुम्हाला UPI पिन कधीच टाकावा लागत नाही: कोणी मागितला तर ती फसवणूक आहे.',
+  'Note': 'टीप',
+  'Check it by scanning it with your UPI app before you share it.': 'शेअर करण्यापूर्वी तो तुमच्या UPI अॅपने स्कॅन करून तपासा.',
+  'A code that UPI apps such as Google Pay, PhonePe and Paytm read to pay you. The payer confirms with their own UPI PIN; nobody is paid until then.':
+      'असा कोड जो Google Pay, PhonePe आणि Paytm सारखे UPI अॅप्स तुम्हाला पेमेंट करण्यासाठी वाचतात. पैसे देणारा स्वतःच्या UPI पिनने खात्री करतो; तोपर्यंत कोणालाही पैसे मिळत नाहीत.',
+  'Find it in your UPI app, under your profile or QR code.': 'तो तुमच्या UPI अॅपमध्ये प्रोफाइल किंवा QR कोडखाली सापडेल.',
+  'The name the payer sees before they pay.': 'पेमेंट करण्यापूर्वी पैसे देणाऱ्याला दिसणारे नाव.',
+  'Amount in rupees (optional)': 'रक्कम रुपयांत (पर्यायी)',
+  'Shown to the payer, for example an order or invoice number.': 'पैसे देणाऱ्याला दिसते, उदा. ऑर्डर किंवा इनव्हॉइस क्रमांक.',
+  'Example filled in. The UPI ID is made up: do not pay it.': 'उदाहरण भरले. UPI आयडी बनावट आहे: त्यावर पेमेंट करू नका.',
+  'UPI payment QR': 'UPI पेमेंट QR',
+  'Make a code to get paid; scanner reads it': 'पैसे मिळवण्यासाठी कोड बनवा; स्कॅनर तो वाचतो',
+  'Who is paid': 'पैसे कोणाला',
+  'Enter who is paid.': 'पैसे कोणाला द्यायचे ते टाका.',
+  'Payment': 'पेमेंट',
+  'Note (optional)': 'टीप (पर्यायी)',
+  'Who gets the money': 'पैसे कोणाला मिळतात',
+  'Leave empty to let the payer type the amount.': 'रिकामे सोडा, म्हणजे पैसे देणारा स्वतः रक्कम टाकेल.',
+  'Before the code can be made:': 'कोड बनवण्यापूर्वी:',
+  'The payer types it': 'पैसे देणारा टाकेल',
+  'Fill in an example': 'उदाहरण भरा',
+  'Not given': 'दिलेले नाही',
+};
+
+const Map<String, String> knUpi = {
+  'UPI payment': 'UPI ಪಾವತಿ',
+  'UPI ID': 'UPI ಐಡಿ',
+  'A valid UPI ID': 'ಮಾನ್ಯ UPI ಐಡಿ',
+  'Enter the UPI ID.': 'UPI ಐಡಿ ನಮೂದಿಸಿ.',
+  'A UPI ID looks like name@bank or 9876543210@upi: letters, numbers, dots or dashes, then @ and the bank.':
+      'UPI ಐಡಿ ಹೀಗಿರುತ್ತದೆ: name@bank ಅಥವಾ 9876543210@upi — ಅಕ್ಷರಗಳು, ಅಂಕಿಗಳು, ಚುಕ್ಕೆ ಅಥವಾ ಡ್ಯಾಶ್, ನಂತರ @ ಮತ್ತು ಬ್ಯಾಂಕ್.',
+  'This bank handle is not one Doculoom knows. Check the spelling: a UPI app only accepts its own handles.':
+      'ಈ ಬ್ಯಾಂಕ್ ಹ್ಯಾಂಡಲ್ Doculoom ಗೆ ತಿಳಿದಿಲ್ಲ. ಕಾಗುಣಿತ ಪರಿಶೀಲಿಸಿ: UPI ಆ್ಯಪ್ ತನ್ನದೇ ಹ್ಯಾಂಡಲ್‌ಗಳನ್ನು ಮಾತ್ರ ಸ್ವೀಕರಿಸುತ್ತದೆ.',
+  'The amount is not valid. Use numbers such as 250 or 250.50.': 'ಮೊತ್ತ ಮಾನ್ಯವಲ್ಲ. 250 ಅಥವಾ 250.50 ನಂತಹ ಸಂಖ್ಯೆಗಳನ್ನು ಬಳಸಿ.',
+  'UPI does not allow more than 5,00,000 rupees in one payment.': 'UPI ಒಂದು ಪಾವತಿಯಲ್ಲಿ 5,00,000 ರೂಪಾಯಿಗಿಂತ ಹೆಚ್ಚಿಗೆ ಅನುಮತಿಸುವುದಿಲ್ಲ.',
+  'Most UPI apps allow up to 1,00,000 rupees in one payment. Tax, hospital and education payments can be more.':
+      'ಹೆಚ್ಚಿನ UPI ಆ್ಯಪ್‌ಗಳು ಒಂದು ಪಾವತಿಯಲ್ಲಿ 1,00,000 ರೂಪಾಯಿ ವರೆಗೆ ಅನುಮತಿಸುತ್ತವೆ. ತೆರಿಗೆ, ಆಸ್ಪತ್ರೆ ಮತ್ತು ಶಿಕ್ಷಣ ಪಾವತಿಗಳು ಇದಕ್ಕಿಂತ ಹೆಚ್ಚಿರಬಹುದು.',
+  'The note is too long (50 characters at most).': 'ಟಿಪ್ಪಣಿ ತುಂಬಾ ಉದ್ದವಾಗಿದೆ (ಗರಿಷ್ಠ 50 ಅಕ್ಷರಗಳು).',
+  'The name is too long (50 letters at most).': 'ಹೆಸರು ತುಂಬಾ ಉದ್ದವಾಗಿದೆ (ಗರಿಷ್ಠ 50 ಅಕ್ಷರಗಳು).',
+  'Pay with a UPI app': 'UPI ಆ್ಯಪ್‌ನಿಂದ ಪಾವತಿಸಿ',
+  'Copy UPI ID': 'UPI ಐಡಿ ನಕಲಿಸಿ',
+  'UPI ID copied': 'UPI ಐಡಿ ನಕಲಿಸಲಾಗಿದೆ',
+  'No UPI app was found on this phone.': 'ಈ ಫೋನ್‌ನಲ್ಲಿ ಯಾವುದೇ UPI ಆ್ಯಪ್ ಕಂಡುಬಂದಿಲ್ಲ.',
+  'This UPI ID is not valid. Do not pay before you have checked it.': 'ಈ UPI ಐಡಿ ಮಾನ್ಯವಲ್ಲ. ಪರಿಶೀಲಿಸದೆ ಪಾವತಿಸಬೇಡಿ.',
+  'Scan a UPI code only to pay. You never enter your UPI PIN to receive money: if someone asks for it, it is a scam.':
+      'UPI ಕೋಡ್ ಅನ್ನು ಪಾವತಿಸಲು ಮಾತ್ರ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ. ಹಣ ಪಡೆಯಲು ನೀವು ಎಂದಿಗೂ UPI ಪಿನ್ ನಮೂದಿಸಬೇಕಾಗಿಲ್ಲ: ಯಾರಾದರೂ ಕೇಳಿದರೆ ಅದು ವಂಚನೆ.',
+  'Note': 'ಟಿಪ್ಪಣಿ',
+  'Check it by scanning it with your UPI app before you share it.': 'ಹಂಚಿಕೊಳ್ಳುವ ಮೊದಲು ನಿಮ್ಮ UPI ಆ್ಯಪ್‌ನಿಂದ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ ಪರಿಶೀಲಿಸಿ.',
+  'A code that UPI apps such as Google Pay, PhonePe and Paytm read to pay you. The payer confirms with their own UPI PIN; nobody is paid until then.':
+      'Google Pay, PhonePe ಮತ್ತು Paytm ನಂತಹ UPI ಆ್ಯಪ್‌ಗಳು ನಿಮಗೆ ಪಾವತಿಸಲು ಓದುವ ಕೋಡ್. ಪಾವತಿಸುವವರು ತಮ್ಮ UPI ಪಿನ್‌ನಿಂದ ಖಚಿತಪಡಿಸುತ್ತಾರೆ; ಅಲ್ಲಿಯವರೆಗೆ ಯಾರಿಗೂ ಹಣ ಸಂದಾಯವಾಗುವುದಿಲ್ಲ.',
+  'Find it in your UPI app, under your profile or QR code.': 'ಇದು ನಿಮ್ಮ UPI ಆ್ಯಪ್‌ನಲ್ಲಿ ಪ್ರೊಫೈಲ್ ಅಥವಾ QR ಕೋಡ್ ಅಡಿಯಲ್ಲಿ ಸಿಗುತ್ತದೆ.',
+  'The name the payer sees before they pay.': 'ಪಾವತಿಸುವ ಮೊದಲು ಪಾವತಿದಾರರಿಗೆ ಕಾಣುವ ಹೆಸರು.',
+  'Amount in rupees (optional)': 'ಮೊತ್ತ ರೂಪಾಯಿಗಳಲ್ಲಿ (ಐಚ್ಛಿಕ)',
+  'Shown to the payer, for example an order or invoice number.': 'ಪಾವತಿದಾರರಿಗೆ ಕಾಣುತ್ತದೆ, ಉದಾಹರಣೆಗೆ ಆರ್ಡರ್ ಅಥವಾ ಇನ್‌ವಾಯ್ಸ್ ಸಂಖ್ಯೆ.',
+  'Example filled in. The UPI ID is made up: do not pay it.': 'ಉದಾಹರಣೆ ತುಂಬಲಾಗಿದೆ. UPI ಐಡಿ ಕಾಲ್ಪನಿಕ: ಇದಕ್ಕೆ ಪಾವತಿಸಬೇಡಿ.',
+  'UPI payment QR': 'UPI ಪಾವತಿ QR',
+  'Make a code to get paid; scanner reads it': 'ಹಣ ಪಡೆಯಲು ಕೋಡ್ ಮಾಡಿ; ಸ್ಕ್ಯಾನರ್ ಅದನ್ನು ಓದುತ್ತದೆ',
+  'Who is paid': 'ಯಾರಿಗೆ ಪಾವತಿ',
+  'Enter who is paid.': 'ಯಾರಿಗೆ ಪಾವತಿ ಎಂದು ನಮೂದಿಸಿ.',
+  'Payment': 'ಪಾವತಿ',
+  'Note (optional)': 'ಟಿಪ್ಪಣಿ (ಐಚ್ಛಿಕ)',
+  'Who gets the money': 'ಹಣ ಯಾರಿಗೆ ಸಿಗುತ್ತದೆ',
+  'Leave empty to let the payer type the amount.': 'ಖಾಲಿ ಬಿಡಿ, ಪಾವತಿದಾರರು ಮೊತ್ತವನ್ನು ತಾವೇ ಟೈಪ್ ಮಾಡುತ್ತಾರೆ.',
+  'Before the code can be made:': 'ಕೋಡ್ ಮಾಡುವ ಮೊದಲು:',
+  'The payer types it': 'ಪಾವತಿದಾರರು ಟೈಪ್ ಮಾಡುತ್ತಾರೆ',
+  'Fill in an example': 'ಉದಾಹರಣೆ ತುಂಬಿ',
+  'Not given': 'ನೀಡಿಲ್ಲ',
+};

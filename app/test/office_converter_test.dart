@@ -3,15 +3,15 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/features/importer/domain/importer.dart';
-import 'package:scanvault/features/office/convert/office_converter.dart';
-import 'package:scanvault/features/office/sheets/data/xlsx_reader.dart';
-import 'package:scanvault/features/office/slides/data/deck_editor.dart';
-import 'package:scanvault/features/office/slides/data/pptx_package.dart';
-import 'package:scanvault/features/office/slides/data/slide_export.dart';
-import 'package:scanvault/features/office/sheets/domain/sheet_model.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/features/importer/domain/importer.dart';
+import 'package:doculoom/features/office/convert/office_converter.dart';
+import 'package:doculoom/features/office/sheets/data/xlsx_reader.dart';
+import 'package:doculoom/features/office/slides/data/deck_editor.dart';
+import 'package:doculoom/features/office/slides/data/pptx_package.dart';
+import 'package:doculoom/features/office/slides/data/slide_export.dart';
+import 'package:doculoom/features/office/sheets/domain/sheet_model.dart';
 
 class _Importer implements DocumentImporter {
   _Importer(this.pages);

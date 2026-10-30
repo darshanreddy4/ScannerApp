@@ -53,7 +53,7 @@ class WatermarkProcessor implements WatermarkService {
         onProgress?.call(i + 1, pages.length);
       }
       final target = p.join(outputDir, '${base}_watermarked_$unique.pdf');
-      await Isolate.run(() => buildPdf(sources, ExportQuality.high, target));
+      await buildPdfInBackground(sources, ExportQuality.high, target);
       for (final s in sources) {
         unawaited(File(s.path).delete().then((_) {}, onError: (_) {}));
       }

@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/features/qr/data/local_share_server.dart';
-import 'package:scanvault/features/qr/domain/qr_payloads.dart';
+import 'package:doculoom/features/qr/data/local_share_server.dart';
+import 'package:doculoom/features/qr/domain/qr_payloads.dart';
 
 Future<(int, List<int>)> _get(String url) async {
   final client = HttpClient();

@@ -6,12 +6,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image/image.dart' as img;
-import 'package:scanvault/core/theme/app_theme.dart';
-import 'package:scanvault/features/markup/domain/markup.dart';
-import 'package:scanvault/features/markup/markup_paint.dart';
-import 'package:scanvault/features/markup/presentation/markup_canvas.dart';
-import 'package:scanvault/features/markup/presentation/markup_cubit.dart';
-import 'package:scanvault/features/markup/presentation/markup_page.dart';
+import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/markup/data/stamp_store.dart';
+import 'package:doculoom/features/markup/domain/stamps.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:doculoom/features/markup/domain/markup.dart';
+import 'package:doculoom/features/markup/markup_paint.dart';
+import 'package:doculoom/features/markup/presentation/markup_canvas.dart';
+import 'package:doculoom/features/markup/presentation/markup_cubit.dart';
+import 'package:doculoom/features/markup/presentation/markup_page.dart';
 
 void main() {
   List<MarkupItem>? result;
@@ -107,7 +110,9 @@ void main() {
       MarkupTool.arrow,
       MarkupTool.rectangle,
       MarkupTool.ellipse,
+      MarkupTool.redact,
       MarkupTool.sticker,
+      MarkupTool.stamp,
       MarkupTool.text,
     ]) {
       await tool(tester, t);
@@ -280,6 +285,80 @@ void main() {
     });
   });
 
+  testWidgets('the Hide tool covers an area in solid black whatever colour or see-through setting is chosen', (tester) async {
+    final cubit = await open(tester);
+    cubit.setColor(0xE53935);
+    cubit.setOpacity(0.2);
+    await tool(tester, MarkupTool.redact);
+    expect(find.textContaining('solid black'), findsOneWidget);
+    expect(find.byKey(const ValueKey('thickness-slider')), findsNothing, reason: 'nothing to adjust');
+    await drag(tester, at(tester, 0.2, 0.3), const Offset(120, 80));
+
+    final box = cubit.state.items.single as MarkupShape;
+    expect(box.redact, isTrue);
+    expect(box.color, 0xFF000000);
+    expect(box.filled, isTrue);
+
+    await tester.runAsync(() async {
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      canvas.drawRect(const Rect.fromLTWH(0, 0, 300, 400), Paint()..color = Colors.white);
+      paintMarkup(canvas, const Size(300, 400), [
+        const MarkupShape(
+          id: 1,
+          kind: ShapeKind.rectangle,
+          from: Offset(0.2, 0.2),
+          to: Offset(0.8, 0.5),
+          color: 0xFF000000,
+          width: 0.001,
+          filled: true,
+          redact: true,
+        ),
+      ]);
+      final image = await recorder.endRecording().toImage(300, 400);
+      final data = (await image.toByteData())!;
+      int px(int x, int y) => data.getUint32((y * 300 + x) * 4);
+      // Every pixel from edge to edge inside the box is pure black, including the very first and last.
+      for (final (x, y) in [(60, 80), (61, 81), (239, 199), (150, 140), (60, 199), (239, 80)]) {
+        expect(data.getUint8((y * 300 + x) * 4), 0, reason: 'red channel at $x,$y');
+        expect(data.getUint8((y * 300 + x) * 4 + 1), 0);
+        expect(data.getUint8((y * 300 + x) * 4 + 2), 0);
+        expect(data.getUint8((y * 300 + x) * 4 + 3), 255, reason: 'fully opaque at $x,$y');
+      }
+      expect(px(20, 20), isNot(0xFF000000), reason: 'outside the box stays white');
+    });
+  });
+
+  testWidgets('a black box cannot be made see-through or coloured afterwards, but can be moved and removed', (tester) async {
+    final cubit = await open(tester);
+    await tool(tester, MarkupTool.redact);
+    await drag(tester, at(tester, 0.2, 0.3), const Offset(120, 80));
+    await tool(tester, MarkupTool.select);
+    await drag(tester, at(tester, 0.3, 0.35), const Offset(40, 20));
+    expect(cubit.state.selectedId, isNotNull);
+    expect(find.textContaining('Black box'), findsOneWidget);
+    expect(find.byKey(const ValueKey('thickness-slider')), findsNothing);
+
+    cubit.setColor(0x1E88E5);
+    cubit.setOpacity(0.1);
+    cubit.setFilled(false);
+    final box = cubit.state.items.single as MarkupShape;
+    expect(box.color, 0xFF000000);
+    expect(box.filled, isTrue);
+    expect(box.redact, isTrue);
+
+    await tester.tap(find.byKey(const ValueKey('delete-selected')));
+    await tester.pump();
+    expect(cubit.state.items, isEmpty);
+  });
+
+  testWidgets('a tiny accidental touch with the Hide tool leaves no box', (tester) async {
+    final cubit = await open(tester);
+    await tool(tester, MarkupTool.redact);
+    await drag(tester, at(tester, 0.5, 0.5), const Offset(2, 1));
+    expect(cubit.state.items, isEmpty);
+  });
+
   test('text marks: size, touching, moving, scaling and turning', () {
     const page = Size(600, 800);
     const t = MarkupText(id: 1, text: 'Line one\nLine two', center: Offset(0.5, 0.5), size: 0.05, color: 0xFF000000);
@@ -434,10 +513,69 @@ void main() {
         await tool(tester, t);
         expect(tester.takeException(), isNull, reason: t.name);
       }
-      await tool(tester, MarkupTool.pen);
+      cubit.selectTool(MarkupTool.pen);
+      await tester.pump();
       await drag(tester, at(tester, 0.3, 0.3), const Offset(40, 20));
       expect(cubit.state.items, isNotEmpty);
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('stamp: choose a ready-made one, tap the page, and it is placed as a framed, tilted stamp', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final cubit = await open(tester);
+    await tool(tester, MarkupTool.stamp);
+    expect(find.text('Tap the page to place'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('stamp-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose a stamp'), findsOneWidget);
+    await tester.tap(find.text('APPROVED', findRichText: true).first);
+    await tester.pumpAndSettle();
+    expect(cubit.state.stamp, const Stamp('APPROVED', stampGreen));
+    await tester.tapAt(at(tester, 0.5, 0.5));
+    await tester.pump();
+    final item = cubit.state.items.single as MarkupText;
+    expect(item.text, 'APPROVED');
+    expect(item.framed, isTrue);
+    expect(item.bold, isTrue);
+    expect(item.rotation, isNot(0));
+    expect(item.color, stampGreen);
+    expect(cubit.state.tool, MarkupTool.select);
+    await tester.tap(find.byKey(const ValueKey('delete-selected')));
+    await tester.pump();
+    expect(cubit.state.items, isEmpty);
+  });
+
+  testWidgets('stamp: make your own, with a clear message first, and it is kept in My stamps', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final cubit = await open(tester);
+    await tool(tester, MarkupTool.stamp);
+    await tester.tap(find.byKey(const ValueKey('stamp-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('make-stamp')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stamp-use')));
+    await tester.pumpAndSettle();
+    expect(find.text('Type the words for the stamp.'), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('stamp-text')), 'my seal');
+    await tester.tap(find.byKey(const ValueKey('stamp-color-blue')));
+    await tester.tap(find.byKey(const ValueKey('stamp-date')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('stamp-preview')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('stamp-use')));
+    await tester.pumpAndSettle();
+    expect(cubit.state.stamp, const Stamp('MY SEAL\n{date}', stampBlue));
+    expect(await const StampStore().load(), [const Stamp('MY SEAL\n{date}', stampBlue)]);
+  });
+
+  testWidgets('stamp: the sheet and the options fit a narrow phone', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await open(tester, width: 320, height: 640);
+    await tool(tester, MarkupTool.stamp);
+    await tester.tap(find.byKey(const ValueKey('stamp-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('make-stamp')));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
 }

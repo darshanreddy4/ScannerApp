@@ -85,9 +85,18 @@ class DocumentRepositoryImpl implements DocumentRepository, FolderRepository {
       }, onError: _db);
 
   @override
-  Future<Result<ScannedDocument>> updateMeta(String id, {bool? favorite, bool? pinned, bool? locked, List<String>? tags, DateTime? date}) => guard(() async {
+  Future<Result<ScannedDocument>> updateMeta(
+    String id, {
+    bool? favorite,
+    bool? pinned,
+    bool? locked,
+    List<String>? tags,
+    DateTime? date,
+    DateTime? expires,
+    bool clearExpiry = false,
+  }) => guard(() async {
     final cleanTags = tags == null ? null : {for (final t in tags) t.trim()}.where((t) => t.isNotEmpty).toList();
-    await _local.updateMeta(id, favorite: favorite, pinned: pinned, locked: locked, tags: cleanTags, date: date);
+    await _local.updateMeta(id, favorite: favorite, pinned: pinned, locked: locked, tags: cleanTags, date: date, expires: expires, clearExpiry: clearExpiry);
     final doc = await _local.get(id);
     if (doc == null) throw const DatabaseFailure('This document no longer exists.');
     return doc;

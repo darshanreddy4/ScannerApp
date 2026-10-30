@@ -2,18 +2,37 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../../../app/app_config.dart';
+import '../domain/ad_pass.dart';
 import '../domain/entities/plan_status.dart';
 import '../domain/repositories/monetization_contracts.dart';
 
 /// Ad unit IDs come from [AppConfig]; the defaults are Google's public test IDs.
 abstract final class AdUnitIds {
   static String get banner => Platform.isAndroid ? AppConfig.bannerAndroid : AppConfig.bannerIos;
+  static String get native => Platform.isAndroid ? AppConfig.nativeAndroid : AppConfig.nativeIos;
   static String get rewarded => Platform.isAndroid ? AppConfig.rewardedAndroid : AppConfig.rewardedIos;
   static String get interstitial => Platform.isAndroid ? AppConfig.interstitialAndroid : AppConfig.interstitialIos;
 }
+
+/// True while a text field has focus or the on-screen keyboard is showing.
+bool isTyping() {
+  final focus = FocusManager.instance.primaryFocus?.context;
+  if (focus != null && (focus.widget is EditableText || focus.findAncestorWidgetOfExactType<EditableText>() != null)) return true;
+  return WidgetsBinding.instance.platformDispatcher.views.any((v) => v.viewInsets.bottom > 0);
+}
+
+/// True while the app is on screen; null means the first frame has not been drawn yet.
+bool isForeground() {
+  final state = WidgetsBinding.instance.lifecycleState;
+  return state == null || state == AppLifecycleState.resumed;
+}
+
+/// A full-screen ad waits this long after the task ends, so the result is on screen before the ad covers it.
+const interstitialSettle = Duration(milliseconds: 700);
 
 class AdMobService implements AdService {
   AdMobService({AdPolicy policy = const AdPolicy()}) : _policy = policy;
@@ -23,6 +42,7 @@ class AdMobService implements AdService {
   RewardedAd? _rewarded;
   bool _rewardedLoading = false;
   DateTime? _lastShownAt;
+  int _actionsSinceAd = 0;
   bool _initialized = false;
   bool _loading = false;
 
@@ -72,11 +92,15 @@ class AdMobService implements AdService {
 
   @override
   Future<void> showPrivacyOptions() async {
-    final done = Completer<void>();
-    await ConsentForm.showPrivacyOptionsForm((_) {
-      if (!done.isCompleted) done.complete();
-    });
-    await done.future;
+    // A form that is still due is shown first; the options form is for a choice that was already made.
+    if (!await ConsentInformation.instance.canRequestAds()) await _gatherConsent();
+    if (await privacyOptionsRequired()) {
+      final done = Completer<void>();
+      await ConsentForm.showPrivacyOptionsForm((_) {
+        if (!done.isCompleted) done.complete();
+      });
+      await done.future;
+    }
     if (!_initialized && await ConsentInformation.instance.canRequestAds()) await initialize();
   }
 
@@ -112,6 +136,14 @@ class AdMobService implements AdService {
 
   @override
   Future<RewardResult> showRewarded() async {
+    if (!_initialized) {
+      final info = ConsentInformation.instance;
+      if (await info.canRequestAds()) {
+        await initialize();
+      } else if (await info.getConsentStatus() != ConsentStatus.unknown) {
+        return RewardResult.consentNeeded;
+      }
+    }
     final ad = await _loadRewarded();
     if (ad == null) return RewardResult.unavailable;
     _rewarded = null;
@@ -156,11 +188,24 @@ class AdMobService implements AdService {
   @override
   Future<void> showInterstitialIfEligible(PlanStatus plan) async {
     final ad = _interstitial;
-    final eligible = _policy.shouldShowInterstitial(plan: plan, lastShownAt: _lastShownAt, now: DateTime.now());
+    if (plan.showsAds) _actionsSinceAd++;
+    final eligible = _policy.shouldShowInterstitial(
+      plan: plan,
+      lastShownAt: _lastShownAt,
+      now: DateTime.now(),
+      typing: isTyping(),
+      actionsSinceLastAd: _actionsSinceAd,
+      foreground: isForeground(),
+      adFree: AdPass.active,
+    );
     if (!eligible || ad == null) {
       _loadInterstitial();
       return;
     }
+
+    await Future<void>.delayed(interstitialSettle);
+    // The person may have started typing, left the app or started a pass while the result appeared.
+    if (isTyping() || !isForeground() || AdPass.active) return;
 
     final done = Completer<void>();
     ad.fullScreenContentCallback = FullScreenContentCallback(
@@ -175,6 +220,7 @@ class AdMobService implements AdService {
     );
     _interstitial = null;
     _lastShownAt = DateTime.now();
+    _actionsSinceAd = 0;
     await ad.show();
     await done.future.timeout(const Duration(minutes: 1), onTimeout: () {});
     _loadInterstitial();

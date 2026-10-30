@@ -43,6 +43,7 @@ class ScanPage {
   final PageSnapshot? preMarkup;
 
   ScanPage copyWith({
+    String? id,
     String? rawPath,
     int? rawWidth,
     int? rawHeight,
@@ -55,7 +56,7 @@ class ScanPage {
     PageSnapshot? preMarkup,
     bool clearPreMarkup = false,
   }) => ScanPage(
-    id: id,
+    id: id ?? this.id,
     rawPath: rawPath ?? this.rawPath,
     rawWidth: rawWidth ?? this.rawWidth,
     rawHeight: rawHeight ?? this.rawHeight,

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +21,8 @@ import '../../rewards/presentation/unlock.dart';
 import '../../settings/domain/feature_access.dart';
 import '../domain/share_options.dart';
 import '../domain/share_sessions.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 class QrShareArgs {
   const QrShareArgs({required this.filePath, required this.fileName, required this.mimeType}) : shareId = null;
@@ -568,7 +570,7 @@ class _PasswordDialogState extends State<_PasswordDialog> {
           autocorrect: false,
           enableSuggestions: false,
           decoration: InputDecoration(
-            hintText: 'Password',
+            hintText: tr('Password'),
             errorText: _error,
             counterText: '',
             suffixIcon: IconButton(

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -8,6 +9,7 @@ import 'package:image/image.dart' as img;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../../../core/utils/region.dart';
 import '../domain/entities/export_options.dart';
 
 /// Source page for builders: only primitives so work can run inside an isolate.
@@ -34,9 +36,16 @@ class PageSource {
   return (bytes: Uint8List.fromList(img.encodeJpg(resized, quality: quality.jpegQuality)), width: resized.width, height: resized.height);
 }
 
-Future<void> buildPdf(List<PageSource> pages, ExportQuality quality, String outputPath) async {
+/// Builds the PDF in another isolate, with the paper of the region chosen on the phone (the isolate cannot read the settings itself).
+Future<void> buildPdfInBackground(List<PageSource> pages, ExportQuality quality, String outputPath) {
+  final letter = Region.letter;
+  return Isolate.run(() => buildPdf(pages, quality, outputPath, letter: letter));
+}
+
+/// Pages are as big as their pictures, fitted into a sheet of paper: A4, or US Letter when [letter] is set.
+Future<void> buildPdf(List<PageSource> pages, ExportQuality quality, String outputPath, {bool letter = false}) async {
   final doc = pw.Document(compress: true);
-  const a4Long = 842.0, a4Short = 595.0;
+  final a4Long = letter ? 792.0 : 842.0, a4Short = letter ? 612.0 : 595.0;
 
   for (final page in pages) {
     final data = loadPageBytes(page, quality);
@@ -60,10 +69,11 @@ Future<void> buildPdf(List<PageSource> pages, ExportQuality quality, String outp
   await File(outputPath).writeAsBytes(bytes, flush: true);
 }
 
-void buildDocx(List<PageSource> pages, ExportQuality quality, String outputPath) {
+/// A Word file with a picture on each page; the page is A4, or US Letter when [letter] is set, with margins of 1 inch.
+void buildDocx(List<PageSource> pages, ExportQuality quality, String outputPath, {bool letter = false}) {
   const emuPerInch = 914400;
-  const maxW = 6.5 * emuPerInch; // US Letter minus 1" margins
-  const maxH = 9.0 * emuPerInch;
+  final maxW = (letter ? 6.5 : 8.27 - 2) * emuPerInch;
+  final maxH = (letter ? 9.0 : 11.69 - 2) * emuPerInch;
 
   final archive = Archive();
   final body = StringBuffer();
@@ -105,7 +115,7 @@ void buildDocx(List<PageSource> pages, ExportQuality quality, String outputPath)
       'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" '
       'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
       'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>$body'
-      '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/>'
+      '<w:sectPr>${letter ? '<w:pgSz w:w="12240" w:h="15840"/>' : '<w:pgSz w:w="11906" w:h="16838"/>'}'
       '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>'
       '</w:sectPr></w:body></w:document>';
 

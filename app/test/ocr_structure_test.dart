@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/features/ocr/domain/math_converter.dart';
-import 'package:scanvault/features/ocr/domain/ocr_models.dart';
-import 'package:scanvault/features/ocr/domain/text_structurer.dart';
+import 'package:doculoom/features/ocr/domain/math_converter.dart';
+import 'package:doculoom/features/ocr/domain/ocr_models.dart';
+import 'package:doculoom/features/ocr/domain/text_structurer.dart';
 
 OcrLine line(String text, {double top = 0, double height = 20, double left = 10, double width = 300}) =>
     OcrLine(text: text, left: left, top: top, right: left + width, bottom: top + height);

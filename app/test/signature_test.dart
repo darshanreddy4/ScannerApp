@@ -4,11 +4,11 @@ import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/features/signature/data/document_signer.dart';
-import 'package:scanvault/features/signature/data/signature_processor.dart';
-import 'package:scanvault/features/signature/data/signature_store.dart';
-import 'package:scanvault/features/signature/domain/signature.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/features/signature/data/document_signer.dart';
+import 'package:doculoom/features/signature/data/signature_processor.dart';
+import 'package:doculoom/features/signature/data/signature_store.dart';
+import 'package:doculoom/features/signature/domain/signature.dart';
 
 void main() {
   late Directory dir;
@@ -215,12 +215,12 @@ void main() {
       expect(File(list.single.path).existsSync(), isTrue);
     });
 
-    test('keeps at most five and says how to make room', () async {
+    test('keeps at most twenty and says how to make room', () async {
       for (var i = 0; i < SignatureStore.maxSaved; i++) {
         expect((await store.save(png)).failureOrNull, isNull);
       }
-      final sixth = await store.save(png);
-      expect(sixth.failureOrNull!.message, contains('up to 5 signatures'));
+      final extra = await store.save(png);
+      expect(extra.failureOrNull!.message, contains('up to 20 signatures'));
       final first = (await store.list()).first;
       await store.delete(first.id);
       expect((await store.save(png)).valueOrNull, isNotNull);
@@ -248,6 +248,122 @@ void main() {
       await store.save(png);
       File(p.join(dir.path, 'signatures', 'zzz.png')).writeAsBytesSync([9, 9]);
       expect((await store.list()).length, 1);
+    });
+
+    group('library', () {
+      test('the first of each kind is the default, and names are cleaned', () async {
+        final a = (await store.save(png, name: '  Work   copy  ')).valueOrNull!;
+        final b = (await store.save(png)).valueOrNull!;
+        final i = (await store.save(png, kind: SignatureKind.initials, name: 'x' * 60)).valueOrNull!;
+        final list = await store.list();
+        expect([for (final s in list) s.id], [a.id, b.id, i.id]);
+        expect([for (final s in list) s.isDefault], [true, false, true]);
+        expect(list.first.name, 'Work copy');
+        expect(list.last.kind, SignatureKind.initials);
+        expect(list.last.name.length, 40);
+      });
+
+      test('setDefault moves the star within its kind only', () async {
+        final a = (await store.save(png)).valueOrNull!;
+        final b = (await store.save(png)).valueOrNull!;
+        final i = (await store.save(png, kind: SignatureKind.initials)).valueOrNull!;
+        await store.setDefault(b.id);
+        final list = {for (final s in await store.list()) s.id: s};
+        expect(list[a.id]!.isDefault, isFalse);
+        expect(list[b.id]!.isDefault, isTrue);
+        expect(list[i.id]!.isDefault, isTrue);
+      });
+
+      test('rename and change of kind are kept, and a moved kind gets a default', () async {
+        final a = (await store.save(png)).valueOrNull!;
+        final b = (await store.save(png)).valueOrNull!;
+        await store.update(a.id, name: 'Mine', kind: SignatureKind.initials);
+        var list = {for (final s in await store.list()) s.id: s};
+        expect(list[a.id]!.name, 'Mine');
+        expect(list[a.id]!.kind, SignatureKind.initials);
+        expect(list[a.id]!.isDefault, isTrue);
+        expect(list[b.id]!.isDefault, isTrue, reason: 'the only signature is the default');
+        await store.update(a.id, name: '   ');
+        list = {for (final s in await store.list()) s.id: s};
+        expect(list[a.id]!.name, isEmpty);
+        await store.update('missing', name: 'x');
+      });
+
+      test('move reorders and survives a new store over the same folder', () async {
+        final ids = [for (var i = 0; i < 3; i++) (await store.save(png)).valueOrNull!.id];
+        await store.move(ids[2], 0);
+        expect([for (final s in await store.list()) s.id], [ids[2], ids[0], ids[1]]);
+        await store.move(ids[2], 99);
+        expect([for (final s in await store.list()) s.id], [ids[0], ids[1], ids[2]]);
+        final again = SignatureStoreImpl(appDir: () async => dir);
+        expect([for (final s in await again.list()) s.id], ids);
+      });
+
+      test('deleting the default hands the star to the next of its kind', () async {
+        final a = (await store.save(png)).valueOrNull!;
+        final b = (await store.save(png)).valueOrNull!;
+        await store.delete(a.id);
+        expect((await store.list()).single.id, b.id);
+        expect((await store.list()).single.isDefault, isTrue);
+      });
+
+      test('recolor changes only the colour and keeps alpha, place and name', () async {
+        final image = img.Image(width: 20, height: 10, numChannels: 4);
+        img.fill(image, color: img.ColorRgba8(0, 0, 0, 0));
+        image.setPixelRgba(5, 5, 200, 10, 10, 255);
+        image.setPixelRgba(6, 5, 200, 10, 10, 90);
+        final src = File(p.join(dir.path, 'ink.png'))..writeAsBytesSync(img.encodePng(image));
+        final a = (await store.save(src.path, name: 'Red')).valueOrNull!;
+        await store.save(png);
+        final r = await store.recolor(a.id, InkColor.blue);
+        expect(r.failureOrNull, isNull);
+        final out = img.decodePng(File(a.path).readAsBytesSync())!;
+        final solid = out.getPixel(5, 5), soft = out.getPixel(6, 5), blank = out.getPixel(0, 0);
+        expect((solid.r, solid.g, solid.b, solid.a), (0x1B, 0x3F, 0xA0, 255));
+        expect(soft.a, 90);
+        expect(soft.b, 0xA0);
+        expect(blank.a, 0);
+        final list = await store.list();
+        expect(list.first.id, a.id);
+        expect(list.first.name, 'Red');
+        expect((await store.recolor('missing', InkColor.black)).failureOrNull, isNotNull);
+      });
+
+      test('duplicate places a copy after the original and respects the limit', () async {
+        final a = (await store.save(png, name: 'Work')).valueOrNull!;
+        final b = (await store.save(png)).valueOrNull!;
+        final copy = (await store.duplicate(a.id)).valueOrNull!;
+        final list = await store.list();
+        expect([for (final s in list) s.id], [a.id, copy.id, b.id]);
+        expect(list[1].name, 'Work copy');
+        expect(list[1].isDefault, isFalse);
+        expect(File(list[1].path).existsSync(), isTrue);
+        expect(list[1].path, isNot(a.path));
+        while ((await store.list()).length < SignatureStore.maxSaved) {
+          await store.save(png);
+        }
+        expect((await store.duplicate(a.id)).failureOrNull, isNotNull);
+        expect((await store.duplicate('missing')).failureOrNull, isNotNull);
+      });
+
+      test('an unreadable index loses the names, not the pictures', () async {
+        await store.save(png, name: 'Keep');
+        File(p.join(dir.path, 'signatures', 'library.json')).writeAsStringSync('{ not json');
+        final list = await store.list();
+        expect(list.length, 1);
+        expect(list.single.name, isEmpty);
+        expect(list.single.isDefault, isTrue);
+      });
+
+      test('pictures saved before the library existed still show up', () async {
+        final folder = Directory(p.join(dir.path, 'signatures'))..createSync();
+        File(png).copySync(p.join(folder.path, '111_0.png'));
+        File(png).copySync(p.join(folder.path, '222_1.png'));
+        final list = await store.list();
+        expect([for (final s in list) s.id], ['111_0', '222_1']);
+        expect(list.first.isDefault, isTrue);
+        expect(list.last.isDefault, isFalse);
+      });
     });
   });
 

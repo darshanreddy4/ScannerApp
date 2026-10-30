@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:scanvault/features/qr/data/relay_share_service.dart';
+import 'package:doculoom/features/qr/data/relay_share_service.dart';
 
 class _FakeRelay {
   _FakeRelay(this.server);

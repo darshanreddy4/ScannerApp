@@ -1,10 +1,10 @@
-name = "scanvault-share"
+name = "doculoom-share"
 main = "src/index.js"
 compatibility_date = "2025-01-01"
 
 [[r2_buckets]]
 binding = "FILES"
-bucket_name = "scanvault-share-files"
+bucket_name = "doculoom-share-files"
 
 # Hourly sweep that deletes expired files.
 [triggers]

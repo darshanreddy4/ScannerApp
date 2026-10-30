@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
 
@@ -15,6 +15,7 @@ import '../../../core/widgets/responsive.dart';
 import '../../export/domain/repositories/export_repository.dart';
 import '../convert/office_converter.dart';
 import '../sheets/presentation/sheet_page.dart';
+import '../../../core/widgets/text.dart';
 
 /// One conversion: choose the file or files, convert, then share or save the results.
 class OfficeConvertPage extends StatefulWidget {

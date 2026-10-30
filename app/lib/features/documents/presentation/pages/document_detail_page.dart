@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
@@ -24,6 +24,8 @@ import '../../../rewards/domain/coin_rules.dart';
 import '../../../rewards/presentation/unlock.dart';
 import '../bloc/document_detail_cubit.dart';
 import '../widgets/document_actions.dart';
+import '../../../../core/widgets/text.dart';
+import '../../../../core/i18n/tr.dart';
 
 class DocumentDetailPage extends StatelessWidget {
   const DocumentDetailPage({super.key, required this.documentId});
@@ -127,7 +129,7 @@ class _DetailViewState extends State<_DetailView> {
                 ),
               if (doc != null)
                 IconButton(
-                  tooltip: 'More',
+                  tooltip: tr('More'),
                   icon: const Icon(AppIcons.more),
                   onPressed: () => showDocumentActions(context, doc, refresh: context.read<DocumentDetailCubit>().load, onDeleted: () => context.pop()),
                 ),
@@ -288,7 +290,7 @@ class _ExportSheetState extends State<_ExportSheet> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
+        padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -307,7 +309,7 @@ class _ExportSheetState extends State<_ExportSheet> {
             const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<ExportQuality>(
               initialValue: _quality,
-              decoration: const InputDecoration(labelText: 'Quality', prefixIcon: Icon(AppIcons.quality, size: 20)),
+              decoration: InputDecoration(labelText: tr('Quality'), prefixIcon: Icon(AppIcons.quality, size: 20)),
               items: [for (final q in ExportQuality.values) DropdownMenuItem(value: q, child: Text(q.label))],
               onChanged: (q) => setState(() => _quality = q ?? _quality),
             ),

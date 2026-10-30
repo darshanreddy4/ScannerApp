@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,7 +8,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/widgets/feedback.dart';
 import '../../../../core/widgets/responsive.dart';
-import '../../../monetization/presentation/ad_banner_slot.dart';
 import '../../../qr/presentation/active_shares_banner.dart';
 import '../../../scanner/presentation/add_content.dart';
 import '../../../settings/presentation/settings_view.dart';
@@ -19,7 +18,10 @@ import '../widgets/folder_editor.dart';
 import '../widgets/folder_style.dart';
 import '../widgets/document_actions.dart' show confirmOwner;
 import '../widgets/document_widgets.dart';
+import '../widgets/expiring_banner.dart';
 import '../widgets/refresh_on_return.dart';
+import '../../../../core/widgets/text.dart';
+import '../../../../core/i18n/tr.dart';
 
 /// Floating action pill: tap the camera to scan immediately, or "+" for more options.
 class ScanFab extends StatelessWidget {
@@ -38,7 +40,7 @@ class ScanFab extends StatelessWidget {
           onTap: () => startScan(context, folderId: folderId),
           borderRadius: const BorderRadius.horizontal(left: Radius.circular(28)),
           child: const Padding(
-            padding: EdgeInsets.fromLTRB(22, 16, 16, 16),
+            padding: EdgeInsetsDirectional.fromSTEB(22, 16, 16, 16),
             child: Icon(AppIcons.camera, color: Colors.white),
           ),
         ),
@@ -47,7 +49,7 @@ class ScanFab extends StatelessWidget {
           onTap: () => showAddSheet(context, folderId: folderId),
           borderRadius: const BorderRadius.horizontal(right: Radius.circular(28)),
           child: const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 22, 16),
+            padding: EdgeInsetsDirectional.fromSTEB(16, 16, 22, 16),
             child: Icon(AppIcons.add, color: Colors.white),
           ),
         ),
@@ -70,6 +72,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final selecting = context.select((DocumentsCubit c) => c.state.selecting);
     final wide = MediaQuery.sizeOf(context).width >= Breakpoints.medium;
+    final pages = IndexedStack(index: _tab, children: const [_DocumentsView(), ToolsView(), SettingsView()]);
     return RefreshOnReturn(
       child: PopScope(
         canPop: !selecting,
@@ -97,19 +100,16 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                     const VerticalDivider(width: 1),
-                    Expanded(
-                      child: IndexedStack(index: _tab, children: const [_DocumentsView(), ToolsView(), SettingsView()]),
-                    ),
+                    Expanded(child: pages),
                   ],
                 )
-              : IndexedStack(index: _tab, children: const [_DocumentsView(), ToolsView(), SettingsView()]),
+              : pages,
           floatingActionButton: _tab == 0 && !selecting ? const ScanFab() : null,
           bottomNavigationBar: wide
-              ? const AdBannerSlot()
+              ? null
               : Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const AdBannerSlot(),
                     const Divider(),
                     NavigationBar(
                       selectedIndex: _tab,
@@ -141,6 +141,7 @@ class _DocumentsViewState extends State<_DocumentsView> {
   Timer? _textDebounce;
   String _query = '';
   bool _favoritesOnly = false;
+  String? _tag;
 
   @override
   void dispose() {
@@ -167,10 +168,15 @@ class _DocumentsViewState extends State<_DocumentsView> {
 
         final q = _query.trim().toLowerCase();
         final searching = q.isNotEmpty;
+        final tags = state.allTags;
+        // A tag nobody uses any more (its documents were deleted or retagged) stops filtering.
+        final tag = tags.any((t) => t.toLowerCase() == _tag?.toLowerCase()) ? _tag : null;
+        // A search or a tag looks across all folders.
+        final filtering = searching || tag != null;
         final folders = _favoritesOnly ? state.favoriteFolders : state.folders;
-        final docs = searching
-            ? (_favoritesOnly ? state.favoriteDocuments.where((d) => state.searchDocuments(q).contains(d)).toList() : state.searchDocuments(q))
-            : (_favoritesOnly ? state.favoriteDocuments : state.inFolder(null));
+        var docs = searching ? state.searchDocuments(q) : (tag != null ? state.openSorted : (_favoritesOnly ? state.favoriteDocuments : state.inFolder(null)));
+        if (_favoritesOnly) docs = docs.where((d) => d.favorite).toList();
+        if (tag != null) docs = docs.where((d) => d.tags.any((t) => t.toLowerCase() == tag.toLowerCase())).toList();
 
         return ContentWidth(
           maxWidth: 1100,
@@ -184,9 +190,13 @@ class _DocumentsViewState extends State<_DocumentsView> {
                     child: ActiveSharesBanner(),
                   ),
                 ),
+                if (!filtering && !_favoritesOnly)
+                  SliverToBoxAdapter(
+                    child: ExpiringBanner(documents: state.documents, onOpen: (d) => openDocument(context, d)),
+                  ),
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
+                    padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
                     child: TextField(
                       controller: _search,
                       onChanged: (v) {
@@ -199,7 +209,7 @@ class _DocumentsViewState extends State<_DocumentsView> {
                       },
                       textInputAction: TextInputAction.search,
                       decoration: InputDecoration(
-                        hintText: 'Search documents',
+                        hintText: tr('Search documents'),
                         prefixIcon: const Icon(AppIcons.search, size: 20),
                         isDense: true,
                         suffixIcon: _query.isEmpty
@@ -235,24 +245,46 @@ class _DocumentsViewState extends State<_DocumentsView> {
                     ),
                   ),
                 ),
-                if (!searching) ...[
+                if (tags.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 44,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+                        children: [
+                          for (final t in tags)
+                            Padding(
+                              padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
+                              child: FilterChip(
+                                key: ValueKey('tag-filter-${t.toLowerCase()}'),
+                                label: Text(t),
+                                selected: tag?.toLowerCase() == t.toLowerCase(),
+                                onSelected: (on) => setState(() => _tag = on ? t : null),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (!filtering) ...[
                   SliverToBoxAdapter(
                     child: _SectionHeader(
                       title: _favoritesOnly ? 'Favourite folders (${folders.length})' : 'Folders (${folders.length})',
-                      trailing: IconButton(tooltip: 'New folder', icon: const Icon(AppIcons.add, size: 22), onPressed: _newFolder),
+                      trailing: IconButton(tooltip: tr('New folder'), icon: const Icon(AppIcons.add, size: 22), onPressed: _newFolder),
                     ),
                   ),
                   if (folders.isEmpty && _favoritesOnly)
                     const SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
+                        padding: EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
                         child: Text('No favourite folders. Use a folder\'s menu to add one.', style: TextStyle(color: AppColors.inkMuted)),
                       ),
                     )
                   else if (folders.isEmpty)
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
+                        padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
                         child: OutlinedButton.icon(
                           onPressed: _newFolder,
                           icon: const Icon(AppIcons.emptyDocs, size: 18),
@@ -280,14 +312,14 @@ class _DocumentsViewState extends State<_DocumentsView> {
                 ],
                 SliverToBoxAdapter(
                   child: _SectionHeader(
-                    title: searching
-                        ? '${docs.length} result${docs.length == 1 ? '' : 's'}'
+                    title: filtering
+                        ? '${docs.length} result${docs.length == 1 ? '' : 's'}${tag == null ? '' : ' tagged $tag'}'
                         : (_favoritesOnly ? 'Favourite documents (${docs.length})' : 'Documents (${docs.length})'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         PopupMenuButton<DocumentSort>(
-                          tooltip: 'Sort',
+                          tooltip: tr('Sort'),
                           icon: const Icon(AppIcons.quality, size: 20, color: AppColors.inkMuted),
                           initialValue: state.sort,
                           onSelected: context.read<DocumentsCubit>().setSort,
@@ -308,8 +340,8 @@ class _DocumentsViewState extends State<_DocumentsView> {
                       padding: const EdgeInsets.all(AppSpacing.xl),
                       child: Center(
                         child: Text(
-                          searching
-                              ? 'No documents match your search'
+                          filtering
+                              ? 'No documents match'
                               : (_favoritesOnly ? 'No favourites yet. Open a document\'s menu, then More, then Add to favourites.' : 'No documents here yet'),
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: AppColors.inkMuted),
@@ -319,7 +351,7 @@ class _DocumentsViewState extends State<_DocumentsView> {
                   )
                 else
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, 96),
+                    padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 0, AppSpacing.md, 96),
                     sliver: DocumentsCollection(documents: docs, gridView: state.gridView),
                   ),
               ],
@@ -338,7 +370,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xs, AppSpacing.sm, 0),
+    padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, AppSpacing.xs, AppSpacing.sm, 0),
     child: SizedBox(
       height: 44,
       child: Row(
@@ -414,22 +446,24 @@ class _FolderCard extends StatelessWidget {
         child: Stack(
           children: [
             Positioned(top: 0, left: 0, right: 0, height: 4, child: ColoredBox(color: accent)),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.md - 2, AppSpacing.sm, AppSpacing.sm),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  FolderBadge.of(folder, size: 48),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    folder.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                  ),
-                  Text('$count item${count == 1 ? '' : 's'}', style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
-                ],
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.sm, AppSpacing.md - 2, AppSpacing.sm, AppSpacing.sm),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    FolderBadge.of(folder, size: 48),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      folder.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                    ),
+                    Text('$count item${count == 1 ? '' : 's'}', style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
+                  ],
+                ),
               ),
             ),
             if (folder.favorite) const Positioned(top: 10, left: 8, child: Icon(AppIcons.star, size: 14, color: AppColors.warning)),

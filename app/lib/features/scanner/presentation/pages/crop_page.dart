@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import '../../../rewards/domain/coin_rules.dart';
+import '../../../rewards/presentation/unlock.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,8 +12,10 @@ import '../../../../core/widgets/responsive.dart';
 import '../../../settings/presentation/settings_cubit.dart';
 import '../../domain/entities/filter_settings.dart';
 import '../bloc/scan_session_cubit.dart';
+import '../mode_flow.dart';
 import '../widgets/filter_labels.dart';
 import '../widgets/polygon_cropper.dart';
+import '../../../../core/widgets/text.dart';
 
 /// Crop step shown after each capture/import: adjust corners, pick a filter, retake or continue.
 class CropPage extends StatelessWidget {
@@ -40,14 +44,23 @@ class CropPage extends StatelessWidget {
     if (outcome == CropOutcome.finished) _leave(context, flow);
   }
 
-  void _leave(BuildContext context, ScanFlow flow) {
-    final hasPages = context.read<ScanSessionCubit>().state.pages.isNotEmpty;
+  Future<void> _leave(BuildContext context, ScanFlow flow) async {
+    final session = context.read<ScanSessionCubit>();
+    final hasPages = session.state.pages.isNotEmpty;
+    // Receipts, cards and IDs are read right after the photo instead of going through the page editor.
+    final finishing = flow != ScanFlow.recrop && session.state.mode.finishesItself && hasPages;
+    if (finishing && await continueModeScan(context)) return;
+    if (!context.mounted) return;
     switch (flow) {
       case ScanFlow.camera:
       case ScanFlow.recrop:
         context.pop();
       case ScanFlow.import:
-        context.go(hasPages ? '/scan/edit' : '/');
+        if (finishing && context.canPop()) {
+          context.pop();
+        } else {
+          context.go(hasPages ? '/scan/edit' : '/');
+        }
     }
   }
 
@@ -66,9 +79,22 @@ class CropPage extends StatelessWidget {
     final flow = context.select((ScanSessionCubit c) => c.state.flow);
     final remaining = context.select((ScanSessionCubit c) => c.state.pending.length);
     final showCrop = context.select((SettingsCubit c) => c.state.showCropAfterCapture);
-    if (draft == null) return const Scaffold(backgroundColor: AppColors.scannerBackdrop);
+    // While a receipt, card or ID is being saved the draft is gone; show the progress instead of an empty screen.
+    if (draft == null) {
+      return PopScope(
+        canPop: false,
+        child: Scaffold(
+          backgroundColor: AppColors.scannerBackdrop,
+          body: Stack(
+            children: [BusyOverlay(visible: busy, label: busyLabel)],
+          ),
+        ),
+      );
+    }
 
     final session = context.read<ScanSessionCubit>();
+    // The page's own context outlives the draft; the builders below are rebuilt away when the draft is gone.
+    final pageContext = context;
 
     return PopScope(
       canPop: false,
@@ -85,7 +111,7 @@ class CropPage extends StatelessWidget {
                   final size = MediaQuery.sizeOf(context);
                   final sideBySide = size.width >= Breakpoints.expanded && size.width > size.height;
                   final cropper = Padding(
-                    padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
+                    padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
                     child: PolygonCropper(
                       imagePath: draft.rawPath,
                       imageWidth: draft.rawWidth,
@@ -106,14 +132,17 @@ class CropPage extends StatelessWidget {
                     busy: busy,
                     canRename: flow != ScanFlow.recrop,
                     showCrop: showCrop,
-                    onFilter: session.setCurrentFilter,
+                    onFilter: (f) async {
+                      if (!freeFilterNames.contains(f.name) && !await requestToolAccess(pageContext, CoinFeature.specialFilters)) return;
+                      session.setCurrentFilter(f);
+                    },
                     onRotate: session.rotateDraft,
                     onFull: session.useFullFrame,
                     onAuto: session.resetToDetected,
-                    onRename: () => _renameDialog(context),
-                    onToggleCrop: (v) => context.read<SettingsCubit>().update((s) => s.copyWith(showCropAfterCapture: v)),
-                    onRetake: () => _retake(context),
-                    onContinue: () => _continue(context),
+                    onRename: () => _renameDialog(pageContext),
+                    onToggleCrop: (v) => pageContext.read<SettingsCubit>().update((s) => s.copyWith(showCropAfterCapture: v)),
+                    onRetake: () => _retake(pageContext),
+                    onContinue: () => _continue(pageContext),
                   );
                   // Wide landscape: controls sit beside the image instead of squeezing it from below.
                   if (sideBySide) {
@@ -184,7 +213,7 @@ class _Controls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
+      padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -210,7 +239,7 @@ class _Controls extends StatelessWidget {
                   initialValue: filter,
                   onSelected: onFilter,
                   itemBuilder: (_) => [
-                    for (final f in ScanFilter.values)
+                    for (final f in filterOrder)
                       PopupMenuItem(
                         value: f,
                         child: Row(children: [Icon(f.icon, size: 18), const SizedBox(width: 10), Text(f.label)]),

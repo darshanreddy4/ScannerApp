@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -18,6 +18,8 @@ import '../../export/domain/repositories/export_repository.dart';
 import '../domain/photo_compressor.dart';
 import 'compress_cubit.dart';
 import 'size_limit_dialog.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 /// Shrinks photos to a file-size limit (for example "under 100 kB" on a job or government portal).
 class CompressPhotoPage extends StatelessWidget {
@@ -296,7 +298,7 @@ class _PhotoRow extends StatelessWidget {
         ),
         title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Text(detail, style: TextStyle(color: color, fontSize: 12.5)),
-        trailing: running ? null : IconButton(tooltip: 'Remove', icon: const Icon(AppIcons.close, size: 18), onPressed: onRemove),
+        trailing: running ? null : IconButton(tooltip: tr('Remove'), icon: const Icon(AppIcons.close, size: 18), onPressed: onRemove),
       ),
     );
   }

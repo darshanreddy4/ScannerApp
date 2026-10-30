@@ -67,6 +67,17 @@ void _stroke(Canvas canvas, Size size, MarkupStroke s) {
 
 void _shape(Canvas canvas, Size size, MarkupShape s) {
   final a = _px(s.from, size), b = _px(s.to, size);
+  if (s.redact) {
+    // Fully opaque and without anti-aliasing at the edges, so nothing shows through.
+    canvas.drawRect(
+      Rect.fromPoints(a, b),
+      Paint()
+        ..color = const Color(0xFF000000)
+        ..style = PaintingStyle.fill
+        ..isAntiAlias = false,
+    );
+    return;
+  }
   final width = s.width * size.width;
   final line = Paint()
     ..color = Color(s.color)
@@ -126,6 +137,17 @@ void _text(Canvas canvas, Size size, MarkupText t) {
   canvas.save();
   canvas.translate(c.dx, c.dy);
   canvas.rotate(t.rotation);
+  if (t.framed) {
+    final pad = markupTextPad(t, size.width);
+    final line = math.max(1.5, t.size * size.width * 0.1);
+    final box = Rect.fromCenter(center: Offset.zero, width: paragraph.width + pad * 2, height: paragraph.height + pad * 2);
+    final ink = Paint()
+      ..color = Color(t.color)
+      ..style = PaintingStyle.stroke
+      ..isAntiAlias = true;
+    canvas.drawRRect(RRect.fromRectAndRadius(box, Radius.circular(pad * 0.7)), ink..strokeWidth = line);
+    canvas.drawRRect(RRect.fromRectAndRadius(box.deflate(line * 2.2), Radius.circular(pad * 0.5)), ink..strokeWidth = line * 0.45);
+  }
   canvas.drawParagraph(paragraph, Offset(-paragraph.width / 2, -paragraph.height / 2));
   canvas.restore();
   paragraph.dispose();

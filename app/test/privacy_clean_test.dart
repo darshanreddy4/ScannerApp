@@ -5,13 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:scanvault/app/di.dart';
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/core/theme/app_theme.dart';
-import 'package:scanvault/features/photo_tools/domain/metadata_cleaner.dart';
-import 'package:scanvault/features/photo_tools/presentation/privacy_clean_cubit.dart';
-import 'package:scanvault/features/photo_tools/presentation/privacy_clean_page.dart';
+import 'package:doculoom/app/di.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/photo_tools/domain/metadata_cleaner.dart';
+import 'package:doculoom/features/photo_tools/presentation/privacy_clean_cubit.dart';
+import 'package:doculoom/features/photo_tools/presentation/privacy_clean_page.dart';
 
 class _Cleaner implements MetadataCleaner {
   final cleaned = <String>[];

@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/scanned_document.dart';
+import '../../../../core/widgets/text.dart';
 
 /// Icons a folder can show, by the key stored with it.
 const Map<String, IconData> folderIcons = {
@@ -93,8 +94,8 @@ class FolderBadge extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(size * 0.3),
                 gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                  begin: AlignmentDirectional.topStart,
+                  end: AlignmentDirectional.bottomEnd,
                   colors: [accent.withValues(alpha: 0.2), accent.withValues(alpha: 0.08)],
                 ),
                 border: Border.all(color: accent.withValues(alpha: 0.18)),

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -16,6 +16,8 @@ import '../../../core/widgets/responsive.dart';
 import '../../export/domain/repositories/export_repository.dart';
 import '../domain/metadata_cleaner.dart';
 import 'privacy_clean_cubit.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 /// Shows what hidden data photos carry (location, camera, date) and removes it before sharing.
 class PrivacyCleanPage extends StatelessWidget {
@@ -250,7 +252,7 @@ class _PhotoRow extends StatelessWidget {
         title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Text(lines.join('\n'), style: TextStyle(color: color, fontSize: 12.5, height: 1.35)),
         isThreeLine: lines.length > 1,
-        trailing: running ? null : IconButton(tooltip: 'Remove', icon: const Icon(AppIcons.close, size: 18), onPressed: onRemove),
+        trailing: running ? null : IconButton(tooltip: tr('Remove'), icon: const Icon(AppIcons.close, size: 18), onPressed: onRemove),
       ),
     );
   }

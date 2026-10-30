@@ -59,7 +59,7 @@ class PdfCompressProcessor implements PdfCompressor {
         final inputs = [for (var i = 0; i < pages.length; i++) PageSource(path: pages[i], width: sizes[i].width, height: sizes[i].height)];
         final redrawn = await Isolate.run(() => redrawPages(inputs, maxSide, quality, pageDir));
         final candidate = p.join(dir.path, 'c$n.pdf');
-        await Isolate.run(() => buildPdf(redrawn, ExportQuality.high, candidate));
+        await buildPdfInBackground(redrawn, ExportQuality.high, candidate);
         await Directory(pageDir).delete(recursive: true);
 
         final size = await File(candidate).length();

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'app/app.dart';
+import 'core/i18n/app_language.dart';
+import 'core/i18n/tr.dart';
 import 'app/di.dart';
 import 'app/incoming_files.dart';
 import 'features/qr/domain/share_sessions.dart';
@@ -17,6 +19,8 @@ Future<void> main() async {
       debugPrint('Unhandled Flutter error: ${details.exceptionAsString()}');
     };
 
+    // Until the settings are read, text follows the language of the phone.
+    Strings.use(AppLanguage.system);
     configureDependencies();
     // Shares keep running outside the app; show the ones that are still active.
     unawaited(sl<ShareSessions>().restore());
@@ -24,7 +28,7 @@ Future<void> main() async {
     unawaited(sl<AdService>().initialize());
 
     WidgetsBinding.instance.addObserver(_CacheTrimmer());
-    runApp(const ScanVaultApp());
+    runApp(const DoculoomApp());
     WidgetsBinding.instance.addPostFrameCallback((_) => IncomingFiles.start());
   }, (error, stack) => debugPrint('Uncaught error: $error\n$stack'));
 }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="qa_scan_short">Scan</string>
+    <string name="qa_scan_long">Scan a document</string>
+    <string name="qa_id_short">ID photo</string>
+    <string name="qa_id_long">Make an ID photo</string>
+    <string name="qa_pdf_short">Read PDF</string>
+    <string name="qa_pdf_long">Read a PDF</string>
+    <string name="qa_qr_short">QR scan</string>
+    <string name="qa_qr_long">Scan a QR code</string>
+    <string name="widget_description">Scan, ID photo, Read PDF and QR scan in one tap</string>
+</resources>

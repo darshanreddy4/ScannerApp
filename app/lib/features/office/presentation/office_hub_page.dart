@@ -1,5 +1,5 @@
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:go_router/go_router.dart';
 
 import '../../../core/error/failures.dart';
@@ -9,6 +9,7 @@ import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/responsive.dart';
 import '../convert/office_converter.dart';
 import '../sheets/presentation/sheet_page.dart';
+import '../../../core/widgets/text.dart';
 
 enum OfficeHub { sheets, slides }
 
@@ -64,7 +65,7 @@ class OfficeHubPage extends StatelessWidget {
               onTap: () => sheets ? context.push('/sheet', extra: const SheetArgs()) : context.push('/slides', extra: null),
             ),
             const Padding(
-              padding: EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.sm),
+              padding: EdgeInsetsDirectional.fromSTEB(4, AppSpacing.md, 4, AppSpacing.sm),
               child: Text('Convert', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
             ),
             for (final c in conversions)

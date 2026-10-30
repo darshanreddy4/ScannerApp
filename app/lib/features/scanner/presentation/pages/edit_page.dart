@@ -1,6 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,9 +16,13 @@ import '../../../markup/presentation/markup_page.dart';
 import '../../../monetization/domain/repositories/monetization_contracts.dart';
 import '../../../monetization/presentation/plan_cubit.dart';
 import '../../domain/entities/scan_page.dart';
+import '../../../tables/presentation/table_page.dart';
 import '../add_content.dart';
+import '../mode_followup.dart';
 import '../bloc/scan_session_cubit.dart';
 import '../widgets/filter_labels.dart';
+import '../../../../core/widgets/text.dart';
+import '../../../../core/i18n/tr.dart';
 
 /// Review and enhance all captured pages, then save the document.
 class EditPage extends StatefulWidget {
@@ -71,6 +76,7 @@ class _EditPageState extends State<EditPage> {
   Future<void> _save() async {
     final plan = context.read<PlanCubit>().state;
     final editingSaved = _session.state.editingDocumentId != null;
+    final mode = _session.state.mode;
     // A successful save resets the session to zero pages; that must not also trigger the "no pages" exit.
     _leaving = true;
     final doc = await _session.save();
@@ -80,14 +86,25 @@ class _EditPageState extends State<EditPage> {
       if (_session.state.error != null) showFailure(context, _session.state.error!);
       return;
     }
-    await sl<AdService>().showInterstitialIfEligible(plan);
+    final next = editingSaved ? null : await runModeFollowUp(context, mode, doc);
     if (!mounted) return;
     // Going back (not to the same address) lets the open document screen reload the pages that were replaced.
     if (editingSaved && context.canPop()) {
       context.pop();
     } else {
       context.go('/document/${doc.id}');
+      final contactText = next?.contactText;
+      final idPhotos = next?.idPhotos;
+      if (contactText != null) context.push('/contact', extra: contactText);
+      if (idPhotos != null) context.push('/id-card', extra: idPhotos);
+      final tablePages = next?.tablePages;
+      if (tablePages != null)
+        context.push(
+          '/table',
+          extra: TableArgs(title: doc.title, imagePaths: tablePages),
+        );
     }
+    unawaited(sl<AdService>().showInterstitialIfEligible(plan));
   }
 
   Future<void> _confirmDiscard() async {
@@ -154,7 +171,7 @@ class _EditPageState extends State<EditPage> {
           persist: false,
           duration: const Duration(seconds: 3),
           // Sit above the bottom toolbar so the tools stay tappable.
-          margin: EdgeInsets.fromLTRB(16, 0, 16, MediaQuery.paddingOf(context).bottom + 84),
+          margin: EdgeInsetsDirectional.fromSTEB(16, 0, 16, MediaQuery.paddingOf(context).bottom + 84),
           action: SnackBarAction(label: 'Undo', onPressed: () => _session.restorePage(index, removed)),
         ),
       );
@@ -470,7 +487,7 @@ class _ColorPanel extends StatelessWidget {
 
     return Container(
       color: AppColors.surface,
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
+      padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -522,6 +539,17 @@ class _ColorPanel extends StatelessWidget {
               },
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.only(top: 6, bottom: 2),
+            child: Text(
+              settings.filter.hint,
+              key: const ValueKey('filter-hint'),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, color: AppColors.inkMuted),
+            ),
+          ),
           _MiniSlider(
             icon: AppIcons.brightness,
             value: settings.brightness,
@@ -541,9 +569,11 @@ class _ColorPanel extends StatelessWidget {
                 child: Row(
                   children: [
                     Checkbox(value: applyAll, onChanged: (v) => session.setApplyToAll(v ?? false), visualDensity: VisualDensity.compact),
-                    const Text(
-                      'Apply to all pages',
-                      style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+                    const Flexible(
+                      child: Text(
+                        'Apply to all pages',
+                        style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ],
                 ),
@@ -721,7 +751,7 @@ class _RearrangeSheet extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          tooltip: 'Delete page',
+                          tooltip: tr('Delete page'),
                           icon: const Icon(AppIcons.delete, color: AppColors.danger),
                           onPressed: () => session.removePage(i),
                         ),

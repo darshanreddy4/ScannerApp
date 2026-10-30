@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/features/pdf_tools/data/pdf_protect_processor.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/features/pdf_tools/data/pdf_protect_processor.dart';
 
 void main() {
   late Directory dir;

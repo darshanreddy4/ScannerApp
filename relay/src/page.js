@@ -28,7 +28,7 @@ export const PAGE_HTML = `<!doctype html>
     <button id="submit" type="submit">Open</button>
   </form>
   <a id="download" class="button" href="#">Download</a>
-  <p>Shared with ScanVault. The file is end-to-end encrypted; this service cannot read it.</p>
+  <p>Shared with Doculoom. The file is end-to-end encrypted; this service cannot read it.</p>
 </main>
 <script src="/app.js"></script>
 </body>

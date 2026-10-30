@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/features/monetization/domain/entities/plan_status.dart';
-import 'package:scanvault/features/monetization/domain/repositories/monetization_contracts.dart';
-import 'package:scanvault/features/rewards/data/coin_wallet_impl.dart';
-import 'package:scanvault/features/rewards/domain/coin_rules.dart';
-import 'package:scanvault/features/rewards/presentation/coins_card.dart';
-import 'package:scanvault/features/settings/domain/feature_access.dart';
+import 'package:doculoom/features/monetization/domain/entities/plan_status.dart';
+import 'package:doculoom/features/monetization/domain/repositories/monetization_contracts.dart';
+import 'package:doculoom/features/rewards/data/coin_wallet_impl.dart';
+import 'package:doculoom/features/rewards/domain/coin_rules.dart';
+import 'package:doculoom/features/rewards/presentation/coins_card.dart';
+import 'package:doculoom/features/settings/domain/feature_access.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/coins_fakes.dart';
@@ -147,9 +147,9 @@ void main() {
       expect(find.text('12 coins'), findsOneWidget);
       expect(find.text('+10'), findsOneWidget);
       expect(find.textContaining('left today'), findsNothing, reason: 'no limit, so no counter');
-      for (final f in CoinFeature.values) {
-        expect(find.textContaining('${f.label}: ${f.cost} coins'), findsOneWidget);
-      }
+      expect(find.textContaining('Light tools: 1 coin'), findsOneWidget);
+      expect(find.textContaining('All other tools: 5 coins each use'), findsOneWidget);
+      expect(find.byKey(const ValueKey('coins-passes')), findsOneWidget);
     });
 
     testWidgets('watching a video adds coins and says so', (tester) async {

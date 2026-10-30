@@ -4,9 +4,9 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/features/pdf_tools/data/security/pdf_model.dart';
-import 'package:scanvault/features/pdf_tools/data/security/pdf_rewriter.dart';
-import 'package:scanvault/features/pdf_tools/data/security/pdf_security.dart';
+import 'package:doculoom/features/pdf_tools/data/security/pdf_model.dart';
+import 'package:doculoom/features/pdf_tools/data/security/pdf_rewriter.dart';
+import 'package:doculoom/features/pdf_tools/data/security/pdf_security.dart';
 
 Uint8List fixture(String name) => File('test/fixtures/pdf_security/$name.pdf').readAsBytesSync();
 

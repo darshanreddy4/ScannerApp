@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
@@ -15,6 +15,8 @@ import '../../export/domain/repositories/export_repository.dart';
 import '../../reader/data/pdf_text_edit.dart';
 import 'pdf_edit_cubit.dart';
 import 'pdf_page_renderer.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 const _pdfMime = 'application/pdf';
 const _renderWidth = 1300;
@@ -248,8 +250,18 @@ class _EditViewState extends State<_EditView> {
             appBar: AppBar(
               title: Text(p.basename(widget.path), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16)),
               actions: [
-                IconButton(key: const ValueKey('pdf-undo'), tooltip: 'Undo', icon: const Icon(AppIcons.markUndo), onPressed: state.canUndo ? cubit.undo : null),
-                IconButton(key: const ValueKey('pdf-redo'), tooltip: 'Redo', icon: const Icon(AppIcons.markRedo), onPressed: state.canRedo ? cubit.redo : null),
+                IconButton(
+                  key: const ValueKey('pdf-undo'),
+                  tooltip: tr('Undo'),
+                  icon: const Icon(AppIcons.markUndo),
+                  onPressed: state.canUndo ? cubit.undo : null,
+                ),
+                IconButton(
+                  key: const ValueKey('pdf-redo'),
+                  tooltip: tr('Redo'),
+                  icon: const Icon(AppIcons.markRedo),
+                  onPressed: state.canRedo ? cubit.redo : null,
+                ),
                 TextButton(
                   key: const ValueKey('pdf-save'),
                   onPressed: !ready || state.busy ? null : _save,
@@ -329,7 +341,7 @@ class _EditViewState extends State<_EditView> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.md, 8, AppSpacing.md, 8),
+          padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 8, AppSpacing.md, 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -516,7 +528,7 @@ class _PageCanvas extends StatelessWidget {
         child: edited.isEmpty
             ? null
             : OverflowBox(
-                alignment: Alignment.centerLeft,
+                alignment: AlignmentDirectional.centerStart,
                 minWidth: 0,
                 maxWidth: double.infinity,
                 child: Text(
@@ -596,7 +608,7 @@ class _LineSheetState extends State<_LineSheet> {
   Widget build(BuildContext context) {
     final bad = _bad;
     return Padding(
-      padding: EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, MediaQuery.viewInsetsOf(context).bottom + AppSpacing.md),
+      padding: EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 0, AppSpacing.md, MediaQuery.viewInsetsOf(context).bottom + AppSpacing.md),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -700,7 +712,7 @@ class _AddSheetState extends State<_AddSheet> {
     final bad = unsupportedCharacters(_controller.text);
     final empty = _controller.text.trim().isEmpty;
     return Padding(
-      padding: EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, MediaQuery.viewInsetsOf(context).bottom + AppSpacing.md),
+      padding: EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 0, AppSpacing.md, MediaQuery.viewInsetsOf(context).bottom + AppSpacing.md),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -715,7 +727,7 @@ class _AddSheetState extends State<_AddSheet> {
               minLines: 1,
               maxLines: 4,
               onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(hintText: 'Type here', errorText: bad.isEmpty ? null : 'These characters cannot be used: $bad'),
+              decoration: InputDecoration(hintText: tr('Type here'), errorText: bad.isEmpty ? null : 'These characters cannot be used: $bad'),
             ),
             const SizedBox(height: 8),
             Row(
@@ -789,7 +801,7 @@ class _AddSheetState extends State<_AddSheet> {
                 if (widget.canDelete)
                   IconButton(
                     key: const ValueKey('pdf-add-delete'),
-                    tooltip: 'Remove',
+                    tooltip: tr('Remove'),
                     color: AppColors.danger,
                     onPressed: () => Navigator.pop(context, const _AddResult(null)),
                     icon: const Icon(AppIcons.delete),

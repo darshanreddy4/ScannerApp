@@ -82,7 +82,7 @@ class PdfPagesProcessor implements PdfPageService {
           onProgress?.call(++done, total);
         }
         final target = p.join(outputDir, part.fileName);
-        await Isolate.run(() => buildPdf(sources, ExportQuality.high, target));
+        await buildPdfInBackground(sources, ExportQuality.high, target);
         result.add(PdfPart(path: target, name: part.fileName, pages: part.pages.length, bytes: await File(target).length()));
       } finally {
         await work.delete(recursive: true).then((_) {}, onError: (_) {});

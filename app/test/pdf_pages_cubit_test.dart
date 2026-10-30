@@ -6,14 +6,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/app/di.dart';
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/core/theme/app_icons.dart';
-import 'package:scanvault/core/theme/app_theme.dart';
-import 'package:scanvault/features/pdf_tools/domain/pdf_pages.dart';
-import 'package:scanvault/features/pdf_tools/presentation/pdf_pages_cubit.dart';
-import 'package:scanvault/features/pdf_tools/presentation/pdf_pages_page.dart';
+import 'package:doculoom/app/di.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/core/theme/app_icons.dart';
+import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/pdf_tools/domain/pdf_pages.dart';
+import 'package:doculoom/features/pdf_tools/presentation/pdf_pages_cubit.dart';
+import 'package:doculoom/features/pdf_tools/presentation/pdf_pages_page.dart';
 
 class _Service implements PdfPageService {
   _Service(this.pages, {this.openFailure});

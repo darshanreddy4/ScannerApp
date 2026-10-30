@@ -6,14 +6,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/app/di.dart';
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/core/theme/app_theme.dart';
-import 'package:scanvault/features/signature/domain/signature.dart';
-import 'package:scanvault/features/signature/presentation/sign_document_page.dart';
-import 'package:scanvault/features/signature/presentation/signature_cubits.dart';
-import 'package:scanvault/features/signature/presentation/signature_pages.dart';
+import 'package:doculoom/app/di.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/signature/domain/signature.dart';
+import 'package:doculoom/features/signature/presentation/sign_document_page.dart';
+import 'package:doculoom/features/signature/presentation/signature_cubits.dart';
+import 'package:doculoom/features/signature/presentation/signature_pages.dart';
 
 class _Store implements SignatureStore {
   _Store(this.dir);
@@ -22,13 +22,13 @@ class _Store implements SignatureStore {
   Failure? saveFailure;
   var counter = 0;
 
-  SavedSignature add() {
+  SavedSignature add({SignatureKind kind = SignatureKind.signature, String name = ''}) {
     final path = p.join(dir.path, 'sig${counter++}.png');
     final image = img.Image(width: 150, height: 50, numChannels: 4);
     img.fill(image, color: img.ColorRgba8(0, 0, 0, 0));
     img.fillRect(image, x1: 10, y1: 10, x2: 140, y2: 40, color: img.ColorRgba8(20, 30, 120, 255));
     File(path).writeAsBytesSync(img.encodePng(image));
-    final s = SavedSignature(id: 's$counter', path: path, width: 150, height: 50);
+    final s = SavedSignature(id: 's$counter', path: path, width: 150, height: 50, kind: kind, name: name, isDefault: !items.any((e) => e.kind == kind));
     items.add(s);
     return s;
   }
@@ -37,9 +37,54 @@ class _Store implements SignatureStore {
   Future<List<SavedSignature>> list() async => [...items];
 
   @override
-  Future<Result<SavedSignature>> save(String pngPath) async {
+  Future<Result<SavedSignature>> save(String pngPath, {SignatureKind kind = SignatureKind.signature, String name = ''}) async {
     if (saveFailure != null) return Err(saveFailure!);
-    if (items.length >= SignatureStore.maxSaved) return const Err(ExportFailure('You can keep up to 5 signatures.'));
+    if (items.length >= SignatureStore.maxSaved) return Err(ExportFailure('You can keep up to ${SignatureStore.maxSaved} signatures.'));
+    lastKind = kind;
+    return Ok(add(kind: kind, name: name));
+  }
+
+  SignatureKind? lastKind;
+  final calls = <String>[];
+
+  void _replace(String id, SavedSignature Function(SavedSignature) f) {
+    final i = items.indexWhere((s) => s.id == id);
+    if (i >= 0) items[i] = f(items[i]);
+  }
+
+  @override
+  Future<void> update(String id, {String? name, SignatureKind? kind}) async {
+    calls.add('update $id $name ${kind?.name}');
+    _replace(id, (s) => s.copyWith(name: name, kind: kind));
+  }
+
+  @override
+  Future<void> setDefault(String id) async {
+    calls.add('default $id');
+    final kind = items.firstWhere((s) => s.id == id).kind;
+    for (final s in [...items]) {
+      if (s.kind == kind) _replace(s.id, (x) => x.copyWith(isDefault: x.id == id));
+    }
+  }
+
+  @override
+  Future<void> move(String id, int index) async {
+    calls.add('move $id $index');
+    final i = items.indexWhere((s) => s.id == id);
+    final s = items.removeAt(i);
+    items.insert(index, s);
+  }
+
+  @override
+  Future<Result<SavedSignature>> recolor(String id, InkColor ink) async {
+    calls.add('recolor $id ${ink.name}');
+    return Ok(items.firstWhere((s) => s.id == id));
+  }
+
+  @override
+  Future<Result<SavedSignature>> duplicate(String id) async {
+    calls.add('duplicate $id');
+    if (items.length >= SignatureStore.maxSaved) return const Err(ExportFailure('full'));
     return Ok(add());
   }
 
@@ -178,7 +223,7 @@ void main() {
     });
 
     test('a full store is reported', () async {
-      for (var i = 0; i < 5; i++) {
+      for (var i = 0; i < SignatureStore.maxSaved; i++) {
         store.add();
       }
       final c = make();
@@ -186,7 +231,7 @@ void main() {
       c.extend(50, 50);
       await c.save(padWidth: 100, padHeight: 100);
       expect(c.state.saved, isNull);
-      expect(c.state.failure!.message, contains('up to 5 signatures'));
+      expect(c.state.failure!.message, contains('up to 20 signatures'));
     });
   });
 
@@ -321,13 +366,117 @@ void main() {
     });
 
     testWidgets('the hub shows saved signatures and disables adding at the limit', (tester) async {
-      for (var i = 0; i < 5; i++) {
+      for (var i = 0; i < SignatureStore.maxSaved; i++) {
         store.add();
       }
       await setUpPage(tester, const SignatureHubPage());
-      expect(find.byType(SignatureThumb), findsNWidgets(5));
-      expect(find.text('You have 5 signatures. Delete one to add another.'), findsOneWidget);
+      expect(find.text('You have 20 signatures. Delete one to add another.'), findsOneWidget);
       expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Draw')).onPressed, isNull);
+    });
+
+    Future<void> menu(WidgetTester tester, String id, String item) async {
+      await tester.tap(find.byKey(ValueKey('sig-menu-$id')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(item));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('the hub names the first signature and marks the default', (tester) async {
+      store
+        ..add()
+        ..add(name: 'Work');
+      await setUpPage(tester, const SignatureHubPage());
+      expect(find.text('Signature 1 (default)'), findsOneWidget);
+      expect(find.text('Work'), findsOneWidget);
+    });
+
+    testWidgets('a menu action renames, sets the default, moves and makes a copy', (tester) async {
+      final a = store.add();
+      final b = store.add();
+      await setUpPage(tester, const SignatureHubPage());
+
+      await menu(tester, b.id, 'Use this signature first');
+      expect(store.calls.last, 'default ${b.id}');
+      expect(find.text('Signature 2 (default)'), findsOneWidget);
+
+      await menu(tester, b.id, 'Move up');
+      expect(store.calls.last, 'move ${b.id} 0');
+      expect(store.items.first.id, b.id);
+
+      await menu(tester, a.id, 'Make a copy');
+      expect(store.calls.last, 'duplicate ${a.id}');
+      expect(store.items.length, 3);
+
+      await menu(tester, a.id, 'Keep as initials');
+      expect(store.calls.last, 'update ${a.id} null initials');
+    });
+
+    testWidgets('rename asks for a name and keeps it', (tester) async {
+      final a = store.add();
+      await setUpPage(tester, const SignatureHubPage());
+      await tester.tap(find.byKey(ValueKey('sig-menu-${a.id}')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Rename'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Office');
+      await tester.tap(find.widgetWithText(TextButton, 'Save'));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+      await tester.pumpAndSettle();
+      expect(store.items.single.name, 'Office');
+      expect(find.text('Office (default)'), findsOneWidget);
+    });
+
+    testWidgets('change of ink colour asks which colour', (tester) async {
+      final a = store.add();
+      await setUpPage(tester, const SignatureHubPage());
+      await menu(tester, a.id, 'Change ink colour');
+      await tester.tap(find.text('Dark blue'));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+      await tester.pumpAndSettle();
+      expect(store.calls.last, 'recolor ${a.id} darkBlue');
+    });
+
+    testWidgets('the kind filter shows one kind, and new pictures follow it', (tester) async {
+      store
+        ..add()
+        ..add(kind: SignatureKind.initials, name: 'JD');
+      await setUpPage(tester, const SignatureHubPage());
+      expect(find.byType(SignatureThumb), findsNWidgets(2));
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Initials'));
+      await tester.pump();
+      expect(find.byType(SignatureThumb), findsOneWidget);
+      expect(find.text('JD (default)'), findsOneWidget);
+      expect(find.text('Draw initials'), findsOneWidget);
+      expect(find.text('Initials from a photo'), findsOneWidget);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Signatures'));
+      await tester.pump();
+      expect(find.byType(SignatureThumb), findsOneWidget);
+      expect(find.text('Draw'), findsOneWidget);
+    });
+
+    testWidgets('initials are saved as initials from the draw and photo pages', (tester) async {
+      await setUpPage(tester, const SignatureDrawPage(kind: SignatureKind.initials));
+      final cubit = tester.element(find.byType(Scaffold).first).read<SignatureDrawCubit>();
+      cubit
+        ..begin(10, 10)
+        ..extend(60, 40);
+      await tester.runAsync(() => cubit.save(padWidth: 300, padHeight: 150));
+      await tester.pump();
+      expect(store.lastKind, SignatureKind.initials);
+    });
+
+    testWidgets('the sign page starts with the default signature, not just the first', (tester) async {
+      store
+        ..add()
+        ..add();
+      store.items[1] = store.items[1].copyWith(isDefault: true);
+      store.items[0] = store.items[0].copyWith(isDefault: false);
+      await setUpPage(tester, const SignDocumentPage(), signer: _Signer(pagePictures(1)));
+      final cubit = tester.element(find.byType(Scaffold).first).read<SignDocumentCubit>();
+      await tester.runAsync(() => cubit.open('/x.pdf'));
+      await tester.pump();
+      expect(cubit.state.selected!.id, store.items[1].id);
     });
 
     for (final width in [320.0, 400.0, 900.0]) {

@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../../../core/utils/region.dart';
 import 'dart:isolate';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -74,7 +75,7 @@ class SlideExporter {
         final size = imageInfo(await f.readAsBytes());
         pages.add(PageSource(path: f.path, width: size?.width ?? 1600, height: size?.height ?? 900));
       }
-      await buildPdf(pages, ExportQuality.high, outputPath);
+      await buildPdf(pages, ExportQuality.high, outputPath, letter: Region.letter);
     } finally {
       for (final f in files) {
         try {

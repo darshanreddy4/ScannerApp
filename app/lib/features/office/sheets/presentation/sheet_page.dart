@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +13,8 @@ import '../domain/sheet_model.dart';
 import 'sheet_cubit.dart';
 import 'sheet_dialogs.dart';
 import 'sheet_grid.dart';
+import '../../../../core/widgets/text.dart';
+import '../../../../core/i18n/tr.dart';
 
 /// Which file the spreadsheet screen opens; a null [path] starts an empty workbook.
 class SheetArgs {
@@ -246,19 +248,19 @@ class _SheetViewState extends State<_SheetView> {
         if (ready) ...[
           IconButton(
             key: const ValueKey('sheet_undo'),
-            tooltip: 'Undo',
+            tooltip: tr('Undo'),
             onPressed: state.canUndo ? cubit.undo : null,
             icon: const Icon(AppIcons.markUndo, size: 20),
           ),
           IconButton(
             key: const ValueKey('sheet_redo'),
-            tooltip: 'Redo',
+            tooltip: tr('Redo'),
             onPressed: state.canRedo ? cubit.redo : null,
             icon: const Icon(AppIcons.markRedo, size: 20),
           ),
           IconButton(
             key: const ValueKey('sheet_find'),
-            tooltip: 'Find',
+            tooltip: tr('Find'),
             onPressed: () => setState(() {
               _finding = !_finding;
               if (_finding) {
@@ -269,7 +271,7 @@ class _SheetViewState extends State<_SheetView> {
             }),
             icon: const Icon(AppIcons.search, size: 20),
           ),
-          IconButton(key: const ValueKey('sheet_save'), tooltip: 'Save or share', onPressed: _saveSheet, icon: const Icon(AppIcons.export, size: 20)),
+          IconButton(key: const ValueKey('sheet_save'), tooltip: tr('Save or share'), onPressed: _saveSheet, icon: const Icon(AppIcons.export, size: 20)),
           PopupMenuButton<String>(
             key: const ValueKey('sheet_menu'),
             icon: const Icon(AppIcons.more),
@@ -346,7 +348,7 @@ class _SheetViewState extends State<_SheetView> {
               controller: _findController,
               focusNode: _findFocus,
               textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(hintText: 'Find in this sheet', isDense: true, border: InputBorder.none),
+              decoration: InputDecoration(hintText: tr('Find in this sheet'), isDense: true, border: InputBorder.none),
               onSubmitted: cubit.find,
             ),
           ),
@@ -405,7 +407,7 @@ class _SheetViewState extends State<_SheetView> {
               keyboardType: TextInputType.text,
               autocorrect: false,
               enableSuggestions: false,
-              decoration: const InputDecoration(hintText: 'Tap a cell, then type here', isDense: true, border: InputBorder.none, filled: false),
+              decoration: InputDecoration(hintText: tr('Tap a cell, then type here'), isDense: true, border: InputBorder.none, filled: false),
               onSubmitted: (_) => _commit(),
             ),
           ),
@@ -418,7 +420,7 @@ class _SheetViewState extends State<_SheetView> {
                       IconButton(
                         key: const ValueKey('formula_cancel'),
                         visualDensity: VisualDensity.compact,
-                        tooltip: 'Cancel',
+                        tooltip: tr('Cancel'),
                         icon: const Icon(AppIcons.close, size: 20),
                         onPressed: () {
                           _input.text = _original;
@@ -428,7 +430,7 @@ class _SheetViewState extends State<_SheetView> {
                       IconButton(
                         key: const ValueKey('formula_ok'),
                         visualDensity: VisualDensity.compact,
-                        tooltip: 'Done',
+                        tooltip: tr('Done'),
                         icon: const Icon(AppIcons.check, size: 22, color: AppColors.primary),
                         onPressed: _commit,
                       ),
@@ -668,11 +670,11 @@ class _SheetTabs extends StatelessWidget {
       ),
       child: Row(
         children: [
-          IconButton(key: const ValueKey('tab_add'), tooltip: 'Add a sheet', onPressed: cubit.addSheet, icon: const Icon(AppIcons.add, size: 20)),
+          IconButton(key: const ValueKey('tab_add'), tooltip: tr('Add a sheet'), onPressed: cubit.addSheet, icon: const Icon(AppIcons.add, size: 20)),
           if (hasHidden)
             IconButton(
               key: const ValueKey('tab_hidden'),
-              tooltip: 'Hidden sheets',
+              tooltip: tr('Hidden sheets'),
               onPressed: () => _hidden(context),
               icon: const Icon(AppIcons.eyeOff, size: 18),
             ),
@@ -708,7 +710,7 @@ class _SheetTabs extends StatelessWidget {
           ),
           IconButton(
             key: const ValueKey('tab_options'),
-            tooltip: 'Sheet options',
+            tooltip: tr('Sheet options'),
             onPressed: () => _menu(context, state.sheetIndex),
             icon: const Icon(AppIcons.more, size: 20),
           ),

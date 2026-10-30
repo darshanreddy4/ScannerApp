@@ -152,3 +152,20 @@ import 'package:image/image.dart' as img;
   File(outputPath).writeAsBytesSync(cut.png, flush: true);
   return (width: cut.width, height: cut.height);
 }
+
+/// The same signature in another ink colour: the shape and the softness of its edges are kept, only the colour changes.
+Uint8List recolorPng(Uint8List png, int argb) {
+  final image = img.decodePng(png);
+  if (image == null) throw const FormatException('Not a PNG');
+  final r = (argb >> 16) & 0xFF, g = (argb >> 8) & 0xFF, b = argb & 0xFF;
+  final rgba = image.convert(format: img.Format.uint8, numChannels: 4);
+  for (final px in rgba) {
+    if (px.a > 0) {
+      px
+        ..r = r
+        ..g = g
+        ..b = b;
+    }
+  }
+  return Uint8List.fromList(img.encodePng(rgba));
+}

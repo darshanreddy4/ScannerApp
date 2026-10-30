@@ -4,10 +4,10 @@ import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/core/theme/app_theme.dart';
-import 'package:scanvault/features/importer/domain/importer.dart';
-import 'package:scanvault/features/reader/data/docx_reading.dart';
-import 'package:scanvault/features/reader/presentation/reader_page.dart';
+import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/importer/domain/importer.dart';
+import 'package:doculoom/features/reader/data/docx_reading.dart';
+import 'package:doculoom/features/reader/presentation/reader_page.dart';
 
 String docx(Directory dir, List<String> paragraphs, {String name = 'sample.docx'}) {
   final body = paragraphs.map((p) => '<w:p><w:r><w:t xml:space="preserve">${const HtmlEscape().convert(p)}</w:t></w:r></w:p>').join();

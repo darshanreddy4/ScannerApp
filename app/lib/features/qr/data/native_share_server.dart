@@ -9,7 +9,7 @@ import '../domain/local_share.dart';
 /// Android: the file is served by a foreground service, so the link keeps working while the app is minimised or
 /// closed. This class only starts and stops shares and reads their state.
 class NativeLocalShareServer implements LocalShareServer, RestorableShares {
-  NativeLocalShareServer({MethodChannel? channel}) : _channel = channel ?? const MethodChannel('scanvault/share');
+  NativeLocalShareServer({MethodChannel? channel}) : _channel = channel ?? const MethodChannel('doculoom/share');
 
   final MethodChannel _channel;
 

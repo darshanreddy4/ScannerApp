@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/core/theme/app_theme.dart';
-import 'package:scanvault/features/documents/data/datasources/document_local_data_source.dart';
-import 'package:scanvault/features/documents/data/repositories/document_repository_impl.dart';
-import 'package:scanvault/features/documents/domain/entities/scanned_document.dart';
-import 'package:scanvault/features/documents/presentation/widgets/folder_editor.dart';
+import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/documents/data/datasources/document_local_data_source.dart';
+import 'package:doculoom/features/documents/data/repositories/document_repository_impl.dart';
+import 'package:doculoom/features/documents/domain/entities/scanned_document.dart';
+import 'package:doculoom/features/documents/presentation/widgets/folder_editor.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {

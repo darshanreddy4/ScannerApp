@@ -4,14 +4,14 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/core/utils/format.dart';
-import 'package:scanvault/features/documents/data/datasources/document_local_data_source.dart';
-import 'package:scanvault/features/documents/data/document_compressor.dart';
-import 'package:scanvault/features/documents/data/repositories/document_repository_impl.dart';
-import 'package:scanvault/features/documents/domain/entities/scanned_document.dart';
-import 'package:scanvault/features/documents/domain/usecases/document_usecases.dart';
-import 'package:scanvault/features/settings/domain/feature_access.dart';
-import 'package:scanvault/features/monetization/domain/entities/plan_status.dart';
+import 'package:doculoom/core/utils/format.dart';
+import 'package:doculoom/features/documents/data/datasources/document_local_data_source.dart';
+import 'package:doculoom/features/documents/data/document_compressor.dart';
+import 'package:doculoom/features/documents/data/repositories/document_repository_impl.dart';
+import 'package:doculoom/features/documents/domain/entities/scanned_document.dart';
+import 'package:doculoom/features/documents/domain/usecases/document_usecases.dart';
+import 'package:doculoom/features/settings/domain/feature_access.dart';
+import 'package:doculoom/features/monetization/domain/entities/plan_status.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -133,7 +133,7 @@ void main() {
   });
 
   test('a version 3 database gains the new columns with safe defaults', () async {
-    final path = p.join(root.path, 'scanvault.db');
+    final path = p.join(root.path, 'doculoom.db');
     final v3 = await openDatabase(
       path,
       version: 3,

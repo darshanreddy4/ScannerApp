@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 /// Asks for a size limit in kB or MB and pops the value in bytes.
 class SizeLimitDialog extends StatefulWidget {
@@ -48,7 +50,7 @@ class SizeLimitDialogState extends State<SizeLimitDialog> {
             autofocus: true,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-            decoration: InputDecoration(hintText: 'For example 45', errorText: _error),
+            decoration: InputDecoration(hintText: tr('For example 45'), errorText: _error),
             onChanged: (_) => setState(() => _error = null),
             onSubmitted: (_) => _save(),
           ),

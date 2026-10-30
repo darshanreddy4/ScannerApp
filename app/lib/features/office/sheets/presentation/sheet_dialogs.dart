@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import 'sheet_cubit.dart';
+import '../../../../core/widgets/text.dart';
 
 /// Result of the colour picker: [color] null means "none" (no fill, or the automatic text colour).
 typedef ColorChoice = ({int? color});
@@ -19,7 +20,7 @@ Future<ColorChoice?> pickColor(BuildContext context, {required String title, req
   showDragHandle: true,
   builder: (_) => SafeArea(
     child: Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,7 +99,7 @@ Future<double?> pickFontSize(BuildContext context, double? current) => showModal
   showDragHandle: true,
   builder: (_) => SafeArea(
     child: Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 16),
       child: Wrap(
         spacing: 10,
         runSpacing: 10,
@@ -238,7 +239,7 @@ Future<SaveChoice?> askSave(BuildContext context, {bool allowPdf = true}) => sho
     return SafeArea(
       child: StatefulBuilder(
         builder: (context, setState) => Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -2,11 +2,11 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/features/office/slides/data/deck_editor.dart';
-import 'package:scanvault/features/office/slides/data/pptx_package.dart';
-import 'package:scanvault/features/office/slides/data/pptx_template.dart';
-import 'package:scanvault/features/office/slides/data/pptx_writer.dart';
-import 'package:scanvault/features/office/slides/domain/slide_model.dart';
+import 'package:doculoom/features/office/slides/data/deck_editor.dart';
+import 'package:doculoom/features/office/slides/data/pptx_package.dart';
+import 'package:doculoom/features/office/slides/data/pptx_template.dart';
+import 'package:doculoom/features/office/slides/data/pptx_writer.dart';
+import 'package:doculoom/features/office/slides/domain/slide_model.dart';
 
 Future<DeckEditor> editor([String name = 'deck.pptx']) async => DeckEditor(await PptxDeck.open(File('test/fixtures/office/$name').readAsBytesSync()));
 

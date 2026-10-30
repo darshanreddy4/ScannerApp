@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -13,23 +13,30 @@ import '../../../core/utils/format.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../importer/domain/importer.dart';
 import '../../settings/presentation/settings_cubit.dart';
+import '../domain/entities/scan_mode.dart';
 import 'bloc/scan_session_cubit.dart';
+import '../../../core/widgets/text.dart';
 
 // Entry points for adding pages from the library or from inside the editor.
 // With `append: true` the pages join the scan session that is already open (they merge into one
 // document); otherwise a fresh session is started.
 
 /// Opens the camera for a new scan, optionally filing the result into [folderId].
-void startScan(BuildContext context, {String? folderId}) {
-  context.read<ScanSessionCubit>().start(defaultFilter: context.read<SettingsCubit>().state.defaultFilter, folderId: folderId);
+void startScan(BuildContext context, {String? folderId, ScanMode? mode}) {
+  final session = context.read<ScanSessionCubit>();
+  session.start(defaultFilter: context.read<SettingsCubit>().state.defaultFilter, folderId: folderId);
+  if (mode != null) session.setMode(mode);
   context.push('/scan');
 }
 
 /// Imports one or more gallery images.
-Future<void> startImport(BuildContext context, {String? folderId, bool append = false}) async {
+Future<void> startImport(BuildContext context, {String? folderId, bool append = false, ScanMode? mode}) async {
   final session = context.read<ScanSessionCubit>();
   final settings = context.read<SettingsCubit>().state;
-  if (!append) session.start(defaultFilter: settings.defaultFilter, folderId: folderId);
+  if (!append) {
+    session.start(defaultFilter: settings.defaultFilter, folderId: folderId);
+    if (mode != null) session.setMode(mode);
+  }
 
   try {
     final files = await ImagePicker().pickMultiImage();
@@ -161,9 +168,9 @@ Future<void> showAddSheet(BuildContext context, {String? folderId, bool append =
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
+            padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
             child: Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: Text(append ? 'Add to this document' : 'Add new document', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
             ),
           ),

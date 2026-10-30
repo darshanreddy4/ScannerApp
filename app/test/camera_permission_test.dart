@@ -4,23 +4,24 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/app/di.dart';
-import 'package:scanvault/app/router_observer.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/core/theme/app_theme.dart';
-import 'package:scanvault/features/documents/domain/repositories/document_repository.dart';
-import 'package:scanvault/features/documents/domain/usecases/document_usecases.dart';
-import 'package:scanvault/features/importer/domain/importer.dart';
-import 'package:scanvault/features/scanner/data/datasources/camera_access.dart';
-import 'package:scanvault/features/scanner/domain/entities/filter_settings.dart';
-import 'package:scanvault/features/scanner/domain/repositories/scanner_repository.dart';
-import 'package:scanvault/features/scanner/domain/usecases/scanner_usecases.dart';
-import 'package:scanvault/features/scanner/presentation/bloc/camera_cubit.dart';
-import 'package:scanvault/features/scanner/presentation/bloc/scan_session_cubit.dart';
-import 'package:scanvault/features/scanner/presentation/pages/camera_page.dart';
-import 'package:scanvault/features/settings/data/settings_repository.dart';
-import 'package:scanvault/features/settings/domain/app_settings.dart';
-import 'package:scanvault/features/settings/presentation/settings_cubit.dart';
+import 'package:doculoom/app/di.dart';
+import 'package:doculoom/app/router_observer.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/documents/domain/repositories/document_repository.dart';
+import 'package:doculoom/features/documents/domain/usecases/document_usecases.dart';
+import 'package:doculoom/features/importer/domain/importer.dart';
+import 'package:doculoom/features/scanner/data/datasources/camera_access.dart';
+import 'package:doculoom/features/scanner/domain/entities/filter_settings.dart';
+import 'package:doculoom/features/scanner/domain/entities/scan_mode.dart';
+import 'package:doculoom/features/scanner/domain/repositories/scanner_repository.dart';
+import 'package:doculoom/features/scanner/domain/usecases/scanner_usecases.dart';
+import 'package:doculoom/features/scanner/presentation/bloc/camera_cubit.dart';
+import 'package:doculoom/features/scanner/presentation/bloc/scan_session_cubit.dart';
+import 'package:doculoom/features/scanner/presentation/pages/camera_page.dart';
+import 'package:doculoom/features/settings/data/settings_repository.dart';
+import 'package:doculoom/features/settings/domain/app_settings.dart';
+import 'package:doculoom/features/settings/presentation/settings_cubit.dart';
 
 /// A phone whose camera permission is answered by the test.
 class _Access implements CameraAccess {
@@ -369,9 +370,43 @@ void main() {
       await open(tester);
       expect(find.text('Auto'), findsNothing);
       expect(find.byTooltip('Turn flash on'), findsNothing);
-      expect(tester.widget<GestureDetector>(find.byKey(const ValueKey('camera-capture'))).onTap, isNull);
+      expect(tester.widget<GestureDetector>(find.byKey(const ValueKey('camera-capture'))).onTapDown, isNull);
       expect(find.text('Gallery'), findsOneWidget, reason: 'pictures can still be added from the gallery');
       expect(find.byTooltip('Close'), findsOneWidget);
+    });
+
+    testWidgets('the scan mode bar picks a mode and tells what it does', (tester) async {
+      access = _Access(CameraAccessStatus.denied);
+      cameras = _Cameras();
+      await open(tester);
+      final session = tester.element(find.byType(CameraPage)).read<ScanSessionCubit>();
+      expect(session.state.mode, ScanMode.document);
+
+      await tester.tap(find.byKey(const ValueKey('scan-mode-receipt')));
+      await tester.pump();
+      expect(session.state.mode, ScanMode.receipt);
+      expect(session.state.currentFilter, ScanFilter.original, reason: 'a mode never adds a filter');
+      expect(session.state.title, startsWith('Receipt '));
+
+      await tester.tap(find.byKey(const ValueKey('scan-mode-document')));
+      await tester.pump();
+      expect(session.state.currentFilter, ScanFilter.original);
+      expect(session.state.title, startsWith('Scan '));
+    });
+
+    testWidgets('the bottom bar has one capture button, Gallery and no overflow on a narrow phone', (tester) async {
+      access = _Access(CameraAccessStatus.denied);
+      cameras = _Cameras();
+      tester.view.physicalSize = const Size(320 * 3, 640 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await open(tester);
+      tester.view.physicalSize = const Size(320 * 3, 640 * 3);
+      await tester.pump();
+      expect(find.byKey(const ValueKey('camera-capture')), findsOneWidget);
+      expect(find.text('Gallery'), findsOneWidget);
+      expect(find.text('Phone camera'), findsNothing);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('Allow camera asks again; a second refusal turns the button into Open Settings', (tester) async {

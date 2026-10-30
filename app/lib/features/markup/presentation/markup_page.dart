@@ -2,18 +2,23 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../../core/widgets/dark_chip.dart';
 import '../domain/markup.dart';
 import 'markup_canvas.dart';
 import 'markup_color_sheet.dart';
 import 'markup_cubit.dart';
 import 'markup_emoji_sheet.dart';
 import 'markup_text_dialog.dart';
+import 'stamp_sheet.dart';
+import '../domain/stamps.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 /// What the markup screen needs to show the page.
 class MarkupArgs {
@@ -212,17 +217,7 @@ class _OptionsRow extends StatelessWidget {
                 child: slider(value: state.widthOf(tool), min: MarkupState.minWidth, max: MarkupState.maxWidth, onChanged: cubit.setWidth),
               ),
               if (tool == MarkupTool.rectangle || tool == MarkupTool.ellipse)
-                FilterChip(
-                  key: const ValueKey('fill-chip'),
-                  label: const Text('Fill'),
-                  selected: state.filled,
-                  onSelected: cubit.setFilled,
-                  labelStyle: TextStyle(color: state.filled ? Colors.black : Colors.white),
-                  backgroundColor: Colors.white12,
-                  selectedColor: Colors.white,
-                  checkmarkColor: Colors.black,
-                  side: BorderSide.none,
-                ),
+                DarkChip(key: const ValueKey('fill-chip'), label: 'Fill', selected: state.filled, onTap: () => cubit.setFilled(!state.filled)),
             ],
           );
         } else if (tool == MarkupTool.sticker) {
@@ -239,6 +234,27 @@ class _OptionsRow extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               _EmojiButton(emoji: state.emoji, onTap: () => _pickEmoji(context, cubit)),
+            ],
+          );
+        } else if (tool == MarkupTool.stamp) {
+          child = Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Flexible(
+                child: Text(
+                  'Tap the page to place',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: Colors.white60, fontSize: 13),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: _StampButton(stamp: state.stamp ?? stampLibrary.first.stamps.first, onTap: () => _pickStamp(context, cubit)),
+                ),
+              ),
             ],
           );
         } else if (tool == MarkupTool.text) {
@@ -268,14 +284,14 @@ class _OptionsRow extends StatelessWidget {
               children: [
                 IconButton(
                   key: const ValueKey('delete-selected'),
-                  tooltip: 'Delete',
+                  tooltip: tr('Delete'),
                   onPressed: cubit.deleteSelected,
                   icon: const Icon(AppIcons.delete, color: Colors.white),
                 ),
                 if (selected is MarkupText) ...[
                   IconButton(
                     key: const ValueKey('edit-text'),
-                    tooltip: 'Edit text',
+                    tooltip: tr('Edit text'),
                     onPressed: () async {
                       final text = await showMarkupTextDialog(context, initial: selected.text);
                       if (text != null) cubit.editText(selected.id, text);
@@ -305,7 +321,9 @@ class _OptionsRow extends StatelessWidget {
                       onChangeEnd: (_) => cubit.endStyleChange(),
                     ),
                   ),
-                ] else
+                ] else if (selected is MarkupShape && selected.redact)
+                  Expanded(child: hint('Black box: drag to move, pinch to resize'))
+                else
                   Expanded(
                     child: slider(
                       value: selected is MarkupStroke ? selected.width : (selected as MarkupShape).width,
@@ -317,6 +335,8 @@ class _OptionsRow extends StatelessWidget {
               ],
             );
           }
+        } else if (tool == MarkupTool.redact) {
+          child = hint('Drag over what to hide. It is covered in solid black.');
         } else if (tool == MarkupTool.eraser) {
           child = hint('Drag over a mark to remove it');
         } else {
@@ -328,6 +348,11 @@ class _OptionsRow extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _pickStamp(BuildContext context, MarkupCubit cubit) async {
+    final stamp = await showStampLibrary(context);
+    if (stamp != null) cubit.selectStamp(stamp);
   }
 
   Future<void> _pickEmoji(BuildContext context, MarkupCubit cubit) async {
@@ -342,17 +367,26 @@ class _BoldChip extends StatelessWidget {
   final ValueChanged<bool> onSelected;
 
   @override
-  Widget build(BuildContext context) => FilterChip(
-    key: const ValueKey('bold-chip'),
-    label: const Text('Bold', style: TextStyle(fontWeight: FontWeight.w700)),
-    selected: selected,
-    onSelected: onSelected,
-    labelStyle: TextStyle(color: selected ? Colors.black : Colors.white),
-    backgroundColor: Colors.white12,
-    selectedColor: Colors.white,
-    checkmarkColor: Colors.black,
-    side: BorderSide.none,
-    visualDensity: VisualDensity.compact,
+  Widget build(BuildContext context) =>
+      DarkChip(key: const ValueKey('bold-chip'), label: 'Bold', bold: true, selected: selected, onTap: () => onSelected(!selected));
+}
+
+class _StampButton extends StatelessWidget {
+  const _StampButton({required this.stamp, required this.onTap});
+  final Stamp stamp;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: 'Choose stamp',
+    excludeSemantics: true,
+    child: InkWell(
+      key: const ValueKey('stamp-button'),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: StampTile(stamp: stamp),
+    ),
   );
 }
 
@@ -392,7 +426,9 @@ class _ToolStrip extends StatelessWidget {
     MarkupTool.arrow: AppIcons.markArrow,
     MarkupTool.rectangle: AppIcons.markSquare,
     MarkupTool.ellipse: AppIcons.markCircle,
+    MarkupTool.redact: AppIcons.markRedact,
     MarkupTool.sticker: AppIcons.markEmoji,
+    MarkupTool.stamp: AppIcons.markStamp,
     MarkupTool.text: AppIcons.markText,
     MarkupTool.select: AppIcons.markMove,
     MarkupTool.hand: AppIcons.markZoom,
@@ -517,20 +553,24 @@ class _BottomBar extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     child: Row(
       children: [
-        TextButton(
-          onPressed: onCancel,
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.white,
-            backgroundColor: Colors.white12,
-            minimumSize: const Size(0, 44),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+        Expanded(
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton(
+              onPressed: onCancel,
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.white12,
+                minimumSize: const Size(0, 44),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+              ),
+              child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Cancel', maxLines: 1)),
+            ),
           ),
-          child: const Text('Cancel', maxLines: 1),
         ),
-        const Spacer(),
         IconButton(
           key: const ValueKey('undo'),
-          tooltip: 'Undo',
+          tooltip: tr('Undo'),
           onPressed: canUndo ? onUndo : null,
           icon: const Icon(AppIcons.markUndo),
           color: Colors.white,
@@ -538,22 +578,29 @@ class _BottomBar extends StatelessWidget {
         ),
         IconButton(
           key: const ValueKey('redo'),
-          tooltip: 'Redo',
+          tooltip: tr('Redo'),
           onPressed: canRedo ? onRedo : null,
           icon: const Icon(AppIcons.markRedo),
           color: Colors.white,
           disabledColor: Colors.white30,
         ),
-        const Spacer(),
-        FilledButton(
-          onPressed: onDone,
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(0, 44),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            backgroundColor: const Color(0xFFFFC107),
-            foregroundColor: Colors.black,
+        Expanded(
+          child: Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: FilledButton(
+              onPressed: onDone,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 44),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                backgroundColor: const Color(0xFFFFC107),
+                foregroundColor: Colors.black,
+              ),
+              child: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('Done', maxLines: 1, style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ),
           ),
-          child: const Text('Done', maxLines: 1, style: TextStyle(fontWeight: FontWeight.w700)),
         ),
       ],
     ),

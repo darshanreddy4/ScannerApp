@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -11,12 +11,16 @@ import '../../../app/di.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../../core/widgets/dialogs.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../export/domain/repositories/export_repository.dart' show ShareService;
 import '../../../core/widgets/responsive.dart';
 import '../../documents/presentation/widgets/document_widgets.dart' show confirmDestructive;
 import '../data/signature_processor.dart' show smoothPath;
 import '../domain/signature.dart';
 import 'signature_cubits.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 /// Shows a signature on white paper, the way it will look on a page.
 class SignatureThumb extends StatelessWidget {
@@ -51,17 +55,77 @@ class SignatureHubPage extends StatelessWidget {
 class _HubView extends StatelessWidget {
   const _HubView();
 
-  Future<void> _go(BuildContext context, String route) async {
-    await context.push<bool>(route);
+  Future<void> _go(BuildContext context, String route, {SignatureKind? kind}) async {
+    await context.push<bool>(route, extra: kind);
     if (context.mounted) await context.read<SignatureHubCubit>().load();
+  }
+
+  Future<void> _onAction(BuildContext context, _SigAction action, SavedSignature s) async {
+    final cubit = context.read<SignatureHubCubit>();
+    switch (action) {
+      case _SigAction.rename:
+        final name = await promptText(
+          context,
+          title: tr('Name this signature'),
+          initial: s.name,
+          hint: tr('For example: Work, or My initials'),
+          allowEmpty: true,
+        );
+        if (name != null) await cubit.rename(s.id, name);
+      case _SigAction.makeDefault:
+        await cubit.makeDefault(s.id);
+      case _SigAction.switchKind:
+        await cubit.setKind(s.id, s.kind == SignatureKind.signature ? SignatureKind.initials : SignatureKind.signature);
+      case _SigAction.recolor:
+        final ink = await showModalBottomSheet<InkColor>(
+          context: context,
+          showDragHandle: true,
+          builder: (sheet) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final c in InkColor.values)
+                  ListTile(
+                    leading: CircleAvatar(radius: 10, backgroundColor: Color(c.argb)),
+                    title: Text(c.label),
+                    onTap: () => Navigator.pop(sheet, c),
+                  ),
+              ],
+            ),
+          ),
+        );
+        if (ink != null) await cubit.recolor(s.id, ink);
+      case _SigAction.duplicate:
+        await cubit.duplicate(s.id);
+      case _SigAction.share:
+        final r = await sl<ShareService>().shareFile(path: s.path, mimeType: 'image/png');
+        if (context.mounted && r.failureOrNull != null) showFailure(context, r.failureOrNull!);
+      case _SigAction.moveUp:
+        await cubit.shift(s.id, -1);
+      case _SigAction.moveDown:
+        await cubit.shift(s.id, 1);
+      case _SigAction.delete:
+        final ok = await confirmDestructive(
+          context,
+          title: 'Delete this signature?',
+          message: 'It will be removed from this phone. Documents you already signed are not changed.',
+          action: 'Delete',
+        );
+        if (ok) await cubit.delete(s.id);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SignatureHubCubit, SignatureHubState>(
+    return BlocConsumer<SignatureHubCubit, SignatureHubState>(
+      listenWhen: (a, b) => b.failure != null && a.failure != b.failure,
+      listener: (context, state) => showFailure(context, state.failure!),
       builder: (context, state) {
         final cubit = context.read<SignatureHubCubit>();
         final full = state.signatures.length >= SignatureStore.maxSaved;
+        final newKind = state.filter ?? SignatureKind.signature;
+        final initials = newKind == SignatureKind.initials;
+        final shown = state.visible;
         return Scaffold(
           appBar: AppBar(title: const Text('Signature')),
           body: SafeArea(
@@ -79,23 +143,42 @@ class _HubView extends StatelessWidget {
                   children: [
                     FilledButton.icon(
                       style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
-                      onPressed: full ? null : () => _go(context, '/signature-draw'),
+                      onPressed: full ? null : () => _go(context, '/signature-draw', kind: newKind),
                       icon: const Icon(AppIcons.edit, size: 18),
-                      label: const Text('Draw'),
+                      label: Text(initials ? 'Draw initials' : 'Draw'),
                     ),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
-                      onPressed: full ? null : () => _go(context, '/signature-photo'),
+                      onPressed: full ? null : () => _go(context, '/signature-photo', kind: newKind),
                       icon: const Icon(AppIcons.camera, size: 18),
-                      label: const Text('From a photo'),
+                      label: Text(initials ? 'Initials from a photo' : 'From a photo'),
                     ),
                   ],
                 ),
                 if (full)
-                  const Padding(
-                    padding: EdgeInsets.only(top: AppSpacing.sm),
-                    child: Text('You have 5 signatures. Delete one to add another.', style: TextStyle(fontSize: 12.5, color: AppColors.warning)),
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.sm),
+                    child: Text(
+                      trf('You have {n} signatures. Delete one to add another.', {'n': SignatureStore.maxSaved}),
+                      style: const TextStyle(fontSize: 12.5, color: AppColors.warning),
+                    ),
                   ),
+                if (state.signatures.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.xs,
+                    children: [
+                      ChoiceChip(label: const Text('All'), selected: state.filter == null, onSelected: (_) => cubit.setFilter(null)),
+                      for (final k in SignatureKind.values)
+                        ChoiceChip(
+                          label: Text(k == SignatureKind.signature ? 'Signatures' : 'Initials'),
+                          selected: state.filter == k,
+                          onSelected: (_) => cubit.setFilter(k),
+                        ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.md),
                 if (state.loaded && state.signatures.isEmpty)
                   const Card(
@@ -105,26 +188,68 @@ class _HubView extends StatelessWidget {
                       child: Text('No signature yet. Draw one with your finger, or photograph one written on white paper.', style: TextStyle(height: 1.4)),
                     ),
                   ),
-                for (final s in state.signatures)
+                if (state.signatures.isNotEmpty && shown.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: Text('Nothing of this kind yet.', style: TextStyle(color: AppColors.inkMuted)),
+                  ),
+                for (final s in shown)
                   Card(
                     margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                     child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      child: Row(
+                      padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, AppSpacing.sm, AppSpacing.xs, AppSpacing.sm),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(child: SignatureThumb(path: s.path)),
-                          IconButton(
-                            tooltip: 'Delete signature',
-                            icon: const Icon(AppIcons.delete, size: 20, color: AppColors.danger),
-                            onPressed: () async {
-                              final ok = await confirmDestructive(
-                                context,
-                                title: 'Delete this signature?',
-                                message: 'It will be removed from this phone. Documents you already signed are not changed.',
-                                action: 'Delete',
-                              );
-                              if (ok) await cubit.delete(s.id);
-                            },
+                          Row(
+                            children: [
+                              if (s.isDefault)
+                                const Padding(
+                                  padding: EdgeInsetsDirectional.only(end: 6),
+                                  child: Icon(AppIcons.star, size: 16, color: AppColors.warning),
+                                ),
+                              Expanded(
+                                child: Text(
+                                  s.isDefault ? '${state.labelOf(s)} (${tr('default')})' : state.labelOf(s),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                              PopupMenuButton<_SigAction>(
+                                key: ValueKey('sig-menu-${s.id}'),
+                                tooltip: tr('More'),
+                                icon: const Icon(AppIcons.more),
+                                onSelected: (a) => _onAction(context, a, s),
+                                itemBuilder: (_) => [
+                                  const PopupMenuItem(value: _SigAction.rename, child: _MenuRow(AppIcons.edit, 'Rename')),
+                                  if (!s.isDefault)
+                                    PopupMenuItem(
+                                      value: _SigAction.makeDefault,
+                                      child: _MenuRow(
+                                        AppIcons.star,
+                                        s.kind == SignatureKind.initials ? 'Use these initials first' : 'Use this signature first',
+                                      ),
+                                    ),
+                                  PopupMenuItem(
+                                    value: _SigAction.switchKind,
+                                    child: _MenuRow(AppIcons.edit, s.kind == SignatureKind.signature ? 'Keep as initials' : 'Keep as a signature'),
+                                  ),
+                                  const PopupMenuItem(value: _SigAction.recolor, child: _MenuRow(AppIcons.palette, 'Change ink colour')),
+                                  const PopupMenuItem(value: _SigAction.duplicate, child: _MenuRow(AppIcons.copy, 'Make a copy')),
+                                  const PopupMenuItem(value: _SigAction.share, child: _MenuRow(AppIcons.share, 'Share picture')),
+                                  if (state.signatures.first.id != s.id)
+                                    const PopupMenuItem(value: _SigAction.moveUp, child: _MenuRow(AppIcons.moveUp, 'Move up')),
+                                  if (state.signatures.last.id != s.id)
+                                    const PopupMenuItem(value: _SigAction.moveDown, child: _MenuRow(AppIcons.moveDown, 'Move down')),
+                                  const PopupMenuItem(value: _SigAction.delete, child: _MenuRow(AppIcons.delete, 'Delete', danger: true)),
+                                ],
+                              ),
+                            ],
+                          ),
+                          Padding(
+                            padding: const EdgeInsetsDirectional.only(end: AppSpacing.md),
+                            child: SignatureThumb(path: s.path),
                           ),
                         ],
                       ),
@@ -167,14 +292,35 @@ class _HubView extends StatelessWidget {
 
 // endregion
 
+enum _SigAction { rename, makeDefault, switchKind, recolor, duplicate, share, moveUp, moveDown, delete }
+
+class _MenuRow extends StatelessWidget {
+  const _MenuRow(this.icon, this.label, {this.danger = false});
+  final IconData icon;
+  final String label;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Icon(icon, size: 18, color: danger ? AppColors.danger : null),
+      const SizedBox(width: 12),
+      Flexible(
+        child: Text(label, style: danger ? const TextStyle(color: AppColors.danger) : null),
+      ),
+    ],
+  );
+}
+
 // region draw
 
 class SignatureDrawPage extends StatelessWidget {
-  const SignatureDrawPage({super.key});
+  const SignatureDrawPage({super.key, this.kind = SignatureKind.signature});
+  final SignatureKind kind;
 
   @override
   Widget build(BuildContext context) => BlocProvider(
-    create: (_) => SignatureDrawCubit(maker: sl<SignatureMaker>(), store: sl<SignatureStore>(), workDir: getTemporaryDirectory),
+    create: (_) => SignatureDrawCubit(maker: sl<SignatureMaker>(), store: sl<SignatureStore>(), workDir: getTemporaryDirectory, kind: kind),
     child: const _DrawView(),
   );
 }
@@ -339,11 +485,12 @@ class _PadPainter extends CustomPainter {
 // region photo
 
 class SignaturePhotoPage extends StatelessWidget {
-  const SignaturePhotoPage({super.key});
+  const SignaturePhotoPage({super.key, this.kind = SignatureKind.signature});
+  final SignatureKind kind;
 
   @override
   Widget build(BuildContext context) => BlocProvider(
-    create: (_) => SignaturePhotoCubit(maker: sl<SignatureMaker>(), store: sl<SignatureStore>(), workDir: getTemporaryDirectory),
+    create: (_) => SignaturePhotoCubit(maker: sl<SignatureMaker>(), store: sl<SignatureStore>(), workDir: getTemporaryDirectory, kind: kind),
     child: const _PhotoView(),
   );
 }

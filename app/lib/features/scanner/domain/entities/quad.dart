@@ -82,6 +82,14 @@ class Quad extends Equatable {
     return Quad(r(bl), r(tl), r(tr), r(br));
   }
 
+  /// Splits down the middle of the top and bottom edges: left page first, then right page.
+  (Quad, Quad) splitVertically() {
+    NormPoint mid(NormPoint a, NormPoint b) => NormPoint((a.x + b.x) / 2, (a.y + b.y) / 2);
+    final top = mid(tl, tr);
+    final bottom = mid(bl, br);
+    return (Quad(tl, top, bottom, bl), Quad(top, tr, br, bottom));
+  }
+
   double maxCornerDelta(Quad other) {
     var m = 0.0;
     for (var i = 0; i < 4; i++) {

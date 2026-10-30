@@ -6,26 +6,26 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image/image.dart' as img;
-import 'package:scanvault/app/di.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/features/documents/domain/entities/scanned_document.dart';
-import 'package:scanvault/features/documents/domain/repositories/document_repository.dart';
-import 'package:scanvault/features/documents/domain/usecases/document_usecases.dart';
-import 'package:scanvault/features/importer/domain/importer.dart';
-import 'package:scanvault/features/monetization/domain/entities/plan_status.dart';
-import 'package:scanvault/features/monetization/domain/repositories/monetization_contracts.dart';
-import 'package:scanvault/features/monetization/presentation/plan_cubit.dart';
-import 'package:scanvault/features/scanner/domain/entities/filter_settings.dart';
-import 'package:scanvault/features/scanner/domain/entities/prepared_image.dart';
-import 'package:scanvault/features/scanner/domain/entities/quad.dart';
-import 'package:scanvault/features/scanner/domain/repositories/scanner_repository.dart';
-import 'package:scanvault/features/scanner/domain/usecases/scanner_usecases.dart';
-import 'package:scanvault/features/scanner/presentation/bloc/scan_session_cubit.dart';
-import 'package:scanvault/features/scanner/presentation/pages/crop_page.dart';
-import 'package:scanvault/features/settings/data/settings_repository.dart';
-import 'package:scanvault/features/settings/domain/app_settings.dart';
-import 'package:scanvault/features/settings/presentation/settings_cubit.dart';
-import 'package:scanvault/features/scanner/presentation/pages/edit_page.dart';
+import 'package:doculoom/app/di.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/features/documents/domain/entities/scanned_document.dart';
+import 'package:doculoom/features/documents/domain/repositories/document_repository.dart';
+import 'package:doculoom/features/documents/domain/usecases/document_usecases.dart';
+import 'package:doculoom/features/importer/domain/importer.dart';
+import 'package:doculoom/features/monetization/domain/entities/plan_status.dart';
+import 'package:doculoom/features/monetization/domain/repositories/monetization_contracts.dart';
+import 'package:doculoom/features/monetization/presentation/plan_cubit.dart';
+import 'package:doculoom/features/scanner/domain/entities/filter_settings.dart';
+import 'package:doculoom/features/scanner/domain/entities/prepared_image.dart';
+import 'package:doculoom/features/scanner/domain/entities/quad.dart';
+import 'package:doculoom/features/scanner/domain/repositories/scanner_repository.dart';
+import 'package:doculoom/features/scanner/domain/usecases/scanner_usecases.dart';
+import 'package:doculoom/features/scanner/presentation/bloc/scan_session_cubit.dart';
+import 'package:doculoom/features/scanner/presentation/pages/crop_page.dart';
+import 'package:doculoom/features/settings/data/settings_repository.dart';
+import 'package:doculoom/features/settings/domain/app_settings.dart';
+import 'package:doculoom/features/settings/presentation/settings_cubit.dart';
+import 'package:doculoom/features/scanner/presentation/pages/edit_page.dart';
 
 late Directory _dir;
 late Uint8List _jpeg;
@@ -135,6 +135,7 @@ void main() {
     providers: [
       BlocProvider.value(value: session),
       BlocProvider(create: (_) => PlanCubit(_Plans())),
+      BlocProvider(create: (_) => SettingsCubit(_Prefs())),
     ],
     child: MaterialApp.router(routerConfig: router),
   );

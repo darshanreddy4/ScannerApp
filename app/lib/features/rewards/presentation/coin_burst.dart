@@ -1,11 +1,12 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../../core/widgets/text.dart';
 
 /// Plays a short "coins added" animation over the screen. Falls back to a message when animations are turned off.
 void showCoinsEarned(BuildContext context, int amount) {

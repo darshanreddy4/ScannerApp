@@ -5,31 +5,85 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/error/failures.dart';
+import '../../../core/i18n/tr.dart';
 import '../domain/signature.dart';
 
 // region hub
 
 class SignatureHubState extends Equatable {
-  const SignatureHubState({this.signatures = const [], this.loaded = false});
+  const SignatureHubState({this.signatures = const [], this.loaded = false, this.filter, this.failure});
   final List<SavedSignature> signatures;
   final bool loaded;
 
+  /// Shows only this kind; null shows all.
+  final SignatureKind? filter;
+  final Failure? failure;
+
+  List<SavedSignature> get visible => filter == null ? signatures : signatures.where((s) => s.kind == filter).toList();
+
+  /// The label shown for a picture: its name, or its kind and its number among that kind.
+  String labelOf(SavedSignature s) {
+    if (s.name.isNotEmpty) return s.name;
+    final n = signatures.where((e) => e.kind == s.kind).toList().indexWhere((e) => e.id == s.id) + 1;
+    return '${tr(s.kind.label)} $n';
+  }
+
   @override
-  List<Object?> get props => [signatures.map((s) => s.id).toList(), loaded];
+  List<Object?> get props => [
+    [for (final s in signatures) (s.id, s.name, s.kind, s.isDefault)],
+    loaded,
+    filter,
+    failure,
+  ];
 }
 
 class SignatureHubCubit extends Cubit<SignatureHubState> {
   SignatureHubCubit(this._store) : super(const SignatureHubState());
   final SignatureStore _store;
 
-  Future<void> load() async {
+  Future<void> load({Failure? failure}) async {
     final list = await _store.list();
-    if (!isClosed) emit(SignatureHubState(signatures: list, loaded: true));
+    if (!isClosed) emit(SignatureHubState(signatures: list, loaded: true, filter: state.filter, failure: failure));
   }
+
+  void setFilter(SignatureKind? kind) => emit(SignatureHubState(signatures: state.signatures, loaded: state.loaded, filter: kind));
 
   Future<void> delete(String id) async {
     await _store.delete(id);
     await load();
+  }
+
+  Future<void> rename(String id, String name) async {
+    await _store.update(id, name: name);
+    await load();
+  }
+
+  Future<void> setKind(String id, SignatureKind kind) async {
+    await _store.update(id, kind: kind);
+    await load();
+  }
+
+  Future<void> makeDefault(String id) async {
+    await _store.setDefault(id);
+    await load();
+  }
+
+  /// Moves one place up (-1) or down (+1) in the full list.
+  Future<void> shift(String id, int by) async {
+    final i = state.signatures.indexWhere((s) => s.id == id);
+    if (i < 0) return;
+    await _store.move(id, (i + by).clamp(0, state.signatures.length - 1));
+    await load();
+  }
+
+  Future<void> recolor(String id, InkColor ink) async {
+    final r = await _store.recolor(id, ink);
+    await load(failure: r.failureOrNull);
+  }
+
+  Future<void> duplicate(String id) async {
+    final r = await _store.duplicate(id);
+    await load(failure: r.failureOrNull);
   }
 }
 
@@ -69,15 +123,20 @@ class SignatureDrawState extends Equatable {
 }
 
 class SignatureDrawCubit extends Cubit<SignatureDrawState> {
-  SignatureDrawCubit({required SignatureMaker maker, required SignatureStore store, required Future<Directory> Function() workDir})
-    : _maker = maker,
-      _store = store,
-      _workDir = workDir,
-      super(const SignatureDrawState());
+  SignatureDrawCubit({
+    required SignatureMaker maker,
+    required SignatureStore store,
+    required Future<Directory> Function() workDir,
+    this.kind = SignatureKind.signature,
+  }) : _maker = maker,
+       _store = store,
+       _workDir = workDir,
+       super(const SignatureDrawState());
 
   final SignatureMaker _maker;
   final SignatureStore _store;
   final Future<Directory> Function() _workDir;
+  final SignatureKind kind;
 
   static const pens = <(String, double)>[('Thin', 2.0), ('Medium', 3.5), ('Thick', 5.5)];
 
@@ -141,7 +200,7 @@ class SignatureDrawCubit extends Cubit<SignatureDrawState> {
       if (!isClosed) emit(state.copyWith(busy: false, failure: png.failureOrNull));
       return;
     }
-    final saved = await _store.save(made.path);
+    final saved = await _store.save(made.path, kind: kind);
     if (isClosed) return;
     emit(state.copyWith(busy: false, saved: saved.valueOrNull, failure: saved.failureOrNull));
   }
@@ -189,15 +248,20 @@ class SignaturePhotoState extends Equatable {
 }
 
 class SignaturePhotoCubit extends Cubit<SignaturePhotoState> {
-  SignaturePhotoCubit({required SignatureMaker maker, required SignatureStore store, required Future<Directory> Function() workDir})
-    : _maker = maker,
-      _store = store,
-      _workDir = workDir,
-      super(const SignaturePhotoState());
+  SignaturePhotoCubit({
+    required SignatureMaker maker,
+    required SignatureStore store,
+    required Future<Directory> Function() workDir,
+    this.kind = SignatureKind.signature,
+  }) : _maker = maker,
+       _store = store,
+       _workDir = workDir,
+       super(const SignaturePhotoState());
 
   final SignatureMaker _maker;
   final SignatureStore _store;
   final Future<Directory> Function() _workDir;
+  final SignatureKind kind;
   int _request = 0;
 
   Future<void> pick(String path) async {
@@ -236,7 +300,7 @@ class SignaturePhotoCubit extends Cubit<SignaturePhotoState> {
     final preview = state.preview;
     if (preview == null || state.busy) return;
     emit(state.copyWith(busy: true, failure: null));
-    final saved = await _store.save(preview.path);
+    final saved = await _store.save(preview.path, kind: kind);
     if (isClosed) return;
     emit(state.copyWith(busy: false, saved: saved.valueOrNull, failure: saved.failureOrNull));
   }
@@ -338,7 +402,9 @@ class SignDocumentCubit extends Cubit<SignDocumentState> {
     final list = await _store.list();
     if (isClosed) return;
     final keep = state.selected == null ? null : list.where((s) => s.id == state.selected!.id).firstOrNull;
-    emit(state.copyWith(signatures: list, selected: keep ?? list.firstOrNull));
+    emit(
+      state.copyWith(signatures: list, selected: keep ?? list.where((s) => s.isDefault && s.kind == SignatureKind.signature).firstOrNull ?? list.firstOrNull),
+    );
   }
 
   Future<void> open(String path) async {

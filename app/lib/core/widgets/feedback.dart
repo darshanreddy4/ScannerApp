@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 import '../error/failures.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
+import 'text.dart';
 
 void showFailure(BuildContext context, Failure failure) {
   final messenger = ScaffoldMessenger.of(context);

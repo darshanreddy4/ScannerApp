@@ -1,12 +1,14 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../domain/markup.dart';
 import 'markup_cubit.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 const _sheetColor = Color(0xFF2B2B2D);
 
@@ -41,7 +43,7 @@ class _MarkupColorSheetState extends State<MarkupColorSheet> {
         final opacity = state.opacityOf(tool);
         return SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+            padding: const EdgeInsetsDirectional.fromSTEB(20, 16, 20, 16),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420),
@@ -60,7 +62,7 @@ class _MarkupColorSheetState extends State<MarkupColorSheet> {
                           ],
                         ),
                         IconButton.filled(
-                          tooltip: 'Close',
+                          tooltip: tr('Close'),
                           style: IconButton.styleFrom(backgroundColor: Colors.white12, foregroundColor: Colors.white),
                           icon: const Icon(AppIcons.close, size: 20),
                           onPressed: () => Navigator.pop(context),

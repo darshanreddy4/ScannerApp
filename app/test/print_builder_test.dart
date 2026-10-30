@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:scanvault/features/export/data/document_builders.dart';
-import 'package:scanvault/features/print/data/print_pdf_builder.dart';
-import 'package:scanvault/features/print/domain/print_options.dart';
+import 'package:doculoom/features/export/data/document_builders.dart';
+import 'package:doculoom/features/print/data/print_pdf_builder.dart';
+import 'package:doculoom/features/print/domain/print_options.dart';
 
 String _text(List<int> bytes) => String.fromCharCodes(bytes);
 

@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/core/theme/app_theme.dart';
-import 'package:scanvault/features/office/sheets/presentation/sheet_page.dart';
+import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/office/sheets/presentation/sheet_page.dart';
 
 Widget host(SheetArgs args) => MaterialApp(
   theme: AppTheme.light(),

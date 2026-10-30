@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -6,8 +6,8 @@ import '../../../../core/theme/app_icons.dart';
 import '../bloc/documents_cubit.dart';
 import '../widgets/document_widgets.dart';
 import '../widgets/refresh_on_return.dart';
-import '../../../monetization/presentation/ad_banner_slot.dart';
 import 'home_page.dart';
+import '../../../../core/widgets/text.dart';
 
 class FolderPage extends StatelessWidget {
   const FolderPage({super.key, required this.folderId});
@@ -30,7 +30,6 @@ class FolderPage extends StatelessWidget {
             child: Scaffold(
               appBar: DocumentsAppBar(title: folder?.name ?? 'Folder'),
               floatingActionButton: state.selecting ? null : ScanFab(folderId: folderId),
-              bottomNavigationBar: const AdBannerSlot(),
               body: docs.isEmpty
                   ? const Center(
                       child: Padding(
@@ -54,7 +53,7 @@ class FolderPage extends StatelessWidget {
                   : CustomScrollView(
                       slivers: [
                         SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 96),
+                          padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 96),
                           sliver: DocumentsCollection(documents: docs, gridView: state.gridView),
                         ),
                       ],

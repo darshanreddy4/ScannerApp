@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -21,6 +21,8 @@ import '../domain/passport_maker.dart';
 import '../domain/photo_compressor.dart';
 import '../domain/photo_specs.dart';
 import 'passport_cubit.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 /// Makes passport, visa and ID photos in the size each country asks for, then saves, shares or prints them.
 class PassportPhotoPage extends StatefulWidget {
@@ -225,7 +227,7 @@ class _SpecTile extends StatelessWidget {
         leading: Icon(selected ? AppIcons.check : AppIcons.idPhoto, color: selected ? AppColors.primary : AppColors.inkMuted),
         title: Text(customEmpty ? 'Custom size' : spec.name, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(detail, style: const TextStyle(fontSize: 12.5)),
-        trailing: onEdit == null ? null : IconButton(tooltip: 'Change size', icon: const Icon(AppIcons.edit, size: 18), onPressed: onEdit),
+        trailing: onEdit == null ? null : IconButton(tooltip: tr('Change size'), icon: const Icon(AppIcons.edit, size: 18), onPressed: onEdit),
         onTap: onTap,
       ),
     );
@@ -272,11 +274,11 @@ class _CountrySheetState extends State<_CountrySheet> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
+                padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
                 child: TextField(
                   autofocus: false,
                   onChanged: (v) => setState(() => _query = v),
-                  decoration: const InputDecoration(hintText: 'Search country', prefixIcon: Icon(AppIcons.search, size: 20), isDense: true),
+                  decoration: InputDecoration(hintText: tr('Search country'), prefixIcon: Icon(AppIcons.search, size: 20), isDense: true),
                 ),
               ),
               Expanded(

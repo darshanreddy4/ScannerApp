@@ -1,12 +1,13 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../domain/cell_display.dart';
 import '../domain/sheet_model.dart';
 import 'sheet_cubit.dart';
+import '../../../../core/widgets/text.dart';
 
 const _headerFill = Color(0xFFF1F4F9);
 const _gridLine = Color(0xFFDDE3EC);
@@ -234,9 +235,9 @@ class _SheetGridState extends State<SheetGrid> {
                 ),
                 padding: EdgeInsets.symmetric(horizontal: 3 * _zoom),
                 alignment: switch (desc.align) {
-                  HAlign.right => style.wrap ? Alignment.topRight : Alignment.bottomRight,
+                  HAlign.right => style.wrap ? AlignmentDirectional.topEnd : AlignmentDirectional.bottomEnd,
                   HAlign.center => style.wrap ? Alignment.topCenter : Alignment.bottomCenter,
-                  _ => style.wrap ? Alignment.topLeft : Alignment.bottomLeft,
+                  _ => style.wrap ? AlignmentDirectional.topStart : AlignmentDirectional.bottomStart,
                 },
                 child: desc.text.isEmpty
                     ? null
@@ -246,9 +247,9 @@ class _SheetGridState extends State<SheetGrid> {
                         softWrap: style.wrap,
                         overflow: style.wrap ? TextOverflow.clip : TextOverflow.ellipsis,
                         textAlign: switch (desc.align) {
-                          HAlign.right => TextAlign.right,
+                          HAlign.right => TextAlign.end,
                           HAlign.center => TextAlign.center,
-                          _ => TextAlign.left,
+                          _ => TextAlign.start,
                         },
                         style: TextStyle(
                           fontSize: (style.fontSize ?? 11) * 1.2 * _zoom,

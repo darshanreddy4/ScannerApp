@@ -38,8 +38,16 @@ class UpdateDocument {
 class UpdateDocumentMeta {
   const UpdateDocumentMeta(this._repo);
   final DocumentRepository _repo;
-  Future<Result<ScannedDocument>> call(String id, {bool? favorite, bool? pinned, bool? locked, List<String>? tags, DateTime? date}) =>
-      _repo.updateMeta(id, favorite: favorite, pinned: pinned, locked: locked, tags: tags, date: date);
+  Future<Result<ScannedDocument>> call(
+    String id, {
+    bool? favorite,
+    bool? pinned,
+    bool? locked,
+    List<String>? tags,
+    DateTime? date,
+    DateTime? expires,
+    bool clearExpiry = false,
+  }) => _repo.updateMeta(id, favorite: favorite, pinned: pinned, locked: locked, tags: tags, date: date, expires: expires, clearExpiry: clearExpiry);
 }
 
 class DuplicateDocument {

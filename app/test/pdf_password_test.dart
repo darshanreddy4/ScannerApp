@@ -5,13 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:scanvault/app/di.dart';
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/core/theme/app_theme.dart';
-import 'package:scanvault/features/pdf_tools/domain/pdf_protector.dart';
-import 'package:scanvault/features/pdf_tools/presentation/pdf_password_cubit.dart';
-import 'package:scanvault/features/pdf_tools/presentation/pdf_password_page.dart';
+import 'package:doculoom/app/di.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/pdf_tools/domain/pdf_protector.dart';
+import 'package:doculoom/features/pdf_tools/presentation/pdf_password_cubit.dart';
+import 'package:doculoom/features/pdf_tools/presentation/pdf_password_page.dart';
 
 class _Protector implements PdfProtector {
   PdfProtectionStatus status = const PdfProtectionStatus(encrypted: false, needsPassword: false, bytes: 2048);

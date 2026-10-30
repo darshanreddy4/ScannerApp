@@ -19,7 +19,7 @@ abstract interface class CameraAccess {
 class SystemCameraAccess implements CameraAccess {
   const SystemCameraAccess();
 
-  static const _channel = MethodChannel('scanvault/camera_access');
+  static const _channel = MethodChannel('doculoom/camera_access');
 
   // iOS asks once when the camera is first opened and reports a refusal then, so only Android is checked up front.
   bool get _checksFirst => Platform.isAndroid;

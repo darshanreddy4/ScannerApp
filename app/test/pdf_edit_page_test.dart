@@ -5,11 +5,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/core/theme/app_theme.dart';
-import 'package:scanvault/features/reader/data/pdf_text_edit.dart';
-import 'package:scanvault/features/text_edit/pdf/pdf_edit_cubit.dart';
-import 'package:scanvault/features/text_edit/pdf/pdf_edit_page.dart';
-import 'package:scanvault/features/text_edit/pdf/pdf_page_renderer.dart';
+import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/reader/data/pdf_text_edit.dart';
+import 'package:doculoom/features/text_edit/pdf/pdf_edit_cubit.dart';
+import 'package:doculoom/features/text_edit/pdf/pdf_edit_page.dart';
+import 'package:doculoom/features/text_edit/pdf/pdf_page_renderer.dart';
 
 const _fixture = 'test/fixtures/office/search_text.pdf';
 

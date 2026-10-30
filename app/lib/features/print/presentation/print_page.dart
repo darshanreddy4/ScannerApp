@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:pdfx/pdfx.dart';
 
 import '../../../app/di.dart';
@@ -13,6 +13,9 @@ import '../../documents/domain/entities/scanned_document.dart';
 import '../data/print_pdf_builder.dart' show sheetsFor;
 import '../domain/print_options.dart';
 import '../domain/print_service.dart';
+import '../../../core/utils/region.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 /// Print settings with a live preview. The final step opens the system print sheet, where the printer,
 /// two-sided printing and paper tray are chosen (works with Xerox, HP, Canon, Epson, Brother and more).
@@ -25,7 +28,7 @@ class PrintPage extends StatefulWidget {
 }
 
 class _PrintPageState extends State<PrintPage> {
-  PrintOptions _options = const PrintOptions();
+  PrintOptions _options = PrintOptions(paper: Region.letter ? PaperSize.letter : PaperSize.a4);
   bool _customRange = false;
   final _rangeController = TextEditingController();
 
@@ -189,7 +192,7 @@ class _PrintPageState extends State<PrintPage> {
                         keyboardType: TextInputType.text,
                         decoration: InputDecoration(
                           isDense: true,
-                          hintText: 'For example 1-3, 5',
+                          hintText: tr('For example 1-3, 5'),
                           errorText: _rangeValid ? null : 'Use pages 1 to $_total, like 1-3, 5',
                         ),
                         onChanged: (v) => _set(_options.copyWith(pageRange: v), immediate: false),

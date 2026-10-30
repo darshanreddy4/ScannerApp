@@ -5,6 +5,9 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../core/storage/temp_files.dart';
+import '../features/reminders/data/reminder_platform.dart';
+import '../features/reminders/domain/reminder_service.dart';
+import '../features/backup/data/backup_service.dart';
 import '../features/office/convert/office_converter.dart';
 import '../features/office/slides/data/slide_export.dart';
 import '../features/ocr/data/mlkit_ocr_engine.dart';
@@ -14,8 +17,13 @@ import '../features/markup/data/markup_renderer_impl.dart';
 import '../features/markup/domain/markup_renderer.dart';
 import '../features/id_card/domain/id_card.dart';
 import '../features/pdf_tools/data/pdf_compress_processor.dart';
+import '../features/pdf_tools/data/pdf_form_processor.dart';
 import '../features/pdf_tools/data/pdf_protect_processor.dart';
+import '../features/hijri/domain/hijri.dart';
+import '../features/pdf_tools/data/pdf_redact_processor.dart';
+import '../features/pdf_tools/domain/pdf_forms.dart';
 import '../features/pdf_tools/domain/pdf_protector.dart';
+import '../features/pdf_tools/domain/pdf_redact.dart';
 import '../features/signature/data/document_signer.dart';
 import '../features/signature/data/signature_processor.dart';
 import '../features/signature/data/signature_store.dart';
@@ -33,6 +41,9 @@ import '../features/photo_tools/domain/passport_maker.dart';
 import '../features/photo_tools/domain/photo_compressor.dart';
 import '../features/qr/data/native_share_server.dart';
 import '../features/qr/data/share_store.dart';
+import '../features/qr/data/scan_history_store.dart';
+import '../features/qr/data/system_scan_services.dart';
+import '../features/qr/domain/scan_services.dart';
 import '../features/qr/domain/share_sessions.dart';
 import '../features/ocr/data/text_repository_impl.dart';
 import '../features/ocr/domain/ocr_engine.dart';
@@ -49,6 +60,7 @@ import '../features/documents/domain/usecases/document_usecases.dart';
 import '../features/documents/presentation/bloc/document_detail_cubit.dart';
 import '../features/documents/presentation/bloc/documents_cubit.dart';
 import '../features/export/data/export_repository_impl.dart';
+import '../features/export/data/share_packager.dart';
 import '../features/export/domain/repositories/export_repository.dart';
 import '../features/export/domain/usecases/export_usecases.dart';
 import '../features/importer/data/importer_impl.dart';
@@ -67,6 +79,12 @@ import '../features/scanner/data/datasources/image_processing_service.dart';
 import '../features/scanner/data/repositories/scanner_repository_impl.dart';
 import '../features/scanner/domain/repositories/scanner_repository.dart';
 import '../features/scanner/domain/usecases/scanner_usecases.dart';
+import '../features/contacts/data/system_contact_saver.dart';
+import '../features/speech/data/system_speech_service.dart';
+import '../features/translate/data/mlkit_translation_service.dart';
+import '../features/translate/domain/translation_service.dart';
+import '../features/speech/domain/speech_service.dart';
+import '../features/contacts/domain/contact_saver.dart';
 import '../features/scanner/data/datasources/camera_access.dart';
 import '../features/scanner/presentation/bloc/camera_cubit.dart';
 import '../features/scanner/presentation/bloc/scan_session_cubit.dart';
@@ -113,6 +131,9 @@ void configureDependencies() {
       ),
     )
     ..registerLazySingleton<PdfProtector>(() => const PdfProtectProcessor())
+    ..registerLazySingleton<PdfFormService>(() => const PdfFormProcessor())
+    ..registerLazySingleton<PdfPageToolsService>(() => const PdfPageToolsProcessor())
+    ..registerLazySingleton<PdfRedactService>(() => PdfRedactProcessor())
     ..registerLazySingleton(() => SlideConverter(importer: sl()))
     ..registerLazySingleton(() => OfficeConverter(workDir: getTemporaryDirectory, slideConversions: sl<SlideConverter>().convert))
     ..registerLazySingleton<PdfCompressor>(
@@ -179,11 +200,17 @@ void configureDependencies() {
     ..registerLazySingleton<DocumentImporter>(() => DocumentImporterImpl())
     ..registerLazySingleton(() => ImportDocumentFile(sl()))
     ..registerLazySingleton<ExportRepository>(() => ExportRepositoryImpl())
+    ..registerLazySingleton<ReminderPlatform>(() => const AndroidReminderPlatform())
+    ..registerLazySingleton(
+      () => ReminderService(sl(), extras: (now, showNames) async => planHijriReminders(await const HijriReminderStore().load(), now, showNames: showNames)),
+    )
+    ..registerLazySingleton<BackupService>(() => LocalBackupService(documents: sl(), folders: sl(), tempDir: getTemporaryDirectory))
     ..registerLazySingleton<ShareService>(() => SharePlusService())
     ..registerLazySingleton<SaveService>(() => DeviceSaveService())
     ..registerLazySingleton<AuthService>(() => LocalAuthService())
     ..registerLazySingleton(() => ExportDocument(sl()))
     ..registerLazySingleton(() => ShareFile(sl()))
+    ..registerLazySingleton(() => SharePackager(sl<PdfProtector>()))
     // Monetization
     ..registerLazySingleton<PrintService>(() => PrintServiceImpl())
     ..registerLazySingleton<LocalShareServer>(() => Platform.isAndroid ? NativeLocalShareServer() : LocalShareServerImpl())
@@ -211,6 +238,13 @@ void configureDependencies() {
       ),
     )
     ..registerLazySingleton<CameraAccess>(() => const SystemCameraAccess())
+    ..registerLazySingleton<ScanHistory>(() => SharedPrefsScanHistory())
+    ..registerLazySingleton<CodeImageReader>(() => const MlKitCodeImageReader())
+    ..registerLazySingleton<WifiJoiner>(() => const SystemWifiJoiner())
+    ..registerLazySingleton<LinkOpener>(() => const SystemLinkOpener())
+    ..registerLazySingleton<ContactSaver>(() => const SystemContactSaver())
+    ..registerLazySingleton<SpeechService>(() => SystemSpeechService())
+    ..registerLazySingleton<TranslationService>(() => MlKitTranslationService())
     ..registerFactory(() => CameraCubit(access: sl()))
     ..registerFactory(
       () => ScanSessionCubit(

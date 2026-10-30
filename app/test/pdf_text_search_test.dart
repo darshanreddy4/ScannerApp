@@ -3,9 +3,9 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:scanvault/features/pdf_tools/data/security/pdf_security.dart';
-import 'package:scanvault/features/reader/data/pdf_text_extractor.dart';
-import 'package:scanvault/features/reader/domain/document_search.dart';
+import 'package:doculoom/features/pdf_tools/data/security/pdf_security.dart';
+import 'package:doculoom/features/reader/data/pdf_text_extractor.dart';
+import 'package:doculoom/features/reader/domain/document_search.dart';
 
 Uint8List fixture(String path) => File('test/fixtures/$path').readAsBytesSync();
 

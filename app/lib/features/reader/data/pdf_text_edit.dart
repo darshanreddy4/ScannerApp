@@ -247,7 +247,7 @@ String unsupportedCharacters(String text) {
   return bad.join();
 }
 
-Uint8List? _winAnsiBytes(String text) {
+Uint8List? winAnsiBytes(String text) {
   final out = <int>[];
   for (final r in text.runes) {
     if (r == 0x0A || r == 0x0D || r == 0x09) {
@@ -309,7 +309,7 @@ Uint8List applyPdfEdits(Uint8List bytes, PdfEditPlan plan) {
       remove.addAll(b.glyphIds);
       final text = e.text.trim();
       if (text.isEmpty) continue;
-      final encoded = _winAnsiBytes(text);
+      final encoded = winAnsiBytes(text);
       if (encoded == null)
         throw PdfEditException('The text "${unsupportedCharacters(text)}" cannot be placed in a PDF. Use letters, numbers and common symbols.');
       final g = read.glyphs[b.first];
@@ -330,7 +330,7 @@ Uint8List applyPdfEdits(Uint8List bytes, PdfEditPlan plan) {
       final color = '${_n(((a.rgb >> 16) & 255) / 255)} ${_n(((a.rgb >> 8) & 255) / 255)} ${_n((a.rgb & 255) / 255)} rg';
       drawn.write('q $color BT /$name ${_n(a.sizePt)} Tf ${_n(a.sizePt * 1.2)} TL ${_n(c)} ${_n(s)} ${_n(-s)} ${_n(c)} ${_n(ux)} ${_n(uy)} Tm\n');
       for (var i = 0; i < lines.length; i++) {
-        final encoded = _winAnsiBytes(lines[i]);
+        final encoded = winAnsiBytes(lines[i]);
         if (encoded == null)
           throw PdfEditException('The text "${unsupportedCharacters(lines[i])}" cannot be placed in a PDF. Use letters, numbers and common symbols.');
         drawn.write('${i == 0 ? '' : 'T* '}${_hexOf(encoded)} Tj\n');

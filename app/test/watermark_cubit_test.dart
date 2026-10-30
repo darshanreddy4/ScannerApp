@@ -3,12 +3,12 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/features/photo_tools/data/business_profile_store.dart';
-import 'package:scanvault/features/photo_tools/domain/watermark.dart';
-import 'package:scanvault/features/photo_tools/domain/watermark_service.dart';
-import 'package:scanvault/features/photo_tools/presentation/watermark_cubit.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/features/photo_tools/data/business_profile_store.dart';
+import 'package:doculoom/features/photo_tools/domain/watermark.dart';
+import 'package:doculoom/features/photo_tools/domain/watermark_service.dart';
+import 'package:doculoom/features/photo_tools/presentation/watermark_cubit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _Service implements WatermarkService {

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:camera/camera.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -12,11 +12,16 @@ import '../../../../app/router_observer.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
+import '../../../../core/widgets/dark_chip.dart';
 import '../../../../core/widgets/feedback.dart';
 import '../../../settings/presentation/settings_cubit.dart';
 import '../bloc/camera_cubit.dart';
+import '../../domain/entities/scan_mode.dart';
 import '../bloc/scan_session_cubit.dart';
+import '../mode_flow.dart';
 import '../widgets/quad_overlay.dart';
+import '../../../../core/widgets/text.dart';
+import '../../../../core/i18n/tr.dart';
 
 class CameraPage extends StatelessWidget {
   const CameraPage({super.key});
@@ -41,6 +46,7 @@ class _CameraViewState extends State<_CameraView> with WidgetsBindingObserver, R
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _camera.setDetection(_session.state.mode.cardAspect == null);
     _camera
       ..onAutoCaptured = _handleCaptured
       ..setQuality(context.read<SettingsCubit>().state.cameraQuality)
@@ -107,10 +113,20 @@ class _CameraViewState extends State<_CameraView> with WidgetsBindingObserver, R
     if (!mounted) return;
     if (added) {
       HapticFeedback.mediumImpact();
+      if (await continueModeScan(context)) return;
+      if (!mounted) return;
     } else if (_session.state.error != null) {
       showFailure(context, _session.state.error!);
     }
     await _camera.resumeStream();
+  }
+
+  Future<void> _done() async {
+    if (_session.state.mode.finishesItself) {
+      if (!await continueModeScan(context) && mounted) context.go('/scan/edit');
+    } else {
+      context.go('/scan/edit');
+    }
   }
 
   Future<void> _pickFromGallery() async {
@@ -130,7 +146,7 @@ class _CameraViewState extends State<_CameraView> with WidgetsBindingObserver, R
         final done = await _session.commitAll();
         if (!mounted) return;
         if (done && _session.state.pages.isNotEmpty) {
-          context.go('/scan/edit');
+          if (!await continueModeScan(context) && mounted && !_session.state.mode.finishesItself) context.go('/scan/edit');
         } else if (_session.state.error != null) {
           showFailure(context, _session.state.error!);
         }
@@ -169,54 +185,66 @@ class _CameraViewState extends State<_CameraView> with WidgetsBindingObserver, R
     final busy = context.select((ScanSessionCubit c) => c.state.busy);
     final busyLabel = context.select((ScanSessionCubit c) => c.state.busyLabel);
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _close();
-      },
-      child: Scaffold(
-        backgroundColor: AppColors.scannerBackdrop,
-        body: SafeArea(
-          child: Stack(
-            children: [
-              OrientationBuilder(
-                builder: (context, orientation) {
-                  final bottom = _BottomBar(
-                    axis: orientation == Orientation.landscape ? Axis.vertical : Axis.horizontal,
-                    pages: pages.length,
-                    lastPagePath: pages.isEmpty ? null : pages.last.croppedPath,
-                    onCapture: _capture,
-                    onGallery: _pickFromGallery,
-                    onDone: () => context.go('/scan/edit'),
-                  );
-                  // Held sideways (tablets, foldables) the controls move to the right edge so the preview keeps its height.
-                  if (orientation == Orientation.landscape) {
-                    return Row(
-                      children: [
-                        const Expanded(child: _Viewfinder()),
-                        SizedBox(
-                          width: 128,
-                          child: Column(
-                            children: [
-                              _TopBar(onClose: _close, axis: Axis.vertical),
-                              Expanded(child: Center(child: bottom)),
-                            ],
+    return BlocListener<ScanSessionCubit, ScanSessionState>(
+      listenWhen: (a, b) => a.mode != b.mode,
+      listener: (_, s) => _camera.setDetection(s.mode.cardAspect == null),
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _close();
+        },
+        child: Scaffold(
+          backgroundColor: AppColors.scannerBackdrop,
+          body: SafeArea(
+            child: Stack(
+              children: [
+                OrientationBuilder(
+                  builder: (context, orientation) {
+                    final bottom = _BottomBar(
+                      axis: orientation == Orientation.landscape ? Axis.vertical : Axis.horizontal,
+                      pages: pages.length,
+                      lastPagePath: pages.isEmpty ? null : pages.last.croppedPath,
+                      onCapture: _capture,
+                      onGallery: _pickFromGallery,
+                      onDone: _done,
+                    );
+                    // Held sideways (tablets, foldables) the controls move to the right edge so the preview keeps its height.
+                    if (orientation == Orientation.landscape) {
+                      return Row(
+                        children: [
+                          const Expanded(
+                            child: Column(
+                              children: [
+                                _ModeBar(),
+                                Expanded(child: _Viewfinder()),
+                              ],
+                            ),
                           ),
-                        ),
+                          SizedBox(
+                            width: 128,
+                            child: Column(
+                              children: [
+                                _TopBar(onClose: _close, axis: Axis.vertical),
+                                Expanded(child: Center(child: bottom)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return Column(
+                      children: [
+                        _TopBar(onClose: _close),
+                        const Expanded(child: _Viewfinder()),
+                        const _ModeBar(),
+                        bottom,
                       ],
                     );
-                  }
-                  return Column(
-                    children: [
-                      _TopBar(onClose: _close),
-                      const Expanded(child: _Viewfinder()),
-                      bottom,
-                    ],
-                  );
-                },
-              ),
-              BusyOverlay(visible: busy, label: busyLabel),
-            ],
+                  },
+                ),
+                BusyOverlay(visible: busy, label: busyLabel),
+              ],
+            ),
           ),
         ),
       ),
@@ -236,16 +264,18 @@ class _TopBar extends StatelessWidget {
     final front = context.select((CameraCubit c) => c.state.isFront);
     final canSwitch = context.select((CameraCubit c) => c.state.canSwitch);
     final ready = context.select((CameraCubit c) => c.state.status == CameraStatus.ready);
+    // Cards are fitted into a frame, so there is no outline search to switch.
+    final cardMode = context.select((ScanSessionCubit c) => c.state.mode.cardAspect != null);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       child: Flex(
         direction: axis,
         mainAxisSize: axis == Axis.vertical ? MainAxisSize.min : MainAxisSize.max,
         children: [
-          IconButton(tooltip: 'Close', color: Colors.white, icon: const Icon(AppIcons.close), onPressed: onClose),
+          IconButton(tooltip: tr('Close'), color: Colors.white, icon: const Icon(AppIcons.close), onPressed: onClose),
           if (axis == Axis.horizontal) const Spacer(),
           // The front camera has no outline detection or flash, so these only apply to the back camera.
-          if (ready && !front)
+          if (ready && !front && !cardMode)
             TextButton.icon(
               onPressed: () {
                 context.read<CameraCubit>().toggleAutoCapture();
@@ -275,11 +305,61 @@ class _TopBar extends StatelessWidget {
   }
 }
 
+/// Picks what is being scanned; the choice changes the guidance and what happens after the photo, never the look of the picture.
+class _ModeBar extends StatelessWidget {
+  const _ModeBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final mode = context.select((ScanSessionCubit c) => c.state.mode);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+            children: [
+              for (final m in ScanMode.values)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
+                  child: DarkChip(
+                    key: ValueKey('scan-mode-${m.name}'),
+                    label: m.label,
+                    selected: m == mode,
+                    selectedColor: AppColors.primary,
+                    onTap: () => context.read<ScanSessionCubit>().setMode(m),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (mode.about != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Text(
+              mode.about!,
+              key: const ValueKey('scan-mode-about'),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _Viewfinder extends StatelessWidget {
   const _Viewfinder();
 
   @override
   Widget build(BuildContext context) {
+    final mode = context.select((ScanSessionCubit c) => c.state.mode);
+    final pagesTaken = context.select((ScanSessionCubit c) => c.state.pages.length);
+    final hint = mode.hintFor(pagesTaken);
     return BlocBuilder<CameraCubit, CameraState>(
       builder: (context, state) {
         switch (state.status) {
@@ -300,6 +380,7 @@ class _Viewfinder extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
+                      if (mode.cardAspect != null) IgnorePointer(child: CustomPaint(painter: CardGuidePainter(mode))),
                       if (!state.isFront)
                         CustomPaint(
                           painter: QuadOverlayPainter(quad: state.quad, locked: state.stable),
@@ -308,8 +389,19 @@ class _Viewfinder extends StatelessWidget {
                         left: 0,
                         right: 0,
                         bottom: AppSpacing.md,
-                        child: Center(
-                          child: _StatusPill(detected: state.quad != null, stable: state.stable, auto: state.autoCapture, front: state.isFront),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (!state.isFront) const _ZoomButtons(),
+                            _StatusPill(
+                              detected: state.quad != null,
+                              stable: state.stable,
+                              auto: state.autoCapture,
+                              front: state.isFront,
+                              hint: hint,
+                              noun: mode.noun,
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -323,12 +415,39 @@ class _Viewfinder extends StatelessWidget {
   }
 }
 
+/// Zoom steps of the back camera; below 1x is the ultra-wide lens on phones that have one.
+class _ZoomButtons extends StatelessWidget {
+  const _ZoomButtons();
+
+  @override
+  Widget build(BuildContext context) {
+    final min = context.select((CameraCubit c) => c.state.minZoom);
+    final max = context.select((CameraCubit c) => c.state.maxZoom);
+    final zoom = context.select((CameraCubit c) => c.state.zoom);
+    final stops = zoomStops(min, max);
+    if (stops.isEmpty) return const SizedBox.shrink();
+    String label(double z) => '${z == z.roundToDouble() ? z.toStringAsFixed(0) : z.toStringAsFixed(1)}x';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Wrap(
+        spacing: 6,
+        children: [
+          for (final z in stops)
+            DarkChip(key: ValueKey('zoom-$z'), label: label(z), selected: (zoom - z).abs() < 0.05, onTap: () => context.read<CameraCubit>().setZoom(z)),
+        ],
+      ),
+    );
+  }
+}
+
 class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.detected, required this.stable, required this.auto, this.front = false});
+  const _StatusPill({required this.detected, required this.stable, required this.auto, required this.hint, required this.noun, this.front = false});
   final bool detected;
   final bool stable;
   final bool auto;
   final bool front;
+  final String hint;
+  final String noun;
 
   @override
   Widget build(BuildContext context) {
@@ -337,8 +456,8 @@ class _StatusPill extends StatelessWidget {
         : stable
         ? (AppIcons.check, auto ? 'Hold steady' : 'Ready to capture', AppColors.success)
         : detected
-        ? (AppIcons.autoDetect, 'Document detected', AppColors.primary)
-        : (AppIcons.scan, 'Align document in frame', Colors.black87);
+        ? (AppIcons.autoDetect, '$noun detected', AppColors.primary)
+        : (AppIcons.scan, hint, Colors.black87);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
@@ -383,8 +502,8 @@ class _PermissionNeeded extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               settingsNeeded
-                  ? 'Camera access is turned off for ScanVault. Open Settings, tap Permissions, then Camera, and choose Allow.'
-                  : 'ScanVault needs the camera to photograph your documents. Pictures stay on your phone.',
+                  ? 'Camera access is turned off for Doculoom. Open Settings, tap Permissions, then Camera, and choose Allow.'
+                  : 'Doculoom needs the camera to photograph your documents. Pictures stay on your phone.',
               key: const ValueKey('camera-permission-text'),
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white70, fontSize: 15),
@@ -469,11 +588,20 @@ class _BottomBar extends StatelessWidget {
         mainAxisSize: axis == Axis.vertical ? MainAxisSize.min : MainAxisSize.max,
         mainAxisAlignment: axis == Axis.vertical ? MainAxisAlignment.center : MainAxisAlignment.spaceBetween,
         children: [
-          _RoundAction(icon: AppIcons.gallery, label: 'Gallery', onTap: onGallery),
-          if (axis == Axis.vertical) const SizedBox(height: AppSpacing.md),
+          if (axis == Axis.vertical) ...[
+            _RoundAction(icon: AppIcons.gallery, label: 'Gallery', onTap: onGallery),
+            const SizedBox(height: AppSpacing.md),
+          ] else
+            Expanded(
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: _RoundAction(icon: AppIcons.gallery, label: 'Gallery', onTap: onGallery),
+              ),
+            ),
           GestureDetector(
             key: const ValueKey('camera-capture'),
-            onTap: capturing || !ready ? null : onCapture,
+            // Fires as the finger lands, so the phone has not yet moved from the press.
+            onTapDown: capturing || !ready ? null : (_) => onCapture(),
             child: Opacity(
               opacity: ready ? 1 : 0.35,
               child: Container(
@@ -491,8 +619,8 @@ class _BottomBar extends StatelessWidget {
             ),
           ),
           if (axis == Axis.vertical) const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            width: 64,
+          _wrapRight(
+            axis,
             child: pages == 0 || lastPagePath == null
                 ? const SizedBox.shrink()
                 : InkResponse(
@@ -542,6 +670,16 @@ class _BottomBar extends StatelessWidget {
       ),
     );
   }
+
+  /// Keeps the shutter in the middle: both sides share the space left of it.
+  Widget _wrapRight(Axis axis, {required Widget child}) => axis == Axis.vertical
+      ? SizedBox(width: 64, child: child)
+      : Expanded(
+          child: Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: SizedBox(width: 64, child: child),
+          ),
+        );
 }
 
 class _RoundAction extends StatelessWidget {
@@ -561,7 +699,10 @@ class _RoundAction extends StatelessWidget {
         children: [
           Icon(icon, color: Colors.white, size: 26),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+          ),
         ],
       ),
     ),

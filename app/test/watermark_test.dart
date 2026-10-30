@@ -4,12 +4,12 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/features/photo_tools/data/watermark_compositor.dart';
-import 'package:scanvault/features/photo_tools/data/watermark_processor.dart';
-import 'package:scanvault/features/photo_tools/data/watermark_stamp.dart';
-import 'package:scanvault/features/photo_tools/domain/photo_compressor.dart';
-import 'package:scanvault/features/photo_tools/domain/watermark.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/features/photo_tools/data/watermark_compositor.dart';
+import 'package:doculoom/features/photo_tools/data/watermark_processor.dart';
+import 'package:doculoom/features/photo_tools/data/watermark_stamp.dart';
+import 'package:doculoom/features/photo_tools/domain/photo_compressor.dart';
+import 'package:doculoom/features/photo_tools/domain/watermark.dart';
 
 Uint8List _solid(int w, int h, List<int> rgba) {
   final bytes = Uint8List(w * h * 4);

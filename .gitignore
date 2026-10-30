@@ -3,3 +3,5 @@
 app/android/build/
 relay/node_modules/
 relay/.wrangler/
+*.aab
+app/release.defines.json

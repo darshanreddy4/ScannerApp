@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'text.dart';
 
 /// Asks for a line of text. Returns the trimmed text, or null if cancelled (or left empty unless [allowEmpty]).
 /// The text controller lives inside the dialog, so it is disposed only after the dialog has fully closed.

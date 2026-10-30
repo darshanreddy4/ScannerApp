@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/features/qr/data/native_share_server.dart';
-import 'package:scanvault/features/qr/data/relay_share_service.dart';
-import 'package:scanvault/features/qr/domain/local_share.dart';
-import 'package:scanvault/features/qr/domain/share_options.dart';
-import 'package:scanvault/features/qr/domain/share_sessions.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/features/qr/data/native_share_server.dart';
+import 'package:doculoom/features/qr/data/relay_share_service.dart';
+import 'package:doculoom/features/qr/domain/local_share.dart';
+import 'package:doculoom/features/qr/domain/share_options.dart';
+import 'package:doculoom/features/qr/domain/share_sessions.dart';
 
 class _Store implements ShareStore {
   List<Map<String, Object?>> saved = [];
@@ -204,7 +204,7 @@ void main() {
   });
 
   group('NativeLocalShareServer', () {
-    const channel = MethodChannel('scanvault/share');
+    const channel = MethodChannel('doculoom/share');
     late List<MethodCall> calls;
     late bool live;
     late int downloads;

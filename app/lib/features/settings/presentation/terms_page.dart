@@ -1,20 +1,21 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/app_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/widgets/responsive.dart';
+import '../../../core/widgets/text.dart';
 
 /// In-app terms. Have a lawyer review them for your country and business before publishing.
 class TermsPage extends StatelessWidget {
   const TermsPage({super.key});
 
   static const _sections = <(String, String)>[
-    ('1. Agreement', 'By installing or using ScanVault you agree to these terms and to the Privacy Policy. If you do not agree, please do not use the app.'),
+    ('1. Agreement', 'By installing or using Doculoom you agree to these terms and to the Privacy Policy. If you do not agree, please do not use the app.'),
     (
       '2. What the app does',
-      'ScanVault lets you scan, import, edit, organise, print, share and lock documents on your phone. Everything is processed and stored on your device.',
+      'Doculoom lets you scan, import, edit, organise, print, share and lock documents on your phone. Everything is processed and stored on your device.',
     ),
     (
       '3. Your content',

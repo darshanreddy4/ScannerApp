@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/features/office/sheets/data/csv.dart';
-import 'package:scanvault/features/office/sheets/data/xlsx_reader.dart';
-import 'package:scanvault/features/office/sheets/data/xlsx_writer.dart';
-import 'package:scanvault/features/office/sheets/domain/sheet_model.dart';
+import 'package:doculoom/features/office/sheets/data/csv.dart';
+import 'package:doculoom/features/office/sheets/data/xlsx_reader.dart';
+import 'package:doculoom/features/office/sheets/data/xlsx_writer.dart';
+import 'package:doculoom/features/office/sheets/domain/sheet_model.dart';
 
 void main() {
   test('parses quotes, embedded separators, line breaks and both newline styles', () {

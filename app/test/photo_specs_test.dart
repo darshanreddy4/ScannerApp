@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/features/photo_tools/domain/crop_math.dart';
-import 'package:scanvault/features/photo_tools/domain/photo_specs.dart';
-import 'package:scanvault/features/photo_tools/domain/sheet_layout.dart';
+import 'package:doculoom/features/photo_tools/domain/crop_math.dart';
+import 'package:doculoom/features/photo_tools/domain/photo_specs.dart';
+import 'package:doculoom/features/photo_tools/domain/sheet_layout.dart';
 
 void main() {
   group('photo size catalog', () {

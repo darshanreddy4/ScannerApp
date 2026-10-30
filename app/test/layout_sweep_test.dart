@@ -3,25 +3,31 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:doculoom/features/cards/data/card_store.dart';
+import 'package:doculoom/features/cards/domain/cards.dart';
+import 'package:doculoom/features/cards/presentation/card_edit_page.dart';
+import 'package:doculoom/features/checklists/data/checklist_store.dart';
+import 'package:doculoom/features/checklists/domain/checklists.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/features/office/convert/office_converter.dart';
-import 'package:scanvault/features/office/sheets/presentation/sheet_page.dart';
-import 'package:scanvault/app/app.dart';
-import 'package:scanvault/app/di.dart';
-import 'package:scanvault/app/router.dart';
-import 'package:scanvault/core/theme/app_icons.dart';
-import 'package:scanvault/features/documents/data/datasources/document_local_data_source.dart';
-import 'package:scanvault/features/documents/data/repositories/document_repository_impl.dart';
-import 'package:scanvault/features/documents/domain/entities/scanned_document.dart';
-import 'package:scanvault/features/monetization/domain/repositories/monetization_contracts.dart';
-import 'package:scanvault/features/ocr/data/text_repository_impl.dart';
-import 'package:scanvault/features/ocr/domain/ocr_models.dart';
-import 'package:scanvault/features/qr/domain/share_sessions.dart';
-import 'package:scanvault/features/qr/presentation/qr_share_page.dart';
-import 'package:scanvault/features/scanner/domain/entities/filter_settings.dart';
-import 'package:scanvault/features/markup/presentation/markup_page.dart';
-import 'package:scanvault/features/scanner/presentation/bloc/scan_session_cubit.dart';
+import 'package:doculoom/features/office/convert/office_converter.dart';
+import 'package:doculoom/features/office/sheets/presentation/sheet_page.dart';
+import 'package:doculoom/app/app.dart';
+import 'package:doculoom/app/di.dart';
+import 'package:doculoom/app/router.dart';
+import 'package:doculoom/core/i18n/tr.dart';
+import 'package:doculoom/core/theme/app_icons.dart';
+import 'package:doculoom/features/documents/data/datasources/document_local_data_source.dart';
+import 'package:doculoom/features/documents/data/repositories/document_repository_impl.dart';
+import 'package:doculoom/features/documents/domain/entities/scanned_document.dart';
+import 'package:doculoom/features/monetization/domain/repositories/monetization_contracts.dart';
+import 'package:doculoom/features/ocr/data/text_repository_impl.dart';
+import 'package:doculoom/features/ocr/domain/ocr_models.dart';
+import 'package:doculoom/features/qr/domain/share_sessions.dart';
+import 'package:doculoom/features/qr/presentation/qr_share_page.dart';
+import 'package:doculoom/features/scanner/domain/entities/filter_settings.dart';
+import 'package:doculoom/features/markup/presentation/markup_page.dart';
+import 'package:doculoom/features/scanner/presentation/bloc/scan_session_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -36,7 +42,18 @@ void main() {
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
 
-  testWidgets('every screen fits every phone size and font scale', (tester) async {
+  testWidgets('every screen fits every phone size and font scale', (tester) => sweep(tester, null));
+
+  // The same screens written from right to left, which mirrors them.
+  testWidgets('every screen fits every phone size and font scale in Arabic', (tester) => sweep(tester, 'ar'));
+
+  // Russian and German have the longest words and phrases of the European languages.
+  testWidgets('every screen fits every phone size and font scale in Russian', (tester) => sweep(tester, 'ru'));
+  testWidgets('every screen fits every phone size and font scale in German', (tester) => sweep(tester, 'de'));
+}
+
+Future<void> sweep(WidgetTester tester, String? language) async {
+  {
     // The test font is far wider than real text, so measure with Roboto, which Android phones use.
     final fonts = '/opt/homebrew/share/flutter/bin/cache/artifacts/material_fonts';
     final roboto = FontLoader('Roboto');
@@ -44,7 +61,7 @@ void main() {
       roboto.addFont(Future.value(File('$fonts/Roboto-$f.ttf').readAsBytesSync().buffer.asByteData()));
     }
     await roboto.load();
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({if (language != null) 'app_language': language});
     final root = Directory.systemTemp.createTempSync('sv_sweep');
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('plugins.flutter.io/path_provider'), (_) async => root.path);
     addTearDown(() => root.deleteSync(recursive: true));
@@ -115,18 +132,18 @@ void main() {
           final where = '${w.toInt()}x${h.toInt()} @${scale}x';
 
           appRouter.go('/');
-          await tester.pumpWidget(const ScanVaultApp());
+          await tester.pumpWidget(const DoculoomApp());
           await settle(load: true);
 
           await visit('Documents tab', where, () async {});
           await visit('Tools tab', where, () async {
-            await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('Tools')));
+            await tester.tap(find.byType(NavigationDestination).at(1));
           });
           await visit('Settings tab', where, () async {
-            await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('Settings')));
+            await tester.tap(find.byType(NavigationDestination).at(2));
           });
           await visit('Documents again + search', where, () async {
-            await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('Documents')));
+            await tester.tap(find.byType(NavigationDestination).at(0));
             await settle();
           });
           await visit('Actions sheet', where, () async {
@@ -136,11 +153,58 @@ void main() {
             await settle();
           });
           appRouter.go('/');
-          await tester.pumpWidget(const ScanVaultApp());
+          await tester.pumpWidget(const DoculoomApp());
           await visit('Folder', where, () async => appRouter.go('/folder/${folder.id}'));
           await visit('Document detail', where, () async => appRouter.go('/document/${doc.id}'));
           await visit('OCR start', where, () async => appRouter.go('/ocr', extra: doc));
           await visit('QR generator', where, () async => appRouter.go('/qr'));
+          await visit('Payment QR', where, () async => appRouter.go('/qr-payment'));
+          await visit('UPI payment QR', where, () async => appRouter.go('/qr-upi'));
+          await visit('E-invoice viewer', where, () async => appRouter.go('/einvoice'));
+          await visit('Invoice maker', where, () async => appRouter.go('/invoice'));
+          await visit('CV maker', where, () async => appRouter.go('/cv'));
+          await visit('VAT refund receipts', where, () async => appRouter.go('/vat-refund'));
+          await visit('Sign with certificate', where, () async => appRouter.go('/pdf-certificate'));
+          await visit('Amount in words', where, () async => appRouter.go('/amount-words'));
+          await visit('Loyalty cards (empty)', where, () async => appRouter.go('/cards'));
+          await visit('Add a card', where, () async => appRouter.go('/card-edit'));
+          const sweepCard = LoyaltyCard(
+            id: 'sweep',
+            name: 'A shop with a rather long name for a loyalty card',
+            number: '4006381333931',
+            type: CardCodeType.ean13,
+            note: 'Member since 2019',
+          );
+          await tester.runAsync(() => const CardStore().put(sweepCard));
+          await visit('Loyalty cards', where, () async => appRouter.go('/cards'));
+          await visit('Show a card', where, () async => appRouter.go('/card-view', extra: 'sweep'));
+          await visit('Edit a card', where, () async => appRouter.go('/card-edit', extra: const CardEditArgs(card: sweepCard)));
+          await tester.runAsync(const CardStore().clear);
+          await visit('Checklists (empty)', where, () async => appRouter.go('/checklists'));
+          const sweepList = Checklist(
+            id: 'sweep-list',
+            title: 'Moving to a new apartment across the city next month',
+            templateId: 'move',
+            items: [
+              ChecklistItem(
+                id: 0,
+                text: 'Tell your bank and card providers the new address and update the address on your ID and licence',
+                note: 'Branch visit on Monday',
+              ),
+              ChecklistItem(id: 1, text: 'Set up mail forwarding', done: true, docId: 'gone'),
+            ],
+          );
+          await tester.runAsync(() => const ChecklistStore().put(sweepList));
+          await visit('Checklists', where, () async => appRouter.go('/checklists'));
+          await visit('One checklist', where, () async => appRouter.go('/checklist', extra: 'sweep-list'));
+          await tester.runAsync(const ChecklistStore().clear);
+          await visit('Application packet', where, () async => appRouter.go('/packet'));
+          await visit('GST invoice', where, () async => appRouter.go('/gst-invoice'));
+          await visit('US invoice', where, () async => appRouter.go('/us-invoice'));
+          await visit('Saudi VAT invoice', where, () async => appRouter.go('/zatca-invoice'));
+          await visit('Safe ID copy', where, () async => appRouter.go('/safe-id'));
+          await visit('Hijri calendar', where, () async => appRouter.go('/hijri'));
+          await visit('Reminder help', where, () async => appRouter.go('/reminder-help'));
           await visit(
             'QR share',
             where,
@@ -194,13 +258,14 @@ void main() {
     } finally {
       tester.platformDispatcher.clearAllTestValues();
       FlutterError.onError = original;
+      Strings.code = 'en';
     }
     tester.platformDispatcher.clearAllTestValues();
     FlutterError.onError = original;
     // ignore: avoid_print
-    print('SWEEP REPORT (${report.length})\n${report.join('\n')}');
+    print('SWEEP REPORT ($language ${report.length})\n${report.join('\n')}');
     expect(report, isEmpty);
-  });
+  }
 }
 
 final report = <String>[];

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/features/text_edit/docx/docx_document.dart';
+import 'package:doculoom/features/text_edit/docx/docx_document.dart';
 
 DocxDocument openSample() => DocxDocument.open(File('test/fixtures/text_edit/sample.docx').readAsBytesSync());
 

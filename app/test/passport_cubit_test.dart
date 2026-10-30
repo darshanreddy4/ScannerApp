@@ -1,13 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/features/photo_tools/domain/crop_math.dart';
-import 'package:scanvault/features/photo_tools/domain/passport_maker.dart';
-import 'package:scanvault/features/photo_tools/domain/photo_compressor.dart';
-import 'package:scanvault/features/photo_tools/domain/photo_specs.dart';
-import 'package:scanvault/features/photo_tools/presentation/passport_cubit.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/features/photo_tools/domain/crop_math.dart';
+import 'package:doculoom/features/photo_tools/domain/passport_maker.dart';
+import 'package:doculoom/features/photo_tools/domain/photo_compressor.dart';
+import 'package:doculoom/features/photo_tools/domain/photo_specs.dart';
+import 'package:doculoom/features/photo_tools/presentation/passport_cubit.dart';
 
 class _Maker implements PassportMaker {
   int width = 4000, height = 3000;

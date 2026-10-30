@@ -2,14 +2,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/app/app.dart';
-import 'package:scanvault/app/di.dart';
-import 'package:scanvault/app/router.dart';
-import 'package:scanvault/core/theme/app_icons.dart';
-import 'package:scanvault/features/documents/data/repositories/document_repository_impl.dart';
-import 'package:scanvault/features/documents/domain/entities/scanned_document.dart';
-import 'package:scanvault/features/documents/data/datasources/document_local_data_source.dart';
-import 'package:scanvault/features/monetization/domain/repositories/monetization_contracts.dart';
+import 'package:doculoom/app/app.dart';
+import 'package:doculoom/app/di.dart';
+import 'package:doculoom/app/router.dart';
+import 'package:doculoom/core/theme/app_icons.dart';
+import 'package:doculoom/features/documents/data/repositories/document_repository_impl.dart';
+import 'package:doculoom/features/documents/domain/entities/scanned_document.dart';
+import 'package:doculoom/features/documents/data/datasources/document_local_data_source.dart';
+import 'package:doculoom/features/monetization/domain/repositories/monetization_contracts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -44,7 +44,7 @@ void main() {
       ..registerSingleton<DocumentLocalDataSource>(local);
 
     appRouter.go('/'); // the router is a global, so start every test at home
-    await tester.pumpWidget(const ScanVaultApp());
+    await tester.pumpWidget(const DoculoomApp());
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
     for (var i = 0; i < 20 && find.text('Lease').evaluate().isEmpty; i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
@@ -82,7 +82,7 @@ void main() {
       ..registerSingleton<DocumentLocalDataSource>(DocumentLocalDataSource(rootDir: root));
 
     appRouter.go('/'); // the router is a global, so start every test at home
-    await tester.pumpWidget(const ScanVaultApp());
+    await tester.pumpWidget(const DoculoomApp());
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
     await tester.pump(const Duration(milliseconds: 500));
     expect(tester.takeException(), isNull);
@@ -111,7 +111,7 @@ void main() {
       ..registerSingleton<DocumentLocalDataSource>(DocumentLocalDataSource(rootDir: root));
 
     appRouter.go('content://com.oneplus.filemanager/root/storage/emulated/0/Android/data/x/Spurti%20Biodata.pdf');
-    await tester.pumpWidget(const ScanVaultApp());
+    await tester.pumpWidget(const DoculoomApp());
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Page Not Found'), findsNothing);

@@ -2,10 +2,10 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/features/office/sheets/data/xlsx_reader.dart';
-import 'package:scanvault/features/office/sheets/data/xlsx_writer.dart';
-import 'package:scanvault/features/office/sheets/domain/number_format.dart';
-import 'package:scanvault/features/office/sheets/domain/sheet_model.dart';
+import 'package:doculoom/features/office/sheets/data/xlsx_reader.dart';
+import 'package:doculoom/features/office/sheets/data/xlsx_writer.dart';
+import 'package:doculoom/features/office/sheets/domain/number_format.dart';
+import 'package:doculoom/features/office/sheets/domain/sheet_model.dart';
 
 Uint8List fixture(String name) => File('test/fixtures/office/$name').readAsBytesSync();
 

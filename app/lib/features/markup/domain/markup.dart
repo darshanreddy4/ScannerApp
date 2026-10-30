@@ -28,8 +28,16 @@ class MarkupStroke extends MarkupItem {
 }
 
 class MarkupShape extends MarkupItem {
-  const MarkupShape({required int id, required this.kind, required this.from, required this.to, required this.color, required this.width, this.filled = false})
-    : super(id);
+  const MarkupShape({
+    required int id,
+    required this.kind,
+    required this.from,
+    required this.to,
+    required this.color,
+    required this.width,
+    this.filled = false,
+    this.redact = false,
+  }) : super(id);
 
   final ShapeKind kind;
   final Offset from;
@@ -37,6 +45,9 @@ class MarkupShape extends MarkupItem {
   final int color;
   final double width;
   final bool filled;
+
+  /// A solid black box that hides what is under it. Colour and see-through settings never apply to it.
+  final bool redact;
 
   MarkupShape copyWith({int? id, Offset? from, Offset? to, int? color, double? width, bool? filled}) => MarkupShape(
     id: id ?? this.id,
@@ -46,6 +57,7 @@ class MarkupShape extends MarkupItem {
     color: color ?? this.color,
     width: width ?? this.width,
     filled: filled ?? this.filled,
+    redact: redact,
   );
 }
 
@@ -71,8 +83,16 @@ class MarkupSticker extends MarkupItem {
 
 /// Text typed onto the page, in one colour. Lines are broken where the writer pressed enter.
 class MarkupText extends MarkupItem {
-  const MarkupText({required int id, required this.text, required this.center, required this.size, required this.color, this.bold = false, this.rotation = 0})
-    : super(id);
+  const MarkupText({
+    required int id,
+    required this.text,
+    required this.center,
+    required this.size,
+    required this.color,
+    this.bold = false,
+    this.rotation = 0,
+    this.framed = false,
+  }) : super(id);
 
   final String text;
   final Offset center;
@@ -87,6 +107,9 @@ class MarkupText extends MarkupItem {
   /// Radians, clockwise.
   final double rotation;
 
+  /// Drawn inside a frame, like a rubber stamp.
+  final bool framed;
+
   static const minSize = 0.015;
   static const maxSize = 0.3;
   static const defaultSize = 0.05;
@@ -99,8 +122,12 @@ class MarkupText extends MarkupItem {
     color: color ?? this.color,
     bold: bold ?? this.bold,
     rotation: rotation ?? this.rotation,
+    framed: framed,
   );
 }
+
+/// The space between a framed text (a stamp) and its frame, in pixels on a page [pageWidth] pixels wide.
+double markupTextPad(MarkupText t, double pageWidth) => t.framed ? t.size * pageWidth * 0.4 : 0;
 
 /// The laid out text of [t] on a page [pageWidth] pixels wide. Drawing and touching both use it, so they agree on where the text is.
 Paragraph markupTextParagraph(MarkupText t, double pageWidth) {
@@ -118,7 +145,7 @@ Paragraph markupTextParagraph(MarkupText t, double pageWidth) {
 }
 
 /// What a tap or drag on the page does.
-enum MarkupTool { pen, pencil, highlighter, eraser, line, arrow, rectangle, ellipse, sticker, text, select, hand }
+enum MarkupTool { pen, pencil, highlighter, eraser, line, arrow, rectangle, ellipse, redact, sticker, stamp, text, select, hand }
 
 extension MarkupToolInfo on MarkupTool {
   String get label => switch (this) {
@@ -130,7 +157,9 @@ extension MarkupToolInfo on MarkupTool {
     MarkupTool.arrow => 'Arrow',
     MarkupTool.rectangle => 'Square',
     MarkupTool.ellipse => 'Circle',
+    MarkupTool.redact => 'Hide',
     MarkupTool.sticker => 'Emoji',
+    MarkupTool.stamp => 'Stamp',
     MarkupTool.text => 'Text',
     MarkupTool.select => 'Move',
     MarkupTool.hand => 'Zoom',
@@ -148,11 +177,12 @@ extension MarkupToolInfo on MarkupTool {
     MarkupTool.arrow => ShapeKind.arrow,
     MarkupTool.rectangle => ShapeKind.rectangle,
     MarkupTool.ellipse => ShapeKind.ellipse,
+    MarkupTool.redact => ShapeKind.rectangle,
     _ => null,
   };
 
   /// Tools that have a colour and a thickness.
-  bool get hasInk => penKind != null || shapeKind != null;
+  bool get hasInk => this != MarkupTool.redact && (penKind != null || shapeKind != null);
 }
 
 /// Where each item is on a page of [page] pixels, for touching, selecting and moving.
@@ -186,7 +216,8 @@ abstract final class MarkupGeometry {
         return Rect.fromCenter(center: c, width: spread * 2, height: spread * 2);
       case MarkupText():
         final para = markupTextParagraph(item, page.width);
-        final w = para.width, h = para.height;
+        final pad = markupTextPad(item, page.width) * 2;
+        final w = para.width + pad, h = para.height + pad;
         para.dispose();
         final cosA = math.cos(item.rotation).abs(), sinA = math.sin(item.rotation).abs();
         return Rect.fromCenter(center: _px(item.center, page), width: w * cosA + h * sinA, height: w * sinA + h * cosA);
@@ -239,7 +270,8 @@ abstract final class MarkupGeometry {
         return local.dx.abs() <= half && local.dy.abs() <= half;
       case MarkupText():
         final para = markupTextParagraph(item, page.width);
-        final halfW = para.width / 2 + tol / 2, halfH = para.height / 2 + tol / 2;
+        final pad = markupTextPad(item, page.width);
+        final halfW = para.width / 2 + pad + tol / 2, halfH = para.height / 2 + pad + tol / 2;
         para.dispose();
         final d = p - _px(item.center, page);
         final cosA = math.cos(-item.rotation), sinA = math.sin(-item.rotation);

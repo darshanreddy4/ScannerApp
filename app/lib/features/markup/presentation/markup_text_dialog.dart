@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 /// Asks for the words to put on the page. Returns null when cancelled; [initial] is filled in when editing.
 Future<String?> showMarkupTextDialog(BuildContext context, {String initial = ''}) => showDialog<String>(
@@ -34,7 +36,7 @@ class _TextDialogState extends State<_TextDialog> {
       maxLines: 5,
       keyboardType: TextInputType.multiline,
       textCapitalization: TextCapitalization.sentences,
-      decoration: const InputDecoration(hintText: 'Type here'),
+      decoration: InputDecoration(hintText: tr('Type here')),
     ),
     actions: [
       TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),

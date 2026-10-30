@@ -4,8 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/features/photo_tools/data/photo_metadata.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/features/photo_tools/data/photo_metadata.dart';
 
 img.Image _picture({bool gps = false, bool camera = false, int? orientation, bool software = false}) {
   final image = img.Image(width: 64, height: 48, numChannels: 3);

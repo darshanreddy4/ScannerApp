@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
@@ -17,13 +17,17 @@ import '../../export/domain/repositories/export_repository.dart';
 import '../../../core/error/failures.dart';
 import '../../importer/domain/importer.dart';
 import '../../pdf_tools/data/security/pdf_security.dart';
+import '../../pdf_tools/domain/pdf_protector.dart';
 import '../../qr/presentation/qr_share_page.dart';
 import '../../scanner/presentation/add_content.dart';
 import '../../scanner/presentation/bloc/scan_session_cubit.dart';
 import '../../settings/presentation/settings_cubit.dart';
 import '../data/docx_reading.dart';
 import '../data/pdf_text_extractor.dart';
+import '../../speech/presentation/read_aloud_page.dart';
 import '../domain/document_search.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 class ReaderArgs {
   const ReaderArgs({required this.path, required this.kind});
@@ -45,12 +49,21 @@ class ReaderPage extends StatefulWidget {
   State<ReaderPage> createState() => _ReaderPageState();
 }
 
-enum _ReaderAction { editText, edit, save, share, qr }
+enum _ReaderAction { readAloud, editText, edit, save, share, qr }
 
 class _ReaderPageState extends State<ReaderPage> {
   PdfControllerPinch? _pdf;
   DocxReading? _docx;
   String? _error;
+
+  // Password-protected PDFs are read from an unlocked temporary copy.
+  var _locked = false;
+  var _unlocking = false;
+  var _showPassword = false;
+  String? _passwordError;
+  String? _unlockedPath;
+  final _passwordField = TextEditingController();
+  final _passwordFocus = FocusNode();
   final _docxPager = PageController();
   int _docxIndex = 0;
 
@@ -65,6 +78,9 @@ class _ReaderPageState extends State<ReaderPage> {
   var _current = -1;
   Map<int, List<int>> _hitsByPage = const {};
 
+  /// The file whose content is read, searched and edited; differs from the original only for an unlocked PDF.
+  String get _readPath => _unlockedPath ?? widget.args.path;
+
   String get _name => p.basename(widget.args.path);
   String get _mime => widget.args.kind == ImportKind.pdf ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
@@ -72,10 +88,65 @@ class _ReaderPageState extends State<ReaderPage> {
   void initState() {
     super.initState();
     if (widget.args.kind == ImportKind.pdf) {
-      _pdf = PdfControllerPinch(document: PdfDocument.openFile(widget.args.path));
+      _openPdf(widget.args.path);
     } else {
       _loadDocx();
     }
+  }
+
+  void _openPdf(String path) {
+    final document = PdfDocument.openFile(path);
+    _pdf = PdfControllerPinch(document: document);
+    if (_unlockedPath == null) {
+      document.then<void>((_) {}, onError: (Object _) {
+        _checkLocked();
+      });
+    }
+  }
+
+  /// A PDF that fails to open is asked for its password when it has one.
+  Future<void> _checkLocked() async {
+    final status = (await sl<PdfProtector>().inspect(widget.args.path)).valueOrNull;
+    if (mounted && status != null && status.needsPassword) setState(() => _locked = true);
+  }
+
+  Future<void> _unlock() async {
+    final password = _passwordField.text;
+    if (password.isEmpty || _unlocking) return;
+    setState(() {
+      _unlocking = true;
+      _passwordError = null;
+    });
+    final out = p.join((await getTemporaryDirectory()).path, 'unlocked_${DateTime.now().microsecondsSinceEpoch}.pdf');
+    final result = await sl<PdfProtector>().unlock(sourcePath: widget.args.path, outputPath: out, password: password);
+    if (!mounted) {
+      _deleteQuietly(out);
+      return;
+    }
+    final failure = result.failureOrNull;
+    if (failure != null) {
+      setState(() {
+        _unlocking = false;
+        _passwordError = failure.message;
+      });
+      _passwordField.selection = TextSelection(baseOffset: 0, extentOffset: _passwordField.text.length);
+      _passwordFocus.requestFocus();
+      return;
+    }
+    _pdf?.dispose();
+    _unlockedPath = out;
+    _passwordField.clear();
+    setState(() {
+      _openPdf(out);
+      _locked = false;
+      _unlocking = false;
+    });
+  }
+
+  void _deleteQuietly(String path) {
+    try {
+      File(path).deleteSync();
+    } catch (_) {}
   }
 
   Future<void> _loadDocx() async {
@@ -101,6 +172,10 @@ class _ReaderPageState extends State<ReaderPage> {
   @override
   void dispose() {
     _pdf?.dispose();
+    final unlocked = _unlockedPath;
+    if (unlocked != null) _deleteQuietly(unlocked);
+    _passwordField.dispose();
+    _passwordFocus.dispose();
     _docx?.dispose();
     _docxPager.dispose();
     _searchField.dispose();
@@ -139,7 +214,7 @@ class _ReaderPageState extends State<ReaderPage> {
     String? notice;
     List<PageTextIndex>? index;
     try {
-      final bytes = await File(widget.args.path).readAsBytes();
+      final bytes = await File(_readPath).readAsBytes();
       final found = await Isolate.run(() => extractPdfText(bytes));
       index = found;
       if (!found.any((page) => page.hasText)) {
@@ -225,6 +300,38 @@ class _ReaderPageState extends State<ReaderPage> {
 
   // endregion
 
+  /// The text of the open file, or null (with a message) when it has none to read.
+  Future<String?> _textToRead() async {
+    if (!_isPdf) {
+      final text = _docx?.plainText ?? '';
+      if (text.trim().isEmpty) showMessage(context, 'This Word document has no text to read.');
+      return text.trim().isEmpty ? null : text;
+    }
+    List<PageTextIndex> index;
+    try {
+      final known = _pdfIndex;
+      if (known != null) {
+        index = known;
+      } else {
+        final bytes = await File(_readPath).readAsBytes();
+        index = await Isolate.run(() => extractPdfText(bytes));
+        _pdfIndex = index;
+      }
+    } on WrongPasswordException {
+      if (mounted) showMessage(context, 'This PDF is password protected, so it cannot be read aloud.');
+      return null;
+    } catch (_) {
+      if (mounted) showMessage(context, 'Read aloud is not available for this PDF.');
+      return null;
+    }
+    final text = index.map((p) => p.text).where((t) => t.trim().isNotEmpty).join('\n\n');
+    if (text.trim().isEmpty && mounted) {
+      showMessage(context, 'This PDF has no text to read. It looks like scanned pages: save it to your library and use Extract text (OCR), then Read aloud.');
+      return null;
+    }
+    return text;
+  }
+
   Future<void> _run(_ReaderAction action) async {
     final session = context.read<ScanSessionCubit>();
     final settings = context.read<SettingsCubit>().state;
@@ -237,11 +344,18 @@ class _ReaderPageState extends State<ReaderPage> {
           '/qr-share',
           extra: QrShareArgs(filePath: widget.args.path, fileName: _name, mimeType: _mime),
         );
+      case _ReaderAction.readAloud:
+        final text = await _textToRead();
+        if (text != null && mounted)
+          context.push(
+            '/read-aloud',
+            extra: ReadAloudArgs(title: _name, text: text),
+          );
       case _ReaderAction.editText:
-        context.push(_isPdf ? '/pdf-edit' : '/docx-edit', extra: widget.args.path);
+        context.push(_isPdf ? '/pdf-edit' : '/docx-edit', extra: _readPath);
       case _ReaderAction.edit:
         session.start(defaultFilter: settings.defaultFilter);
-        final ok = await runWithProgress(context, session, () => session.importDocumentFile(widget.args.kind, widget.args.path));
+        final ok = await runWithProgress(context, session, () => session.importDocumentFile(widget.args.kind, _readPath));
         if (!mounted) return;
         if (ok) {
           context.push('/scan/edit');
@@ -251,7 +365,7 @@ class _ReaderPageState extends State<ReaderPage> {
       case _ReaderAction.save:
         session.start(defaultFilter: settings.defaultFilter);
         final doc = await runWithProgress(context, session, () async {
-          if (!await session.importDocumentFile(widget.args.kind, widget.args.path)) return null;
+          if (!await session.importDocumentFile(widget.args.kind, _readPath)) return null;
           return session.save();
         });
         if (!mounted) return;
@@ -265,7 +379,7 @@ class _ReaderPageState extends State<ReaderPage> {
 
   @override
   Widget build(BuildContext context) {
-    final canSearch = _isPdf ? _pdf != null : (_docx != null && _docx!.hasText);
+    final canSearch = _isPdf ? _pdf != null && !_locked : (_docx != null && _docx!.hasText);
     return Scaffold(
       backgroundColor: const Color(0xFFE9EDF3),
       appBar: AppBar(
@@ -274,7 +388,7 @@ class _ReaderPageState extends State<ReaderPage> {
           if (canSearch)
             IconButton(
               key: const ValueKey('reader-search-button'),
-              tooltip: 'Search in this file',
+              tooltip: tr('Search in this file'),
               icon: const Icon(AppIcons.search),
               onPressed: _searching ? _closeSearch : _openSearch,
             ),
@@ -282,6 +396,7 @@ class _ReaderPageState extends State<ReaderPage> {
             icon: const Icon(AppIcons.more),
             onSelected: _run,
             itemBuilder: (_) => [
+              const PopupMenuItem(value: _ReaderAction.readAloud, child: _Row(AppIcons.speak, 'Read aloud')),
               const PopupMenuItem(value: _ReaderAction.editText, child: _Row(AppIcons.editDocument, 'Edit text')),
               const PopupMenuItem(value: _ReaderAction.edit, child: _Row(AppIcons.edit, 'Edit pages')),
               const PopupMenuItem(value: _ReaderAction.save, child: _Row(AppIcons.storage, 'Save to library')),
@@ -313,7 +428,58 @@ class _ReaderPageState extends State<ReaderPage> {
     );
   }
 
+  Widget _buildLocked() => Center(
+    child: SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(AppIcons.lock, size: 48, color: AppColors.inkMuted),
+            const SizedBox(height: AppSpacing.md),
+            const Text(
+              'This PDF is password protected. Type its password to open it.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.inkMuted),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            TextField(
+              key: const ValueKey('reader-password-field'),
+              controller: _passwordField,
+              focusNode: _passwordFocus,
+              obscureText: !_showPassword,
+              autofocus: true,
+              readOnly: _unlocking,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _unlock(),
+              decoration: InputDecoration(
+                labelText: tr('Password'),
+                errorText: _passwordError == null ? null : tr(_passwordError!),
+                suffixIcon: IconButton(
+                  tooltip: tr(_showPassword ? 'Hide password' : 'Show password'),
+                  icon: Icon(_showPassword ? AppIcons.eyeOff : AppIcons.eye),
+                  onPressed: () => setState(() => _showPassword = !_showPassword),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                key: const ValueKey('reader-unlock-button'),
+                onPressed: _unlocking ? null : _unlock,
+                child: _unlocking ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Unlock PDF'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   Widget _buildPdf() {
+    if (_locked) return _buildLocked();
     final controller = _pdf!;
     // The viewer keeps its pages at a fixed offset, so no side or top safe-area gap may move them away from the highlights.
     return MediaQuery.removePadding(
@@ -533,7 +699,7 @@ class _SearchBar extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.md, 6, AppSpacing.xs, 6),
+            padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 6, AppSpacing.xs, 6),
             child: Row(
               children: [
                 Expanded(
@@ -548,13 +714,13 @@ class _SearchBar extends StatelessWidget {
                       focusNode.requestFocus();
                     },
                     decoration: InputDecoration(
-                      hintText: 'Search in this file',
+                      hintText: tr('Search in this file'),
                       isDense: true,
                       prefixIcon: const Icon(AppIcons.search, size: 18),
                       suffixIcon: controller.text.isEmpty
                           ? null
                           : IconButton(
-                              tooltip: 'Clear',
+                              tooltip: tr('Clear'),
                               icon: const Icon(AppIcons.close, size: 16),
                               onPressed: () {
                                 controller.clear();
@@ -571,21 +737,21 @@ class _SearchBar extends StatelessWidget {
                 ),
                 IconButton(
                   key: const ValueKey('search-prev'),
-                  tooltip: 'Previous match',
+                  tooltip: tr('Previous match'),
                   visualDensity: VisualDensity.compact,
                   onPressed: total == 0 ? null : onPrevious,
                   icon: const Icon(AppIcons.expandLess),
                 ),
                 IconButton(
                   key: const ValueKey('search-next'),
-                  tooltip: 'Next match',
+                  tooltip: tr('Next match'),
                   visualDensity: VisualDensity.compact,
                   onPressed: total == 0 ? null : onNext,
                   icon: const Icon(AppIcons.expandMore),
                 ),
                 IconButton(
                   key: const ValueKey('search-close'),
-                  tooltip: 'Close search',
+                  tooltip: tr('Close search'),
                   visualDensity: VisualDensity.compact,
                   onPressed: onClose,
                   icon: const Icon(AppIcons.close),

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:go_router/go_router.dart';
 
 import '../../../app/di.dart';
@@ -9,6 +9,7 @@ import '../../../core/theme/app_icons.dart';
 import '../domain/share_options.dart';
 import '../domain/share_sessions.dart';
 import 'qr_share_page.dart';
+import '../../../core/widgets/text.dart';
 
 /// Lists the files that are being shared right now, so a share started earlier can be reopened or stopped.
 class ActiveSharesBanner extends StatelessWidget {
@@ -23,7 +24,7 @@ class ActiveSharesBanner extends StatelessWidget {
       builder: (context, shares, _) {
         if (shares.isEmpty) return const SizedBox.shrink();
         return Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
+          padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
           child: Column(
             children: [for (final s in shares) _ShareTile(share: s, onStop: () => sessions.stop(s.id))],
           ),

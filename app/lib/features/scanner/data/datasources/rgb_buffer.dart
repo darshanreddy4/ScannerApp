@@ -25,6 +25,35 @@ class RgbBuffer {
 
   Uint8List encodeJpeg({int quality = 90}) => img.encodeJpg(toImage(), quality: quality);
 
+  /// Averages blocks of [k] x [k] pixels: a quick, clean way to shrink a large picture by a whole factor.
+  RgbBuffer boxShrink(int k) {
+    if (k <= 1) return this;
+    final nw = math.max(1, width ~/ k), nh = math.max(1, height ~/ k);
+    final out = RgbBuffer.blank(nw, nh);
+    final o = out.data;
+    for (var y = 0; y < nh; y++) {
+      for (var x = 0; x < nw; x++) {
+        var r = 0, g = 0, b = 0, n = 0;
+        final y1 = y == nh - 1 ? height : (y + 1) * k;
+        final x1 = x == nw - 1 ? width : (x + 1) * k;
+        for (var yy = y * k; yy < y1; yy++) {
+          var p = (yy * width + x * k) * 3;
+          for (var xx = x * k; xx < x1; xx++, p += 3) {
+            r += data[p];
+            g += data[p + 1];
+            b += data[p + 2];
+            n++;
+          }
+        }
+        final d = (y * nw + x) * 3;
+        o[d] = r ~/ n;
+        o[d + 1] = g ~/ n;
+        o[d + 2] = b ~/ n;
+      }
+    }
+    return out;
+  }
+
   Uint8List toGray() {
     final out = Uint8List(width * height);
     for (var i = 0, p = 0; i < out.length; i++, p += 3) {

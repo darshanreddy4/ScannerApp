@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/features/id_card/data/id_card_processor.dart';
-import 'package:scanvault/features/id_card/domain/id_card.dart';
+import 'package:doculoom/features/id_card/data/id_card_processor.dart';
+import 'package:doculoom/features/id_card/domain/id_card.dart';
 
 void main() {
   group('card sizes', () {

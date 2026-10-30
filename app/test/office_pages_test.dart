@@ -2,16 +2,16 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/app/di.dart';
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/core/theme/app_theme.dart';
-import 'package:scanvault/features/export/domain/repositories/export_repository.dart';
-import 'package:scanvault/features/importer/domain/importer.dart';
-import 'package:scanvault/features/office/convert/office_converter.dart';
-import 'package:scanvault/features/office/presentation/office_convert_page.dart';
-import 'package:scanvault/features/office/presentation/office_hub_page.dart';
-import 'package:scanvault/features/office/slides/data/slide_export.dart';
+import 'package:doculoom/app/di.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/export/domain/repositories/export_repository.dart';
+import 'package:doculoom/features/importer/domain/importer.dart';
+import 'package:doculoom/features/office/convert/office_converter.dart';
+import 'package:doculoom/features/office/presentation/office_convert_page.dart';
+import 'package:doculoom/features/office/presentation/office_hub_page.dart';
+import 'package:doculoom/features/office/slides/data/slide_export.dart';
 
 class _Share implements ShareService {
   final shared = <List<String>>[];

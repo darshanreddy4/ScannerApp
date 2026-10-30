@@ -37,6 +37,9 @@ class DocxReading {
 
   bool get hasText => _blocks.any((b) => b.text.trim().isNotEmpty);
 
+  /// All the text of the document in reading order, for reading aloud.
+  String get plainText => _blocks.map((b) => b.text).where((t) => t.trim().isNotEmpty).join('\n\n');
+
   /// Every place [query] occurs, in reading order.
   List<SearchHit> search(String query, {int limit = 2000}) {
     final pattern = searchPattern(query);

@@ -2,20 +2,20 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/features/documents/domain/entities/scanned_document.dart';
-import 'package:scanvault/features/documents/domain/repositories/document_repository.dart';
-import 'package:scanvault/features/documents/domain/usecases/document_usecases.dart';
-import 'package:scanvault/features/importer/domain/importer.dart';
-import 'package:scanvault/features/markup/domain/markup.dart';
-import 'package:scanvault/features/markup/domain/markup_renderer.dart';
-import 'package:scanvault/features/scanner/domain/entities/filter_settings.dart';
-import 'package:scanvault/features/scanner/domain/entities/prepared_image.dart';
-import 'package:scanvault/features/scanner/domain/entities/quad.dart';
-import 'package:scanvault/features/scanner/domain/repositories/scanner_repository.dart';
-import 'package:scanvault/features/scanner/domain/usecases/scanner_usecases.dart';
-import 'package:scanvault/features/scanner/presentation/bloc/scan_session_cubit.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/features/documents/domain/entities/scanned_document.dart';
+import 'package:doculoom/features/documents/domain/repositories/document_repository.dart';
+import 'package:doculoom/features/documents/domain/usecases/document_usecases.dart';
+import 'package:doculoom/features/importer/domain/importer.dart';
+import 'package:doculoom/features/markup/domain/markup.dart';
+import 'package:doculoom/features/markup/domain/markup_renderer.dart';
+import 'package:doculoom/features/scanner/domain/entities/filter_settings.dart';
+import 'package:doculoom/features/scanner/domain/entities/prepared_image.dart';
+import 'package:doculoom/features/scanner/domain/entities/quad.dart';
+import 'package:doculoom/features/scanner/domain/repositories/scanner_repository.dart';
+import 'package:doculoom/features/scanner/domain/usecases/scanner_usecases.dart';
+import 'package:doculoom/features/scanner/presentation/bloc/scan_session_cubit.dart';
 
 class _Scanner implements ScannerRepository {
   var n = 0;

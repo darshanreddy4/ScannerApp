@@ -2,9 +2,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/features/reader/data/pdf_text_edit.dart';
-import 'package:scanvault/features/reader/data/pdf_text_extractor.dart';
-import 'package:scanvault/features/reader/domain/document_search.dart';
+import 'package:doculoom/features/reader/data/pdf_text_edit.dart';
+import 'package:doculoom/features/reader/data/pdf_text_extractor.dart';
+import 'package:doculoom/features/reader/domain/document_search.dart';
 
 void main() {
   final original = File('test/fixtures/office/search_text.pdf').readAsBytesSync();

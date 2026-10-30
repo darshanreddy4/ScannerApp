@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/features/ocr/presentation/markdown_math_view.dart';
+import 'package:doculoom/features/ocr/presentation/markdown_math_view.dart';
 
 Future<void> show(WidgetTester tester, String markdown, {double width = 400}) async {
   tester.view.physicalSize = Size(width, 900);

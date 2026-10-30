@@ -369,9 +369,9 @@ void _paintPlaceholderBox(ui.Canvas canvas, ui.Rect rect, String label) {
 
 TextAlign _align(String a) => switch (a) {
   'ctr' => TextAlign.center,
-  'r' => TextAlign.right,
+  'r' => TextAlign.end,
   'just' => TextAlign.justify,
-  _ => TextAlign.left,
+  _ => TextAlign.start,
 };
 
 TextPainter _paragraphPainter(ParaView p, double maxWidth, {bool wrap = true}) {

@@ -12,6 +12,7 @@ import '../../../core/error/result.dart';
 import '../../documents/domain/entities/scanned_document.dart';
 import '../domain/entities/export_options.dart';
 import '../domain/repositories/export_repository.dart';
+import '../../../core/utils/region.dart';
 import 'document_builders.dart';
 
 class ExportRepositoryImpl implements ExportRepository {
@@ -27,9 +28,10 @@ class ExportRepositoryImpl implements ExportRepository {
       try {
         switch (format) {
           case ExportFormat.pdf:
-            await Isolate.run(() => buildPdf(sources, quality, out));
+            await buildPdfInBackground(sources, quality, out);
           case ExportFormat.docx:
-            await Isolate.run(() => buildDocx(sources, quality, out));
+            final letter = Region.letter;
+            await Isolate.run(() => buildDocx(sources, quality, out, letter: letter));
         }
       } catch (_) {
         final partial = File(out);
@@ -88,7 +90,7 @@ class DeviceSaveService implements SaveService {
       throw const PermissionFailure('Allow photo access in Settings to save images to your gallery.');
     }
     for (final path in paths) {
-      await Gal.putImage(path, album: 'ScanVault');
+      await Gal.putImage(path, album: 'Doculoom');
     }
     return paths.length;
   }, onError: (e) => StorageFailure('The images could not be saved to your gallery.', cause: e));

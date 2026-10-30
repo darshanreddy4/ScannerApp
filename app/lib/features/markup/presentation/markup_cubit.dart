@@ -3,7 +3,9 @@ import 'dart:ui';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/utils/format.dart';
 import '../domain/markup.dart';
+import '../domain/stamps.dart';
 
 class MarkupState extends Equatable {
   const MarkupState({
@@ -15,6 +17,7 @@ class MarkupState extends Equatable {
     this.opacities = defaultOpacities,
     this.filled = false,
     this.emoji = '✅',
+    this.stamp,
     this.textSize = MarkupText.defaultSize,
     this.textBold = false,
     this.selectedId,
@@ -34,6 +37,9 @@ class MarkupState extends Equatable {
   final Map<MarkupTool, double> opacities;
   final bool filled;
   final String emoji;
+
+  /// The stamp the Stamp tool puts on the page.
+  final Stamp? stamp;
 
   /// Font size of new text, a share of the page width.
   final double textSize;
@@ -93,6 +99,7 @@ class MarkupState extends Equatable {
     Map<MarkupTool, double>? opacities,
     bool? filled,
     String? emoji,
+    Object? stamp = _keep,
     double? textSize,
     bool? textBold,
     Object? selectedId = _keep,
@@ -107,6 +114,7 @@ class MarkupState extends Equatable {
     opacities: opacities ?? this.opacities,
     filled: filled ?? this.filled,
     emoji: emoji ?? this.emoji,
+    stamp: identical(stamp, _keep) ? this.stamp : stamp as Stamp?,
     textSize: textSize ?? this.textSize,
     textBold: textBold ?? this.textBold,
     selectedId: identical(selectedId, _keep) ? this.selectedId : selectedId as int?,
@@ -127,6 +135,7 @@ class MarkupState extends Equatable {
     opacities,
     filled,
     emoji,
+    stamp,
     textSize,
     textBold,
     selectedId,
@@ -136,7 +145,9 @@ class MarkupState extends Equatable {
 }
 
 class MarkupCubit extends Cubit<MarkupState> {
-  MarkupCubit({required this.page}) : super(const MarkupState());
+  MarkupCubit({required this.page, DateTime Function()? now}) : _now = now ?? DateTime.now, super(const MarkupState());
+
+  final DateTime Function() _now;
 
   /// Size of the page picture in pixels; touches are shares of it.
   final Size page;
@@ -167,8 +178,17 @@ class MarkupCubit extends Cubit<MarkupState> {
   static const _unset = Object();
 
   void selectTool(MarkupTool tool) {
-    emit(state.copyWith(tool: tool, draft: null, selectedId: tool == MarkupTool.select ? state.selectedId : null));
+    emit(
+      state.copyWith(
+        tool: tool,
+        draft: null,
+        selectedId: tool == MarkupTool.select ? state.selectedId : null,
+        stamp: tool == MarkupTool.stamp && state.stamp == null ? stampLibrary.first.stamps.first : state.stamp,
+      ),
+    );
   }
+
+  void selectStamp(Stamp stamp) => emit(state.copyWith(stamp: stamp));
 
   void setColor(int rgb) {
     emit(state.copyWith(color: rgb & 0xFFFFFF));
@@ -231,6 +251,7 @@ class MarkupCubit extends Cubit<MarkupState> {
   void _restyleSelected() {
     final s = state.selected;
     if (s == null || state.tool != MarkupTool.select) return;
+    if (s is MarkupShape && s.redact) return;
     final tool = _inkTool;
     final argb = state.argbFor(tool);
     final width = state.widthOf(tool);
@@ -278,9 +299,20 @@ class MarkupCubit extends Cubit<MarkupState> {
       case MarkupTool.arrow:
       case MarkupTool.rectangle:
       case MarkupTool.ellipse:
+      case MarkupTool.redact:
+        final redact = tool == MarkupTool.redact;
         emit(
           state.copyWith(
-            draft: MarkupShape(id: -1, kind: tool.shapeKind!, from: at, to: at, color: state.argbFor(tool), width: state.widthOf(tool), filled: state.filled),
+            draft: MarkupShape(
+              id: -1,
+              kind: tool.shapeKind!,
+              from: at,
+              to: at,
+              color: redact ? 0xFF000000 : state.argbFor(tool),
+              width: redact ? 0.001 : state.widthOf(tool),
+              filled: redact || state.filled,
+              redact: redact,
+            ),
             selectedId: null,
           ),
         );
@@ -290,6 +322,21 @@ class MarkupCubit extends Cubit<MarkupState> {
       case MarkupTool.sticker:
         final sticker = MarkupSticker(id: _nextId++, text: state.emoji, center: at, size: 0.12);
         _commit([...state.items, sticker], selectedId: sticker.id);
+        emit(state.copyWith(tool: MarkupTool.select));
+      case MarkupTool.stamp:
+        final stamp = state.stamp ?? stampLibrary.first.stamps.first;
+        final words = stamp.resolve(formatDate(_now()).toUpperCase());
+        final item = MarkupText(
+          id: _nextId++,
+          text: words,
+          center: at,
+          size: stamp.fontSize(words),
+          color: stamp.color,
+          bold: true,
+          rotation: -0.17,
+          framed: true,
+        );
+        _commit([...state.items, item], selectedId: item.id);
         emit(state.copyWith(tool: MarkupTool.select));
       case MarkupTool.select:
         _before = state.items;
@@ -324,6 +371,7 @@ class MarkupCubit extends Cubit<MarkupState> {
       case MarkupTool.arrow:
       case MarkupTool.rectangle:
       case MarkupTool.ellipse:
+      case MarkupTool.redact:
         if (d is! MarkupShape) return;
         emit(state.copyWith(draft: d.copyWith(to: at)));
       case MarkupTool.eraser:

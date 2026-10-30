@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,6 +13,7 @@ import '../../../markup/domain/markup.dart';
 import '../../../markup/domain/markup_renderer.dart';
 import '../../domain/entities/filter_settings.dart';
 import '../../domain/entities/quad.dart';
+import '../../domain/entities/scan_mode.dart';
 import '../../domain/entities/scan_page.dart';
 import '../../domain/usecases/scanner_usecases.dart';
 
@@ -21,7 +23,7 @@ enum ScanFlow { camera, import, recrop }
 enum CropOutcome { failed, nextImage, finished }
 
 /// Filters shown as thumbnails in the editor, in display order.
-const thumbFilters = [ScanFilter.original, ScanFilter.documentBw, ScanFilter.magicColor, ScanFilter.grayscale];
+const thumbFilters = filterOrder;
 
 class ScanSessionState {
   const ScanSessionState({
@@ -32,6 +34,7 @@ class ScanSessionState {
     this.flow = ScanFlow.camera,
     this.pending = const [],
     this.currentFilter = ScanFilter.magicColor,
+    this.mode = ScanMode.document,
     this.title = '',
     this.folderId,
     this.editingDocumentId,
@@ -53,6 +56,7 @@ class ScanSessionState {
   final ScanFlow flow;
   final List<String> pending;
   final ScanFilter currentFilter;
+  final ScanMode mode;
   final String title;
   final String? folderId;
 
@@ -78,6 +82,7 @@ class ScanSessionState {
     ScanFlow? flow,
     List<String>? pending,
     ScanFilter? currentFilter,
+    ScanMode? mode,
     String? title,
     int? selected,
     bool? applyToAll,
@@ -95,6 +100,7 @@ class ScanSessionState {
     flow: flow ?? this.flow,
     pending: pending ?? this.pending,
     currentFilter: currentFilter ?? this.currentFilter,
+    mode: mode ?? this.mode,
     title: title ?? this.title,
     folderId: folderId,
     editingDocumentId: editingDocumentId,
@@ -153,20 +159,32 @@ class ScanSessionCubit extends Cubit<ScanSessionState> {
   Timer? _debounce;
   int _idCounter = 0;
 
+  /// Filter from Settings; scan modes fall back to it when they have no look of their own.
+  ScanFilter _baseFilter = ScanFilter.magicColor;
+
   String _newId() => '${DateTime.now().microsecondsSinceEpoch}-${_idCounter++}';
 
   /// Starts a fresh scan session.
   void start({required ScanFilter defaultFilter, String? folderId}) {
     _debounce?.cancel();
+    _baseFilter = defaultFilter;
     unawaited(clearWorkFiles?.call(DateTime.now()));
     emit(ScanSessionState(currentFilter: defaultFilter, title: defaultScanTitle(DateTime.now()), folderId: folderId));
   }
 
   void clearError() => emit(state.copyWith(clearError: true));
 
+  /// Switches what is being scanned. A fresh scan also gets a matching name; the look of the photos is never changed.
+  void setMode(ScanMode mode) {
+    if (mode == state.mode) return;
+    final fresh = state.pages.isEmpty && state.editingDocumentId == null;
+    emit(state.copyWith(mode: mode, title: fresh ? mode.title(DateTime.now()) : null));
+  }
+
   /// Opens a saved document in the editor with every page's crop and filter restored.
   void loadDocument(ScannedDocument doc, {required ScanFilter defaultFilter}) {
     _debounce?.cancel();
+    _baseFilter = defaultFilter;
     emit(
       ScanSessionState(
         pages: [for (final p in doc.pages) _pageFromSaved(p)],
@@ -269,7 +287,7 @@ class ScanSessionCubit extends Cubit<ScanSessionState> {
     final result = await _prepareImage(sourcePath);
     return result.when(
       ok: (img) {
-        final quad = img.detectedQuad ?? Quad.defaultInset;
+        final quad = state.mode.pickQuad(img.detectedQuad, img.width / img.height);
         emit(
           state.copyWith(
             busy: false,
@@ -378,27 +396,46 @@ class ScanSessionCubit extends Cubit<ScanSessionState> {
     if (d == null) return CropOutcome.failed;
     emit(state.copyWith(busy: true, busyLabel: 'Cropping', clearError: true));
 
-    final result = await _cropDocument(imagePath: d.rawPath, quad: d.quad);
-    final failure = result.failureOrNull;
-    final info = result.valueOrNull;
-    if (failure != null || info == null) {
-      emit(state.copyWith(busy: false, error: failure));
-      return CropOutcome.failed;
+    final editIndex = state.draftEditIndex;
+    final halves = editIndex == null && state.mode.split ? d.quad.splitVertically() : null;
+    final quads = halves == null ? [d.quad] : [halves.$1, halves.$2];
+    final made = <ScanPage>[];
+    for (var i = 0; i < quads.length; i++) {
+      final result = await _cropDocument(imagePath: d.rawPath, quad: quads[i]);
+      final failure = result.failureOrNull;
+      final info = result.valueOrNull;
+      if (failure != null || info == null) {
+        emit(state.copyWith(busy: false, error: failure));
+        return CropOutcome.failed;
+      }
+      made.add(
+        d.copyWith(
+          id: i == 0 ? d.id : _newId(),
+          quad: quads[i],
+          detectedQuad: halves == null ? d.detectedQuad : quads[i],
+          croppedPath: info.path,
+          croppedWidth: info.width,
+          croppedHeight: info.height,
+          clearPreMarkup: true,
+        ),
+      );
     }
 
-    final page = d.copyWith(croppedPath: info.path, croppedWidth: info.width, croppedHeight: info.height, clearPreMarkup: true);
-    final editIndex = state.draftEditIndex;
     final pages = [...state.pages];
     int selected;
     if (editIndex != null) {
-      pages[editIndex] = page;
+      pages[editIndex] = made.first;
       selected = editIndex;
     } else {
-      pages.add(page);
-      selected = pages.length - 1;
+      pages.addAll(made);
+      selected = pages.length - made.length;
     }
-    final previews = {...state.previews}..remove(page.id);
-    final thumbs = {...state.thumbs}..remove(page.id);
+    final previews = {...state.previews};
+    final thumbs = {...state.thumbs};
+    for (final page in made) {
+      previews.remove(page.id);
+      thumbs.remove(page.id);
+    }
 
     emit(state.copyWith(busy: false, pages: pages, selected: selected, previews: previews, thumbs: thumbs, clearDraft: true));
     return _advanceQueue();
@@ -603,26 +640,45 @@ class ScanSessionCubit extends Cubit<ScanSessionState> {
     if (state.pages.isEmpty || state.busy) return null;
     final total = state.pages.length;
     final out = <NewPage>[];
+    bool untouched(ScanPage page) => page.settings.filter == ScanFilter.original && page.settings.brightness == 0 && page.settings.contrast == 0;
 
-    for (var i = 0; i < total; i++) {
-      emit(state.copyWith(busy: true, busyLabel: 'Rendering page ${i + 1} of $total', clearError: true));
-      final page = state.pages[i];
-      final cropped = page.croppedPath!;
-      final untouched = page.settings.filter == ScanFilter.original && page.settings.brightness == 0 && page.settings.contrast == 0;
-      var imagePath = cropped;
-      var width = page.croppedWidth!;
-      var height = page.croppedHeight!;
-      if (!untouched) {
-        final result = await _applyFilter(imagePath: cropped, settings: page.settings);
+    // Pages that need a filter are rendered two at a time, each in its own isolate.
+    final needed = state.pages.where((p) => !untouched(p)).length;
+    final rendered = List<({String path, int width, int height})?>.filled(total, null);
+    emit(state.copyWith(busy: true, busyLabel: needed == 0 ? 'Preparing pages' : 'Rendering ${needed == 1 ? 'page' : 'pages'}', clearError: true));
+    var next = 0, done = 0;
+    Failure? failure;
+    Future<void> worker() async {
+      while (failure == null) {
+        final i = next++;
+        if (i >= total) return;
+        final page = state.pages[i];
+        if (untouched(page)) continue;
+        final result = await _applyFilter(imagePath: page.croppedPath!, settings: page.settings);
         final info = result.valueOrNull;
         if (info == null) {
-          emit(state.copyWith(busy: false, error: result.failureOrNull));
-          return null;
+          failure ??= result.failureOrNull;
+          return;
         }
-        imagePath = info.path;
-        width = info.width;
-        height = info.height;
+        rendered[i] = (path: info.path, width: info.width, height: info.height);
+        done++;
+        if (needed > 1) emit(state.copyWith(busy: true, busyLabel: 'Rendering pages: $done of $needed'));
       }
+    }
+
+    await Future.wait([for (var k = 0; k < math.min(2, total); k++) worker()]);
+    if (failure != null) {
+      emit(state.copyWith(busy: false, error: failure));
+      return null;
+    }
+
+    for (var i = 0; i < total; i++) {
+      final page = state.pages[i];
+      final cropped = page.croppedPath!;
+      final made = rendered[i];
+      final imagePath = made?.path ?? cropped;
+      final width = made?.width ?? page.croppedWidth!;
+      final height = made?.height ?? page.croppedHeight!;
       final q = page.quad.points;
       out.add(
         NewPage(
@@ -653,7 +709,7 @@ class ScanSessionCubit extends Cubit<ScanSessionState> {
     return saved.when(
       ok: (doc) {
         unawaited(clearWorkFiles?.call(DateTime.now()));
-        emit(ScanSessionState(currentFilter: state.currentFilter, title: defaultScanTitle(DateTime.now())));
+        emit(ScanSessionState(currentFilter: _baseFilter, title: defaultScanTitle(DateTime.now())));
         return doc;
       },
       err: (f) {

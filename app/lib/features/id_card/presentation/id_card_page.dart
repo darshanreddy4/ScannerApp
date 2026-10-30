@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -19,14 +19,22 @@ import '../../photo_tools/domain/crop_math.dart';
 import '../../photo_tools/domain/passport_maker.dart';
 import '../domain/id_card.dart';
 import 'id_card_cubit.dart';
+import '../../../core/widgets/text.dart';
 
 /// Puts the front and back of an ID card on one page at its real size, ready to print or send.
 class IdCardPage extends StatelessWidget {
-  const IdCardPage({super.key});
+  const IdCardPage({super.key, this.photos = const []});
+
+  /// Front and back photos to start from, e.g. a scan that was just saved.
+  final List<String> photos;
 
   @override
   Widget build(BuildContext context) => BlocProvider(
-    create: (_) => IdCardCubit(maker: sl<IdCardMaker>(), workDir: getTemporaryDirectory),
+    create: (_) {
+      final cubit = IdCardCubit(maker: sl<IdCardMaker>(), workDir: getTemporaryDirectory);
+      if (photos.isNotEmpty) cubit.prefill(photos);
+      return cubit;
+    },
     child: const _IdCardView(),
   );
 }

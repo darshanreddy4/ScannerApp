@@ -24,6 +24,9 @@ class CameraState {
     this.lens = CameraLensDirection.back,
     this.canSwitch = false,
     this.settingsNeeded = false,
+    this.zoom = 1,
+    this.minZoom = 1,
+    this.maxZoom = 1,
     this.failure,
   });
 
@@ -45,6 +48,11 @@ class CameraState {
 
   /// With [CameraStatus.permissionDenied]: the system no longer asks, so access must be turned on in Settings.
   final bool settingsNeeded;
+
+  /// Zoom factor and the range the camera offers; below 1 is the ultra-wide lens on phones that have one.
+  final double zoom;
+  final double minZoom;
+  final double maxZoom;
   final Failure? failure;
 
   bool get isFront => lens == CameraLensDirection.front;
@@ -61,6 +69,9 @@ class CameraState {
     CameraLensDirection? lens,
     bool? canSwitch,
     bool? settingsNeeded,
+    double? zoom,
+    double? minZoom,
+    double? maxZoom,
     Failure? failure,
   }) => CameraState(
     status: status ?? this.status,
@@ -73,6 +84,9 @@ class CameraState {
     lens: lens ?? this.lens,
     canSwitch: canSwitch ?? this.canSwitch,
     settingsNeeded: settingsNeeded ?? this.settingsNeeded,
+    zoom: zoom ?? this.zoom,
+    minZoom: minZoom ?? this.minZoom,
+    maxZoom: maxZoom ?? this.maxZoom,
     failure: failure ?? this.failure,
   );
 }
@@ -119,6 +133,38 @@ class CameraCubit extends Cubit<CameraState> {
   };
 
   void setQuality(CameraQuality quality) => _quality = quality;
+
+  bool _detect = true;
+
+  /// Turns the live outline search (and with it auto-capture) on or off; cards are fitted into a frame instead.
+  void setDetection(bool on) {
+    if (_detect == on) return;
+    _detect = on;
+    _previous = null;
+    _stableCount = 0;
+    if (!on) emit(state.copyWith(clearQuad: true, stable: false));
+  }
+
+  Future<void> _readZoom(CameraController c) async {
+    try {
+      final lo = await c.getMinZoomLevel();
+      final hi = await c.getMaxZoomLevel();
+      if (!isClosed) emit(state.copyWith(minZoom: lo, maxZoom: hi, zoom: 1.0.clamp(lo, hi)));
+    } catch (_) {
+      // A camera without zoom control simply shows no zoom buttons.
+    }
+  }
+
+  Future<void> setZoom(double level) async {
+    final c = _controller;
+    if (c == null || !c.value.isInitialized || state.isFront) return;
+    final next = level.clamp(state.minZoom, state.maxZoom);
+    try {
+      await c.setZoomLevel(next);
+      if (!isClosed) emit(state.copyWith(zoom: next));
+    } catch (_) {}
+  }
+
   DateTime _lastFrame = DateTime.fromMillisecondsSinceEpoch(0);
   Quad? _previous;
   int _stableCount = 0;
@@ -187,7 +233,7 @@ class CameraCubit extends Cubit<CameraState> {
       var controller = await _open(description, _preset);
       if (controller == null) {
         // Some cameras (often the front one) do not offer the highest preset.
-        controller = await _open(description, ResolutionPreset.high);
+        controller = await _open(description, ResolutionPreset.ultraHigh) ?? await _open(description, ResolutionPreset.high);
         if (controller == null) {
           emit(state.copyWith(status: CameraStatus.failed, failure: const CameraFailure('The camera could not be started.')));
           return;
@@ -204,7 +250,10 @@ class CameraCubit extends Cubit<CameraState> {
         await controller.dispose();
         return;
       }
-      emit(state.copyWith(status: CameraStatus.ready, controller: controller, lens: _lens, canSwitch: canSwitch, flashOn: torch));
+      emit(
+        state.copyWith(status: CameraStatus.ready, controller: controller, lens: _lens, canSwitch: canSwitch, flashOn: torch, zoom: 1, minZoom: 1, maxZoom: 1),
+      );
+      if (!front) await _readZoom(controller);
       if (!front) await controller.startImageStream(_onFrame);
     } on CameraException catch (e) {
       if (isClosed) return;
@@ -251,6 +300,7 @@ class CameraCubit extends Cubit<CameraState> {
   }
 
   void _onFrame(CameraImage image) {
+    if (!_detect) return;
     final now = DateTime.now();
     if (now.difference(_lastFrame) < _frameInterval || state.capturing) return;
     _lastFrame = now;
@@ -431,4 +481,14 @@ Quad quadForDisplay(Quad q, int rotation) {
   final tl = bySum.first, br = bySum.last;
   final rest = pts.where((p) => p != tl && p != br).toList()..sort((a, b) => (b.x - b.y).compareTo(a.x - a.y));
   return Quad(tl, rest.first, br, rest.last);
+}
+
+/// Zoom buttons to offer for a camera whose zoom runs from [min] to [max]: the ultra-wide end when there is one, then 1x and the usual steps.
+List<double> zoomStops(double min, double max) {
+  final stops = <double>[
+    if (min < 0.95) (min * 10).ceil() / 10,
+    for (final z in const [1.0, 2.0, 3.0, 5.0, 10.0])
+      if (z >= min - 0.001 && z <= max + 0.001) z,
+  ];
+  return stops.length < 2 ? const [] : stops;
 }

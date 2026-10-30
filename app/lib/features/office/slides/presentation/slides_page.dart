@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
@@ -14,6 +14,8 @@ import '../../../export/domain/repositories/export_repository.dart';
 import '../../sheets/presentation/sheet_dialogs.dart';
 import 'slide_canvas.dart';
 import 'slides_cubit.dart';
+import '../../../../core/widgets/text.dart';
+import '../../../../core/i18n/tr.dart';
 
 class SlidesPage extends StatelessWidget {
   const SlidesPage({super.key, this.path});
@@ -108,7 +110,7 @@ class _SlidesViewState extends State<_SlidesView> {
       showDragHandle: true,
       builder: (_) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 16),
           child: Wrap(
             spacing: 12,
             runSpacing: 12,
@@ -149,7 +151,7 @@ class _SlidesViewState extends State<_SlidesView> {
         return SafeArea(
           child: StatefulBuilder(
             builder: (context, setState) => Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -291,18 +293,23 @@ class _SlidesViewState extends State<_SlidesView> {
                   if (ready) ...[
                     IconButton(
                       key: const ValueKey('slides_undo'),
-                      tooltip: 'Undo',
+                      tooltip: tr('Undo'),
                       onPressed: state.canUndo ? cubit.undo : null,
                       icon: const Icon(AppIcons.markUndo, size: 20),
                     ),
                     IconButton(
                       key: const ValueKey('slides_redo'),
-                      tooltip: 'Redo',
+                      tooltip: tr('Redo'),
                       onPressed: state.canRedo ? cubit.redo : null,
                       icon: const Icon(AppIcons.markRedo, size: 20),
                     ),
-                    IconButton(key: const ValueKey('slides_play'), tooltip: 'Slide show', onPressed: _show, icon: const Icon(Icons.play_arrow_rounded)),
-                    IconButton(key: const ValueKey('slides_export'), tooltip: 'Save or share', onPressed: _export, icon: const Icon(AppIcons.export, size: 20)),
+                    IconButton(key: const ValueKey('slides_play'), tooltip: tr('Slide show'), onPressed: _show, icon: const Icon(Icons.play_arrow_rounded)),
+                    IconButton(
+                      key: const ValueKey('slides_export'),
+                      tooltip: tr('Save or share'),
+                      onPressed: _export,
+                      icon: const Icon(AppIcons.export, size: 20),
+                    ),
                   ],
                 ],
               ),
@@ -639,7 +646,7 @@ class _SlideShowPageState extends State<SlideShowPage> {
           ),
           SafeArea(
             child: Align(
-              alignment: Alignment.topRight,
+              alignment: AlignmentDirectional.topEnd,
               child: IconButton(
                 key: const ValueKey('show_close'),
                 color: Colors.white,

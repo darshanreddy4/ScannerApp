@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
@@ -13,6 +13,8 @@ import '../../../core/widgets/feedback.dart';
 import '../../export/domain/repositories/export_repository.dart';
 import 'docx_document.dart';
 import 'docx_edit_cubit.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 const _docxMime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
@@ -193,19 +195,19 @@ class _EditViewState extends State<_EditView> {
               actions: [
                 IconButton(
                   key: const ValueKey('docx-undo'),
-                  tooltip: 'Undo',
+                  tooltip: tr('Undo'),
                   icon: const Icon(AppIcons.markUndo),
                   onPressed: state.canUndo ? cubit.undo : null,
                 ),
                 IconButton(
                   key: const ValueKey('docx-redo'),
-                  tooltip: 'Redo',
+                  tooltip: tr('Redo'),
                   icon: const Icon(AppIcons.markRedo),
                   onPressed: state.canRedo ? cubit.redo : null,
                 ),
                 IconButton(
                   key: const ValueKey('docx-find-button'),
-                  tooltip: 'Find and replace',
+                  tooltip: tr('Find and replace'),
                   icon: const Icon(AppIcons.search),
                   onPressed: state.loading ? null : (_finding ? _closeFind : _openFind),
                 ),
@@ -239,7 +241,7 @@ class _EditViewState extends State<_EditView> {
       color: Colors.white,
       elevation: 1,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 6, AppSpacing.xs, 6),
+        padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 6, AppSpacing.xs, 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -256,7 +258,7 @@ class _EditViewState extends State<_EditView> {
                       cubit.step(1);
                       _findFocus.requestFocus();
                     },
-                    decoration: const InputDecoration(hintText: 'Find', isDense: true, prefixIcon: Icon(AppIcons.search, size: 18)),
+                    decoration: InputDecoration(hintText: tr('Find'), isDense: true, prefixIcon: Icon(AppIcons.search, size: 18)),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -273,28 +275,28 @@ class _EditViewState extends State<_EditView> {
                 IconButton(
                   key: const ValueKey('docx-find-prev'),
                   visualDensity: VisualDensity.compact,
-                  tooltip: 'Previous',
+                  tooltip: tr('Previous'),
                   onPressed: state.matches.isEmpty ? null : () => cubit.step(-1),
                   icon: const Icon(AppIcons.expandLess),
                 ),
                 IconButton(
                   key: const ValueKey('docx-find-next'),
                   visualDensity: VisualDensity.compact,
-                  tooltip: 'Next',
+                  tooltip: tr('Next'),
                   onPressed: state.matches.isEmpty ? null : () => cubit.step(1),
                   icon: const Icon(AppIcons.expandMore),
                 ),
                 IconButton(
                   key: const ValueKey('docx-find-options'),
                   visualDensity: VisualDensity.compact,
-                  tooltip: 'Replace',
+                  tooltip: tr('Replace'),
                   onPressed: () => setState(() => _replacing = !_replacing),
                   icon: Icon(AppIcons.edit, color: _replacing ? AppColors.primary : null),
                 ),
                 IconButton(
                   key: const ValueKey('docx-find-close'),
                   visualDensity: VisualDensity.compact,
-                  tooltip: 'Close',
+                  tooltip: tr('Close'),
                   onPressed: _closeFind,
                   icon: const Icon(AppIcons.close),
                 ),
@@ -302,14 +304,14 @@ class _EditViewState extends State<_EditView> {
             ),
             if (_replacing)
               Padding(
-                padding: const EdgeInsets.only(top: 6, right: AppSpacing.sm),
+                padding: const EdgeInsetsDirectional.only(top: 6, end: AppSpacing.sm),
                 child: Row(
                   children: [
                     Expanded(
                       child: TextField(
                         key: const ValueKey('docx-replace-field'),
                         controller: _replaceField,
-                        decoration: const InputDecoration(hintText: 'Replace with', isDense: true),
+                        decoration: InputDecoration(hintText: tr('Replace with'), isDense: true),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -368,7 +370,7 @@ class _EditViewState extends State<_EditView> {
           child: Container(
             key: const ValueKey('docx-paper'),
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+            padding: const EdgeInsetsDirectional.fromSTEB(20, 24, 20, 40),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(4),
@@ -453,9 +455,9 @@ class _EditViewState extends State<_EditView> {
     }
     final align = switch (b.align) {
       'center' => TextAlign.center,
-      'right' => TextAlign.right,
+      'right' => TextAlign.end,
       'both' => TextAlign.justify,
-      _ => TextAlign.left,
+      _ => TextAlign.start,
     };
     return KeyedSubtree(
       key: _keyFor(b.index),
@@ -463,7 +465,7 @@ class _EditViewState extends State<_EditView> {
         key: ValueKey('docx-para-${b.index}'),
         onTap: () => _edit(b.index),
         child: Padding(
-          padding: EdgeInsets.only(left: (b.indentPt * _ptToPx).clamp(0, 140), top: 3, bottom: 3),
+          padding: EdgeInsetsDirectional.only(start: (b.indentPt * _ptToPx).clamp(0, 140), top: 3, bottom: 3),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -474,7 +476,7 @@ class _EditViewState extends State<_EditView> {
                   children: [
                     if (b.listLabel != null)
                       Padding(
-                        padding: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsetsDirectional.only(end: 8),
                         child: Text(b.listLabel!, style: TextStyle(fontSize: 11 * _ptToPx, height: 1.35)),
                       ),
                     Expanded(
@@ -488,7 +490,7 @@ class _EditViewState extends State<_EditView> {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Align(
-                      alignment: Alignment.centerLeft,
+                      alignment: AlignmentDirectional.centerStart,
                       child: Image.memory(bytes, height: 140, fit: BoxFit.contain, errorBuilder: (_, _, _) => const SizedBox.shrink()),
                     ),
                   ),
@@ -580,7 +582,7 @@ class _ParagraphSheetState extends State<_ParagraphSheet> {
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
+          padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -593,7 +595,7 @@ class _ParagraphSheetState extends State<_ParagraphSheet> {
                 maxLines: 6,
                 keyboardType: TextInputType.multiline,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(hintText: 'Type here'),
+                decoration: InputDecoration(hintText: tr('Type here')),
               ),
               const SizedBox(height: AppSpacing.sm),
               SingleChildScrollView(
@@ -605,7 +607,7 @@ class _ParagraphSheetState extends State<_ParagraphSheet> {
                     toggle(const ValueKey('fmt-underline'), AppIcons.underline, 'Underline', fmt.underline, (on) => FormatChange(underline: on)),
                     PopupMenuButton<double>(
                       key: const ValueKey('fmt-size'),
-                      tooltip: 'Text size',
+                      tooltip: tr('Text size'),
                       onSelected: (v) => _apply(FormatChange(sizePt: v)),
                       itemBuilder: (_) => [for (final s in _sizes) PopupMenuItem(value: s, child: Text('${s.round()}'))],
                       child: Padding(
@@ -621,7 +623,7 @@ class _ParagraphSheetState extends State<_ParagraphSheet> {
                     ),
                     PopupMenuButton<int>(
                       key: const ValueKey('fmt-color'),
-                      tooltip: 'Text colour',
+                      tooltip: tr('Text colour'),
                       onSelected: (v) => _apply(v == -1 ? const FormatChange(clearColor: true) : FormatChange(color: v)),
                       itemBuilder: (_) => [
                         const PopupMenuItem<int>(value: -1, child: Text('Automatic')),

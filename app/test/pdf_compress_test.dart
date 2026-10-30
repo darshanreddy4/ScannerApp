@@ -4,9 +4,9 @@ import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/features/pdf_tools/data/pdf_compress_processor.dart';
-import 'package:scanvault/features/pdf_tools/domain/pdf_compressor.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/features/pdf_tools/data/pdf_compress_processor.dart';
+import 'package:doculoom/features/pdf_tools/domain/pdf_compressor.dart';
 
 void main() {
   late Directory dir;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/quad.dart';
+import '../../domain/entities/scan_mode.dart';
 
 /// Draws the detected document outline over the live preview.
 class QuadOverlayPainter extends CustomPainter {
@@ -40,4 +41,30 @@ class QuadOverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(QuadOverlayPainter old) => old.quad != quad || old.locked != locked;
+}
+
+/// Frame to fit a card in, drawn with the same rectangle that becomes the first crop when no outline is detected.
+class CardGuidePainter extends CustomPainter {
+  CardGuidePainter(this.mode);
+
+  final ScanMode mode;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final q = mode.guideQuad(size.width / size.height);
+    if (q == null) return;
+    final rect = Rect.fromLTRB(q.tl.x * size.width, q.tl.y * size.height, q.br.x * size.width, q.br.y * size.height);
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(12));
+    canvas.drawRRect(rrect, Paint()..color = Colors.white.withValues(alpha: 0.08));
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.85)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+  }
+
+  @override
+  bool shouldRepaint(CardGuidePainter old) => old.mode != mode;
 }

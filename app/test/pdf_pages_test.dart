@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/features/pdf_tools/data/pdf_pages_processor.dart';
-import 'package:scanvault/features/pdf_tools/domain/pdf_pages.dart';
-import 'package:scanvault/features/photo_tools/data/watermark_stamp.dart';
-import 'package:scanvault/features/photo_tools/domain/watermark.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/features/pdf_tools/data/pdf_pages_processor.dart';
+import 'package:doculoom/features/pdf_tools/domain/pdf_pages.dart';
+import 'package:doculoom/features/photo_tools/data/watermark_stamp.dart';
+import 'package:doculoom/features/photo_tools/domain/watermark.dart';
 
 class _SpyRenderer extends WatermarkStampRenderer {
   _SpyRenderer();

@@ -7,15 +7,15 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>ScanVault</string>
+	<string>Doculoom</string>
 	<key>NSCameraUsageDescription</key>
-	<string>ScanVault uses the camera to scan documents. Images stay on your device.</string>
+	<string>Doculoom uses the camera to scan documents. Images stay on your device.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>ScanVault imports images you choose from your photo library. Images stay on your device.</string>
+	<string>Doculoom imports images you choose from your photo library. Images stay on your device.</string>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-3940256099942544~1458002511</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>ScanVault shares a file directly with a nearby device on your Wi-Fi when you show a QR code. Nothing is uploaded.</string>
+	<string>Doculoom shares a file directly with a nearby device on your Wi-Fi when you show a QR code. Nothing is uploaded.</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -23,7 +23,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>scanvault</string>
+	<string>doculoom</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

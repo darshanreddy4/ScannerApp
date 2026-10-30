@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../../../core/utils/region.dart';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -66,8 +67,10 @@ class SheetRenderer {
     }
     const margin = 70.0;
     final totalWidth = [for (var c = 0; c <= lastCol; c++) _colPx(s, c)].fold<double>(0, (a, b) => a + b);
-    final portrait = totalWidth <= 1240 - 2 * margin;
-    final pageW = portrait ? 1240.0 : 1754.0, pageH = portrait ? 1754.0 : 1240.0;
+    // The pages are as big as sheets of paper drawn at 150 dots to the inch: A4, or US Letter by region.
+    final short = Region.letter ? 1275.0 : 1240.0, long = Region.letter ? 1650.0 : 1754.0;
+    final portrait = totalWidth <= short - 2 * margin;
+    final pageW = portrait ? short : long, pageH = portrait ? long : short;
     final areaW = pageW - 2 * margin, areaH = pageH - 2 * margin - 30;
 
     List<(int, int)> group(int count, double Function(int) size, double limit) {
@@ -157,9 +160,9 @@ class SheetRenderer {
         ),
         textDirection: TextDirection.ltr,
         textAlign: switch (desc.align) {
-          HAlign.right => TextAlign.right,
+          HAlign.right => TextAlign.end,
           HAlign.center => TextAlign.center,
-          _ => TextAlign.left,
+          _ => TextAlign.start,
         },
         maxLines: style.wrap ? null : 1,
         ellipsis: style.wrap ? null : '\u2026',
@@ -231,7 +234,7 @@ class SheetRenderer {
     await workDir.create(recursive: true);
     final pages = await renderPages(sheets, workDir, onProgress: onProgress);
     try {
-      await buildPdf(pages, ExportQuality.high, outputPath);
+      await buildPdf(pages, ExportQuality.high, outputPath, letter: Region.letter);
     } finally {
       for (final page in pages) {
         try {

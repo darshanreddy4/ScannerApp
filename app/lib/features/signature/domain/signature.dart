@@ -27,23 +27,73 @@ class SignaturePng {
   double get aspect => width / height;
 }
 
+/// What a saved picture is for: a full signature, or the short initials put on every page.
+enum SignatureKind {
+  signature('Signature'),
+  initials('Initials');
+
+  const SignatureKind(this.label);
+  final String label;
+}
+
 class SavedSignature {
-  const SavedSignature({required this.id, required this.path, required this.width, required this.height});
+  const SavedSignature({
+    required this.id,
+    required this.path,
+    required this.width,
+    required this.height,
+    this.name = '',
+    this.kind = SignatureKind.signature,
+    this.isDefault = false,
+  });
   final String id;
   final String path;
   final int width;
   final int height;
 
+  /// The name the person gave it; empty until then.
+  final String name;
+  final SignatureKind kind;
+
+  /// The one of its kind that is picked first when signing.
+  final bool isDefault;
+
   double get aspect => width / height;
+
+  SavedSignature copyWith({String? name, SignatureKind? kind, bool? isDefault}) => SavedSignature(
+    id: id,
+    path: path,
+    width: width,
+    height: height,
+    name: name ?? this.name,
+    kind: kind ?? this.kind,
+    isDefault: isDefault ?? this.isDefault,
+  );
 }
 
 abstract interface class SignatureStore {
-  static const maxSaved = 5;
+  static const maxSaved = 20;
 
+  /// In the order the person arranged them.
   Future<List<SavedSignature>> list();
 
-  /// Keeps a copy of the PNG. Fails when [maxSaved] signatures are already kept.
-  Future<Result<SavedSignature>> save(String pngPath);
+  /// Keeps a copy of the PNG. Fails when [maxSaved] signatures are already kept. The first of its kind becomes the default.
+  Future<Result<SavedSignature>> save(String pngPath, {SignatureKind kind = SignatureKind.signature, String name = ''});
+
+  /// Changes the name (trimmed, at most 40 letters) and the kind.
+  Future<void> update(String id, {String? name, SignatureKind? kind});
+
+  /// Makes this the one picked first for its kind.
+  Future<void> setDefault(String id);
+
+  /// Puts the signature at [index] of the list.
+  Future<void> move(String id, int index);
+
+  /// Draws the signature again in another ink colour; it keeps its place, name and kind.
+  Future<Result<SavedSignature>> recolor(String id, InkColor ink);
+
+  /// A copy placed after the original. Fails when [maxSaved] are already kept.
+  Future<Result<SavedSignature>> duplicate(String id);
 
   Future<void> delete(String id);
 

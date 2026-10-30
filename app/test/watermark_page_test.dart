@@ -6,13 +6,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/app/di.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/core/theme/app_theme.dart';
-import 'package:scanvault/features/photo_tools/domain/watermark.dart';
-import 'package:scanvault/features/photo_tools/domain/watermark_service.dart';
-import 'package:scanvault/features/photo_tools/presentation/watermark_cubit.dart';
-import 'package:scanvault/features/photo_tools/presentation/watermark_page.dart';
+import 'package:doculoom/app/di.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/photo_tools/domain/watermark.dart';
+import 'package:doculoom/features/photo_tools/domain/watermark_service.dart';
+import 'package:doculoom/features/photo_tools/presentation/watermark_cubit.dart';
+import 'package:doculoom/features/photo_tools/presentation/watermark_page.dart';
 
 class _Service implements WatermarkService {
   final calls = <String>[];

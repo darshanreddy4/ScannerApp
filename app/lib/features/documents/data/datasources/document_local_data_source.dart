@@ -14,8 +14,8 @@ import '../../domain/entities/scanned_document.dart';
 class DocumentLocalDataSource {
   DocumentLocalDataSource({Database? database, Directory? rootDir}) : _db = database, _root = rootDir;
 
-  static const _dbName = 'scanvault.db';
-  static const _version = 7;
+  static const _dbName = 'doculoom.db';
+  static const _version = 8;
 
   Database? _db;
   Directory? _root;
@@ -52,7 +52,8 @@ class DocumentLocalDataSource {
             favorite INTEGER NOT NULL DEFAULT 0,
             pinned INTEGER NOT NULL DEFAULT 0,
             locked INTEGER NOT NULL DEFAULT 0,
-            tags TEXT
+            tags TEXT,
+            expires_at INTEGER
           )''');
         await db.execute('''
           CREATE TABLE pages(
@@ -116,6 +117,10 @@ class DocumentLocalDataSource {
           final have = {for (final c in await db.rawQuery('PRAGMA table_info(folders)')) c['name']};
           if (!have.contains('icon')) await db.execute('ALTER TABLE folders ADD COLUMN icon TEXT');
           if (!have.contains('color')) await db.execute('ALTER TABLE folders ADD COLUMN color INTEGER');
+        }
+        if (from < 8) {
+          final have = {for (final c in await db.rawQuery('PRAGMA table_info(documents)')) c['name']};
+          if (!have.contains('expires_at')) await db.execute('ALTER TABLE documents ADD COLUMN expires_at INTEGER');
         }
       },
     );
@@ -321,7 +326,16 @@ class DocumentLocalDataSource {
   }
 
   /// Updates flags, tags or the document date. Only the given fields change; the date also sets "updated".
-  Future<void> updateMeta(String id, {bool? favorite, bool? pinned, bool? locked, List<String>? tags, DateTime? date}) async {
+  Future<void> updateMeta(
+    String id, {
+    bool? favorite,
+    bool? pinned,
+    bool? locked,
+    List<String>? tags,
+    DateTime? date,
+    DateTime? expires,
+    bool clearExpiry = false,
+  }) async {
     final db = await _database();
     final values = <String, Object?>{
       if (favorite != null) 'favorite': favorite ? 1 : 0,
@@ -330,6 +344,8 @@ class DocumentLocalDataSource {
       if (tags != null) 'tags': jsonEncode(tags),
       if (date != null) 'created_at': date.millisecondsSinceEpoch,
       if (date != null) 'updated_at': date.millisecondsSinceEpoch,
+      if (expires != null) 'expires_at': expires.millisecondsSinceEpoch,
+      if (clearExpiry) 'expires_at': null,
     };
     if (values.isEmpty) return;
     await db.update('documents', values, where: 'id = ?', whereArgs: [id]);
@@ -426,6 +442,7 @@ class DocumentLocalDataSource {
     pinned: (row['pinned'] as int? ?? 0) == 1,
     locked: (row['locked'] as int? ?? 0) == 1,
     tags: _decodeTags(row['tags'] as String?),
+    expiresAt: (row['expires_at'] as int?) == null ? null : DateTime.fromMillisecondsSinceEpoch(row['expires_at'] as int),
   );
 
   static List<String> _decodeTags(String? json) => json == null || json.isEmpty ? const [] : [for (final t in jsonDecode(json) as List) t as String];

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="scan"
+        android:enabled="true"
+        android:icon="@drawable/ic_qa_scan"
+        android:shortcutShortLabel="@string/qa_scan_short"
+        android:shortcutLongLabel="@string/qa_scan_long">
+        <intent
+            android:action="com.doculoom.app.QUICK_ACTION"
+            android:targetPackage="com.doculoom.app"
+            android:targetClass="com.doculoom.app.MainActivity">
+            <extra android:name="doculoom_quick" android:value="scan" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="id_photo"
+        android:enabled="true"
+        android:icon="@drawable/ic_qa_id"
+        android:shortcutShortLabel="@string/qa_id_short"
+        android:shortcutLongLabel="@string/qa_id_long">
+        <intent
+            android:action="com.doculoom.app.QUICK_ACTION"
+            android:targetPackage="com.doculoom.app"
+            android:targetClass="com.doculoom.app.MainActivity">
+            <extra android:name="doculoom_quick" android:value="id_photo" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="read_pdf"
+        android:enabled="true"
+        android:icon="@drawable/ic_qa_pdf"
+        android:shortcutShortLabel="@string/qa_pdf_short"
+        android:shortcutLongLabel="@string/qa_pdf_long">
+        <intent
+            android:action="com.doculoom.app.QUICK_ACTION"
+            android:targetPackage="com.doculoom.app"
+            android:targetClass="com.doculoom.app.MainActivity">
+            <extra android:name="doculoom_quick" android:value="read_pdf" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="qr_scan"
+        android:enabled="true"
+        android:icon="@drawable/ic_qa_qr"
+        android:shortcutShortLabel="@string/qa_qr_short"
+        android:shortcutLongLabel="@string/qa_qr_long">
+        <intent
+            android:action="com.doculoom.app.QUICK_ACTION"
+            android:targetPackage="com.doculoom.app"
+            android:targetClass="com.doculoom.app.MainActivity">
+            <extra android:name="doculoom_quick" android:value="qr_scan" />
+        </intent>
+    </shortcut>
+</shortcuts>

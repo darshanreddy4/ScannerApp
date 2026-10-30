@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
@@ -23,6 +24,13 @@ class ScannerRepositoryImpl implements ScannerRepository {
   Future<String> _newPath() async {
     _workDir ??= await Directory(p.join((await getTemporaryDirectory()).path, 'scan_work')).create(recursive: true);
     return p.join(_workDir!.path, '${_uuid.v4()}.jpg');
+  }
+
+  /// Where the small preview copy of [imagePath] lives: in the scan work folder, so it is cleaned up with the other working files.
+  Future<String> _proxyPath(String imagePath) async {
+    await _newPath();
+    final key = md5.convert(imagePath.codeUnits).toString();
+    return p.join(_workDir!.path, 'proxy_$key.jpg');
   }
 
   Failure _processingError(Object e) => switch (e) {
@@ -74,11 +82,11 @@ class ScannerRepositoryImpl implements ScannerRepository {
 
   @override
   Future<Result<Uint8List>> previewFilter({required String imagePath, required FilterSettings settings}) =>
-      guard(() => _service.preview(imagePath, settings), onError: _processingError);
+      guard(() async => _service.preview(imagePath, settings, proxyPath: await _proxyPath(imagePath)), onError: _processingError);
 
   @override
   Future<Result<List<Uint8List>>> previewFilterBatch({required String imagePath, required List<FilterSettings> variants, int maxSide = 180}) =>
-      guard(() => _service.previewBatch(imagePath, variants, maxSide), onError: _processingError);
+      guard(() async => _service.previewBatch(imagePath, variants, maxSide, proxyPath: await _proxyPath(imagePath)), onError: _processingError);
 
   @override
   Future<Result<ImageFileInfo>> applyFilter({required String imagePath, required FilterSettings settings}) => guard(() async {

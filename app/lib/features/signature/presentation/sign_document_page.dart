@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -15,6 +15,8 @@ import '../../../core/widgets/responsive.dart';
 import '../../export/domain/repositories/export_repository.dart';
 import '../domain/signature.dart';
 import 'signature_cubits.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 /// Puts a saved signature on a PDF or photo. The signature is dragged into place on a preview of the page.
 class SignDocumentPage extends StatelessWidget {
@@ -147,13 +149,13 @@ class _SignViewState extends State<_SignView> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 IconButton(
-                                  tooltip: 'Previous page',
+                                  tooltip: tr('Previous page'),
                                   onPressed: state.page > 0 ? () => cubit.setPage(state.page - 1) : null,
                                   icon: const Icon(AppIcons.back),
                                 ),
                                 Text('Page ${state.page + 1} of ${state.pageCount}', style: const TextStyle(fontWeight: FontWeight.w600)),
                                 IconButton(
-                                  tooltip: 'Next page',
+                                  tooltip: tr('Next page'),
                                   onPressed: state.page < state.pageCount - 1 ? () => cubit.setPage(state.page + 1) : null,
                                   icon: const Icon(AppIcons.next),
                                 ),
@@ -190,20 +192,23 @@ class _SignViewState extends State<_SignView> {
                                 children: [
                                   for (final s in state.signatures)
                                     Padding(
-                                      padding: const EdgeInsets.only(right: AppSpacing.sm),
-                                      child: InkWell(
-                                        key: ValueKey('sig-${s.id}'),
-                                        onTap: () => cubit.select(s),
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Container(
-                                          width: 110,
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(color: s.id == sig.id ? AppColors.primary : AppColors.border, width: s.id == sig.id ? 2.5 : 1),
-                                            color: Colors.white,
+                                      padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
+                                      child: Tooltip(
+                                        message: s.name.isEmpty ? tr(s.kind.label) : s.name,
+                                        child: InkWell(
+                                          key: ValueKey('sig-${s.id}'),
+                                          onTap: () => cubit.select(s),
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Container(
+                                            width: 110,
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: s.id == sig.id ? AppColors.primary : AppColors.border, width: s.id == sig.id ? 2.5 : 1),
+                                              color: Colors.white,
+                                            ),
+                                            padding: const EdgeInsets.all(6),
+                                            child: Image.file(File(s.path), fit: BoxFit.contain),
                                           ),
-                                          padding: const EdgeInsets.all(6),
-                                          child: Image.file(File(s.path), fit: BoxFit.contain),
                                         ),
                                       ),
                                     ),

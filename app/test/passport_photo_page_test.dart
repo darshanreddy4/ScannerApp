@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/app/di.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/core/theme/app_theme.dart';
-import 'package:scanvault/features/photo_tools/domain/passport_maker.dart';
-import 'package:scanvault/features/photo_tools/domain/photo_compressor.dart';
-import 'package:scanvault/features/photo_tools/domain/photo_specs.dart';
-import 'package:scanvault/features/photo_tools/presentation/passport_cubit.dart';
-import 'package:scanvault/features/photo_tools/presentation/passport_photo_page.dart';
+import 'package:doculoom/app/di.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/photo_tools/domain/passport_maker.dart';
+import 'package:doculoom/features/photo_tools/domain/photo_compressor.dart';
+import 'package:doculoom/features/photo_tools/domain/photo_specs.dart';
+import 'package:doculoom/features/photo_tools/presentation/passport_cubit.dart';
+import 'package:doculoom/features/photo_tools/presentation/passport_photo_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _Maker implements PassportMaker {

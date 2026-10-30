@@ -5,15 +5,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:scanvault/app/di.dart';
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/core/theme/app_theme.dart';
-import 'package:scanvault/features/id_card/domain/id_card.dart';
-import 'package:scanvault/features/id_card/presentation/id_card_cubit.dart';
-import 'package:scanvault/features/id_card/presentation/id_card_page.dart';
-import 'package:scanvault/features/photo_tools/domain/crop_math.dart';
-import 'package:scanvault/features/photo_tools/domain/passport_maker.dart';
+import 'package:doculoom/app/di.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/id_card/domain/id_card.dart';
+import 'package:doculoom/features/id_card/presentation/id_card_cubit.dart';
+import 'package:doculoom/features/id_card/presentation/id_card_page.dart';
+import 'package:doculoom/features/photo_tools/domain/crop_math.dart';
+import 'package:doculoom/features/photo_tools/domain/passport_maker.dart';
 
 class _Maker implements IdCardMaker {
   _Maker(this.dir);
@@ -65,6 +65,33 @@ void main() {
       expect(c.state.front.view!.zoom, 1);
       expect(c.state.busy, isFalse);
       await c.close();
+    });
+
+    test('starting from a saved scan fills the front and the back and lands on the overview', () async {
+      final c = make();
+      await c.prefill(['/front.jpg', '/back.jpg']);
+      expect(maker.prepared.map((p) => p.source), ['/front.jpg', '/back.jpg']);
+      expect(c.state.front.has, isTrue);
+      expect(c.state.back.has, isTrue);
+      expect(c.state.editing, isNull);
+      await c.create();
+      expect(maker.lastSides.length, 2);
+      await c.close();
+    });
+
+    test('a single saved photo fills only the front, and an empty list changes nothing', () async {
+      final one = make();
+      await one.prefill(['/front.jpg']);
+      expect(one.state.front.has, isTrue);
+      expect(one.state.back.has, isFalse);
+      expect(one.state.editing, isNull);
+      await one.close();
+
+      final none = make();
+      await none.prefill(const []);
+      expect(none.state.front.has, isFalse);
+      expect(maker.prepared.length, 1);
+      await none.close();
     });
 
     test('a photo that cannot be read reports it and changes nothing', () async {

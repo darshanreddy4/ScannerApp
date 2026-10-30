@@ -1,7 +1,8 @@
+import '../../../monetization/presentation/inline_ad.dart';
 import 'folder_style.dart';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,7 +13,10 @@ import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/feedback.dart';
 import '../../domain/entities/scanned_document.dart';
 import '../bloc/documents_cubit.dart';
+import 'expiring_banner.dart';
 import 'document_actions.dart';
+import '../../../../core/widgets/text.dart';
+import '../../../../core/i18n/tr.dart';
 
 export '../../../../core/widgets/dialogs.dart' show promptText;
 
@@ -58,7 +62,7 @@ class _MoveSheet extends StatelessWidget {
         shrinkWrap: true,
         children: [
           const Padding(
-            padding: EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
+            padding: EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
             child: Text('Move to folder', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
           ),
           ListTile(
@@ -93,7 +97,7 @@ class DocMenuButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final cubit = context.read<DocumentsCubit>();
     return IconButton(
-      tooltip: 'More',
+      tooltip: tr('More'),
       icon: const Icon(AppIcons.more, size: 20, color: AppColors.inkMuted),
       onPressed: () => showDocumentActions(context, document, refresh: cubit.load),
     );
@@ -228,7 +232,14 @@ class DocumentListTile extends StatelessWidget {
                       style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
                     ),
                     const SizedBox(height: 6),
-                    _PagesChip(count: document.pageCount),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        _PagesChip(count: document.pageCount),
+                        if (document.expiresAt != null) ExpiryChip(expires: document.expiresAt!),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -252,17 +263,17 @@ class _Flags extends StatelessWidget {
     children: [
       if (document.favorite)
         const Padding(
-          padding: EdgeInsets.only(left: 6),
+          padding: EdgeInsetsDirectional.only(start: 6),
           child: Icon(AppIcons.star, size: 14, color: AppColors.warning),
         ),
       if (document.pinned)
         const Padding(
-          padding: EdgeInsets.only(left: 6),
+          padding: EdgeInsetsDirectional.only(start: 6),
           child: Icon(AppIcons.pin, size: 14, color: AppColors.primary),
         ),
       if (document.locked)
         const Padding(
-          padding: EdgeInsets.only(left: 6),
+          padding: EdgeInsetsDirectional.only(start: 6),
           child: Icon(AppIcons.lock, size: 14, color: AppColors.inkMuted),
         ),
     ],
@@ -326,7 +337,7 @@ class DocumentGridCard extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.sm + 4, AppSpacing.sm, 0, AppSpacing.sm),
+              padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.sm + 4, AppSpacing.sm, 0, AppSpacing.sm),
               child: Row(
                 children: [
                   Expanded(
@@ -347,6 +358,11 @@ class DocumentGridCard extends StatelessWidget {
                           ],
                         ),
                         Text(formatDate(document.updatedAt), style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
+                        if (document.expiresAt != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: ExpiryChip(expires: document.expiresAt!),
+                          ),
                       ],
                     ),
                   ),
@@ -361,43 +377,57 @@ class DocumentGridCard extends StatelessWidget {
   }
 }
 
-/// Documents as a list or a grid, depending on [gridView].
+/// Documents as a list or a grid, depending on [gridView]. With two or more documents one banner ad sits after the first row, inside
+/// the scrolling content, with space around it.
 class DocumentsCollection extends StatelessWidget {
   const DocumentsCollection({super.key, required this.documents, required this.gridView});
   final List<ScannedDocument> documents;
   final bool gridView;
 
+  Widget _withBanner(int after, Widget Function(List<ScannedDocument>) part) {
+    if (documents.length < 2) return part(documents);
+    final n = after.clamp(1, documents.length);
+    return SliverMainAxisGroup(
+      slivers: [
+        part(documents.sublist(0, n)),
+        const SliverToBoxAdapter(child: InlineAd()),
+        if (n < documents.length) part(documents.sublist(n)),
+      ],
+    );
+  }
+
+  Widget _grid(double maxExtent, double spacing, {double? aspect, double? mainExtent, required Widget Function(ScannedDocument) card}) => SliverLayoutBuilder(
+    builder: (context, constraints) {
+      final columns = (constraints.crossAxisExtent / (maxExtent + spacing)).ceil().clamp(1, 8);
+      return _withBanner(
+        columns,
+        (docs) => SliverGrid.builder(
+          gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: maxExtent,
+            crossAxisSpacing: spacing,
+            mainAxisSpacing: aspect != null ? spacing : AppSpacing.sm + 2,
+            childAspectRatio: aspect ?? 1,
+            mainAxisExtent: mainExtent,
+          ),
+          itemCount: docs.length,
+          itemBuilder: (_, i) => card(docs[i]),
+        ),
+      );
+    },
+  );
+
   @override
   Widget build(BuildContext context) {
-    if (gridView) {
-      return SliverGrid.builder(
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 220,
-          crossAxisSpacing: AppSpacing.md,
-          mainAxisSpacing: AppSpacing.md,
-          childAspectRatio: 0.76,
-        ),
-        itemCount: documents.length,
-        itemBuilder: (_, i) => DocumentGridCard(document: documents[i]),
-      );
-    }
+    if (gridView) return _grid(220, AppSpacing.md, aspect: 0.76, card: (d) => DocumentGridCard(document: d));
     // Two columns once there is room, so rows do not stretch across a tablet.
-    if (MediaQuery.sizeOf(context).width >= Breakpoints.medium) {
-      return SliverGrid.builder(
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 520,
-          mainAxisExtent: 96,
-          crossAxisSpacing: AppSpacing.md,
-          mainAxisSpacing: AppSpacing.sm + 2,
-        ),
-        itemCount: documents.length,
-        itemBuilder: (_, i) => DocumentListTile(document: documents[i]),
-      );
-    }
-    return SliverList.separated(
-      itemCount: documents.length,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm + 2),
-      itemBuilder: (_, i) => DocumentListTile(document: documents[i]),
+    if (MediaQuery.sizeOf(context).width >= Breakpoints.medium) return _grid(520, AppSpacing.md, mainExtent: 96, card: (d) => DocumentListTile(document: d));
+    return _withBanner(
+      2,
+      (docs) => SliverList.separated(
+        itemCount: docs.length,
+        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm + 2),
+        itemBuilder: (_, i) => DocumentListTile(document: docs[i]),
+      ),
     );
   }
 }
@@ -438,6 +468,14 @@ class DocumentsAppBar extends StatelessWidget implements PreferredSizeWidget {
       );
   }
 
+  Future<void> _packet(BuildContext context) async {
+    final cubit = context.read<DocumentsCubit>();
+    final router = GoRouter.of(context);
+    final ids = [...cubit.state.selection];
+    cubit.clearSelection();
+    await router.push<void>('/packet', extra: ids);
+  }
+
   Future<void> _move(BuildContext context) async {
     final cubit = context.read<DocumentsCubit>();
     final target = await pickFolder(context, cubit.state.folders, null);
@@ -471,7 +509,7 @@ class DocumentsAppBar extends StatelessWidget implements PreferredSizeWidget {
     final cubit = context.read<DocumentsCubit>();
     return AppBar(
       backgroundColor: AppColors.primarySoft,
-      leading: IconButton(tooltip: 'Cancel selection', icon: const Icon(AppIcons.close), onPressed: cubit.clearSelection),
+      leading: IconButton(tooltip: tr('Cancel selection'), icon: const Icon(AppIcons.close), onPressed: cubit.clearSelection),
       title: Text('${selection.length} selected'),
       actions: [
         IconButton(
@@ -479,9 +517,10 @@ class DocumentsAppBar extends StatelessWidget implements PreferredSizeWidget {
           icon: const Icon(AppIcons.merge),
           onPressed: selection.length < 2 ? null : () => _merge(context),
         ),
-        IconButton(tooltip: 'Move to folder', icon: const Icon(AppIcons.emptyDocs), onPressed: () => _move(context)),
+        IconButton(tooltip: tr('Make an application packet'), icon: const Icon(AppIcons.packet), onPressed: () => _packet(context)),
+        IconButton(tooltip: tr('Move to folder'), icon: const Icon(AppIcons.emptyDocs), onPressed: () => _move(context)),
         IconButton(
-          tooltip: 'Delete',
+          tooltip: tr('Delete'),
           icon: const Icon(AppIcons.delete, color: AppColors.danger),
           onPressed: () => _delete(context),
         ),
@@ -522,7 +561,7 @@ class _MergeDialogState extends State<_MergeDialog> {
           controller: _title,
           autofocus: true,
           textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(labelText: 'New document name'),
+          decoration: InputDecoration(labelText: tr('New document name')),
         ),
         const SizedBox(height: AppSpacing.sm),
         CheckboxListTile(

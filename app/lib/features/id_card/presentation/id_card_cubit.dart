@@ -8,6 +8,7 @@ import '../../../core/error/failures.dart';
 import '../../photo_tools/domain/crop_math.dart';
 import '../../photo_tools/domain/passport_maker.dart';
 import '../domain/id_card.dart';
+import '../../../core/utils/region.dart';
 
 enum CardSideId {
   front('Front'),
@@ -79,7 +80,10 @@ class IdCardState extends Equatable {
 }
 
 class IdCardCubit extends Cubit<IdCardState> {
-  IdCardCubit({required IdCardMaker maker, required Future<Directory> Function() workDir}) : _maker = maker, _workDir = workDir, super(const IdCardState());
+  IdCardCubit({required IdCardMaker maker, required Future<Directory> Function() workDir})
+    : _maker = maker,
+      _workDir = workDir,
+      super(IdCardState(options: IdCardOptions(paper: Region.letter ? CardPaper.letter : CardPaper.a4)));
 
   final IdCardMaker _maker;
   final Future<Directory> Function() _workDir;
@@ -120,6 +124,13 @@ class IdCardCubit extends Cubit<IdCardState> {
         editing: id,
       ).copyWith(busy: false),
     );
+  }
+
+  /// Starts from photos already on the phone: the first is the front, the second the back.
+  Future<void> prefill(List<String> paths) async {
+    if (paths.isNotEmpty) await setPhoto(CardSideId.front, paths[0]);
+    if (paths.length > 1) await setPhoto(CardSideId.back, paths[1]);
+    if (!isClosed) done();
   }
 
   void edit(CardSideId id) {

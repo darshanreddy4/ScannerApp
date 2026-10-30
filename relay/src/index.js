@@ -114,7 +114,7 @@ export default {
       return new Response(PAGE_JS, { headers: { ...BASE_HEADERS, 'Content-Type': 'text/javascript; charset=utf-8' } });
     }
     if (request.method === 'GET' && pathname === '/') {
-      return new Response('ScanVault share relay', { headers: { ...BASE_HEADERS, 'Content-Type': 'text/plain' } });
+      return new Response('Doculoom share relay', { headers: { ...BASE_HEADERS, 'Content-Type': 'text/plain' } });
     }
     return json({ error: 'not_found' }, 404);
   },

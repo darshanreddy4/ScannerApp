@@ -1,5 +1,5 @@
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -14,6 +14,7 @@ import '../../export/domain/repositories/export_repository.dart';
 import '../../photo_tools/presentation/size_limit_dialog.dart';
 import '../domain/pdf_compressor.dart';
 import 'pdf_compress_cubit.dart';
+import '../../../core/widgets/text.dart';
 
 /// Shrinks a PDF to fit an email or upload limit.
 class PdfCompressPage extends StatelessWidget {

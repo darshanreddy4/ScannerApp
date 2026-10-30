@@ -45,8 +45,10 @@ class DocumentsState extends Equatable {
 
   bool get selecting => selection.isNotEmpty;
 
-  List<ScannedDocument> inFolder(String? folderId) {
-    final list = documents.where((d) => d.folderId == folderId).toList();
+  List<ScannedDocument> inFolder(String? folderId) => _sorted(documents.where((d) => d.folderId == folderId));
+
+  List<ScannedDocument> _sorted(Iterable<ScannedDocument> source) {
+    final list = source.toList();
     switch (sort) {
       case DocumentSort.newest:
         list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
@@ -66,6 +68,28 @@ class DocumentsState extends Equatable {
 
   /// Documents that may appear in cross-folder lists (search, favourites): never those inside a locked folder.
   List<ScannedDocument> get openDocuments => documents.where((d) => !_lockedFolderIds.contains(d.folderId)).toList();
+
+  /// Every document outside locked folders, in the chosen order.
+  List<ScannedDocument> get openSorted => _sorted(openDocuments);
+
+  /// Tags in use outside locked folders, most used first; letter case is ignored and the first spelling seen is shown.
+  List<String> get allTags {
+    final shown = <String, String>{};
+    final count = <String, int>{};
+    for (final d in openDocuments) {
+      for (final t in d.tags) {
+        final key = t.toLowerCase();
+        shown.putIfAbsent(key, () => t);
+        count[key] = (count[key] ?? 0) + 1;
+      }
+    }
+    final keys = count.keys.toList()
+      ..sort((a, b) {
+        final byCount = count[b]!.compareTo(count[a]!);
+        return byCount != 0 ? byCount : a.compareTo(b);
+      });
+    return [for (final k in keys) shown[k]!];
+  }
 
   List<ScannedDocument> searchDocuments(String query) {
     final q = query.trim().toLowerCase();

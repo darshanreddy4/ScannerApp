@@ -4,15 +4,15 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:scanvault/features/export/data/document_builders.dart';
-import 'package:scanvault/features/export/domain/entities/export_options.dart';
-import 'package:scanvault/features/monetization/domain/entities/plan_status.dart';
-import 'package:scanvault/features/monetization/domain/repositories/monetization_contracts.dart';
-import 'package:scanvault/features/scanner/data/datasources/document_edge_detector.dart';
-import 'package:scanvault/features/scanner/data/datasources/image_filters.dart';
-import 'package:scanvault/features/scanner/data/datasources/rgb_buffer.dart';
-import 'package:scanvault/features/scanner/domain/entities/filter_settings.dart';
-import 'package:scanvault/features/scanner/domain/entities/quad.dart';
+import 'package:doculoom/features/export/data/document_builders.dart';
+import 'package:doculoom/features/export/domain/entities/export_options.dart';
+import 'package:doculoom/features/monetization/domain/entities/plan_status.dart';
+import 'package:doculoom/features/monetization/domain/repositories/monetization_contracts.dart';
+import 'package:doculoom/features/scanner/data/datasources/document_edge_detector.dart';
+import 'package:doculoom/features/scanner/data/datasources/image_filters.dart';
+import 'package:doculoom/features/scanner/data/datasources/rgb_buffer.dart';
+import 'package:doculoom/features/scanner/domain/entities/filter_settings.dart';
+import 'package:doculoom/features/scanner/domain/entities/quad.dart';
 
 /// Light skewed quadrilateral on a dark background.
 Uint8List _syntheticFrame(int w, int h, List<(double, double)> poly) {
@@ -89,9 +89,17 @@ void main() {
       return b;
     }
 
-    test('document filter outputs only black or white', () {
-      final out = ImageFilters.apply(gradient(), const FilterSettings(filter: ScanFilter.documentBw));
+    test('sharp black and white outputs only black or white', () {
+      final out = ImageFilters.apply(gradient(), const FilterSettings(filter: ScanFilter.sharpBw));
       expect(out.data.every((v) => v == 0 || v == 255), isTrue);
+    });
+
+    test('document filter outputs neutral grey tones', () {
+      final out = ImageFilters.apply(gradient(), const FilterSettings(filter: ScanFilter.documentBw));
+      for (var i = 0; i < 64 * 64; i++) {
+        expect(out.data[i * 3], out.data[i * 3 + 1]);
+        expect(out.data[i * 3], out.data[i * 3 + 2]);
+      }
     });
 
     test('grayscale equalises channels', () {
@@ -131,7 +139,7 @@ void main() {
     late List<PageSource> pages;
 
     setUp(() {
-      tmp = Directory.systemTemp.createTempSync('scanvault_test');
+      tmp = Directory.systemTemp.createTempSync('doculoom_test');
       pages = [];
       for (var i = 0; i < 2; i++) {
         final image = img.Image(width: 120, height: 160)..clear(img.ColorRgb8(240, 240, 240));
@@ -172,6 +180,15 @@ void main() {
     test('free user sees banner and a first interstitial', () {
       expect(policy.shouldShowBanner(PlanStatus.free), isTrue);
       expect(policy.shouldShowInterstitial(plan: PlanStatus.free, lastShownAt: null, now: now), isTrue);
+      expect(policy.shouldShowInterstitial(plan: PlanStatus.free, lastShownAt: null, now: now, typing: true), isFalse);
+    });
+
+    test('an ad comes after every Nth finished action only', () {
+      expect(policy.everyNthAction, 2);
+      expect(policy.shouldShowInterstitial(plan: PlanStatus.free, lastShownAt: null, now: now, actionsSinceLastAd: 1), isFalse);
+      expect(policy.shouldShowInterstitial(plan: PlanStatus.free, lastShownAt: null, now: now, actionsSinceLastAd: 2), isTrue);
+      expect(policy.shouldShowInterstitial(plan: PlanStatus.premium, lastShownAt: null, now: now, actionsSinceLastAd: 9), isFalse);
+      expect(const AdPolicy(everyNthAction: 3).shouldShowInterstitial(plan: PlanStatus.free, lastShownAt: null, now: now, actionsSinceLastAd: 2), isFalse);
     });
 
     test('cooldown suppresses back-to-back interstitials', () {

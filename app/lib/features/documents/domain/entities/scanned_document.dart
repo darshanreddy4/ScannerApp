@@ -68,6 +68,7 @@ class ScannedDocument extends Equatable {
     this.pinned = false,
     this.locked = false,
     this.tags = const [],
+    this.expiresAt,
   });
 
   final String id;
@@ -83,11 +84,14 @@ class ScannedDocument extends Equatable {
   final bool locked;
   final List<String> tags;
 
+  /// When the document stops being valid (a passport, a policy); null when it does not expire.
+  final DateTime? expiresAt;
+
   int get pageCount => pages.length;
   DocumentPage? get cover => pages.isEmpty ? null : pages.first;
 
   @override
-  List<Object?> get props => [id, title, createdAt, updatedAt, pages, folderId, favorite, pinned, locked, tags];
+  List<Object?> get props => [id, title, createdAt, updatedAt, pages, folderId, favorite, pinned, locked, tags, expiresAt];
 }
 
 /// How a folder looks: an icon from the app's set (or [textOnly] for just its name) and an accent colour.

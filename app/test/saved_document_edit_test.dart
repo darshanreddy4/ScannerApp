@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:scanvault/features/documents/data/datasources/document_local_data_source.dart';
-import 'package:scanvault/features/documents/domain/entities/scanned_document.dart';
-import 'package:scanvault/features/monetization/domain/entities/plan_status.dart';
-import 'package:scanvault/features/settings/domain/feature_access.dart';
+import 'package:doculoom/features/documents/data/datasources/document_local_data_source.dart';
+import 'package:doculoom/features/documents/domain/entities/scanned_document.dart';
+import 'package:doculoom/features/monetization/domain/entities/plan_status.dart';
+import 'package:doculoom/features/settings/domain/feature_access.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 File _file(Directory dir, String name, [String content = 'x']) => File(p.join(dir.path, name))..writeAsStringSync(content);
@@ -121,7 +121,7 @@ void main() {
   });
 
   test('a version 2 database is upgraded and old pages open without edit info', () async {
-    final path = p.join(root.path, 'scanvault.db');
+    final path = p.join(root.path, 'doculoom.db');
     final v2 = await openDatabase(
       path,
       version: 2,

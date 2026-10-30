@@ -10,20 +10,39 @@ enum OcrScript {
   final String languages;
 }
 
-/// One line of recognised text with its box in image pixels.
-class OcrLine extends Equatable {
-  const OcrLine({required this.text, required this.left, required this.top, required this.right, required this.bottom});
+/// One word of a line with its box in image pixels.
+class OcrWord extends Equatable {
+  const OcrWord({required this.text, required this.left, required this.top, required this.right, required this.bottom});
   final String text;
   final double left;
   final double top;
   final double right;
   final double bottom;
 
+  @override
+  List<Object?> get props => [text, left, top, right, bottom];
+}
+
+/// One line of recognised text with its box in image pixels.
+class OcrLine extends Equatable {
+  const OcrLine({required this.text, required this.left, required this.top, required this.right, required this.bottom, this.words = const [], this.angle = 0});
+  final String text;
+  final double left;
+  final double top;
+  final double right;
+  final double bottom;
+
+  /// The words of the line, when the engine tells them apart; empty otherwise.
+  final List<OcrWord> words;
+
+  /// How much the line is turned, in radians clockwise (0 for a level line).
+  final double angle;
+
   double get width => right - left;
   double get height => bottom - top;
 
   @override
-  List<Object?> get props => [text, left, top, right, bottom];
+  List<Object?> get props => [text, left, top, right, bottom, words, angle];
 }
 
 /// A group of lines the engine considers one paragraph or region.

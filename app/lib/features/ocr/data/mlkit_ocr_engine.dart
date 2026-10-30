@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+import 'dart:math' show Point;
+
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
 import '../../../core/error/failures.dart';
@@ -17,6 +20,14 @@ class MlKitOcrEngine implements OcrEngine {
     OcrScript.devanagari => TextRecognitionScript.devanagiri,
   };
 
+  /// The turn of a line from its top edge (first two corners), in radians clockwise.
+  static double _angleOf(List<Point<int>> corners) {
+    if (corners.length < 2) return 0;
+    final a = corners[0], b = corners[1];
+    if (a == b) return 0;
+    return math.atan2((b.y - a.y).toDouble(), (b.x - a.x).toDouble());
+  }
+
   @override
   Future<Result<OcrPageResult>> recognize(String imagePath, OcrScript script) => guard(() async {
     final size = await _service.inspect(imagePath);
@@ -31,7 +42,18 @@ class MlKitOcrEngine implements OcrEngine {
             OcrBlock(
               lines: [
                 for (final l in b.lines)
-                  OcrLine(text: l.text, left: l.boundingBox.left, top: l.boundingBox.top, right: l.boundingBox.right, bottom: l.boundingBox.bottom),
+                  OcrLine(
+                    text: l.text,
+                    left: l.boundingBox.left,
+                    top: l.boundingBox.top,
+                    right: l.boundingBox.right,
+                    bottom: l.boundingBox.bottom,
+                    words: [
+                      for (final e in l.elements)
+                        OcrWord(text: e.text, left: e.boundingBox.left, top: e.boundingBox.top, right: e.boundingBox.right, bottom: e.boundingBox.bottom),
+                    ],
+                    angle: _angleOf(l.cornerPoints),
+                  ),
               ],
             ),
         ],

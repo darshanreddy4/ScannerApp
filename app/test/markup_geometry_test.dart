@@ -4,12 +4,12 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/core/error/result.dart';
-import 'package:scanvault/features/markup/data/markup_renderer_impl.dart';
-import 'package:scanvault/features/markup/domain/markup.dart';
-import 'package:scanvault/features/scanner/domain/entities/filter_settings.dart';
-import 'package:scanvault/features/scanner/domain/entities/prepared_image.dart';
-import 'package:scanvault/features/scanner/domain/repositories/scanner_repository.dart';
+import 'package:doculoom/core/error/result.dart';
+import 'package:doculoom/features/markup/data/markup_renderer_impl.dart';
+import 'package:doculoom/features/markup/domain/markup.dart';
+import 'package:doculoom/features/scanner/domain/entities/filter_settings.dart';
+import 'package:doculoom/features/scanner/domain/entities/prepared_image.dart';
+import 'package:doculoom/features/scanner/domain/repositories/scanner_repository.dart';
 
 const page = Size(1000, 1400);
 

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/app/di.dart';
+import 'package:doculoom/app/di.dart';
 import 'support/coins_fakes.dart';
-import 'package:scanvault/features/monetization/domain/entities/plan_status.dart';
-import 'package:scanvault/features/monetization/domain/repositories/monetization_contracts.dart';
-import 'package:scanvault/features/monetization/presentation/plan_cubit.dart';
-import 'package:scanvault/features/settings/data/settings_repository.dart';
-import 'package:scanvault/features/settings/domain/app_settings.dart';
-import 'package:scanvault/features/settings/presentation/settings_cubit.dart';
-import 'package:scanvault/features/settings/presentation/settings_view.dart';
+import 'package:doculoom/features/monetization/domain/entities/plan_status.dart';
+import 'package:doculoom/features/monetization/domain/repositories/monetization_contracts.dart';
+import 'package:doculoom/features/monetization/presentation/plan_cubit.dart';
+import 'package:doculoom/features/settings/data/settings_repository.dart';
+import 'package:doculoom/features/settings/domain/app_settings.dart';
+import 'package:doculoom/features/settings/presentation/settings_cubit.dart';
+import 'package:doculoom/features/settings/presentation/settings_view.dart';
 
 class _Plans implements PlanRepository {
   @override

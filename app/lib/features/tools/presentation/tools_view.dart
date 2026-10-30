@@ -1,15 +1,22 @@
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:go_router/go_router.dart';
 
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../../core/i18n/tr.dart';
+import '../../../core/utils/region.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../importer/domain/importer.dart';
+import '../../rewards/domain/coin_rules.dart';
+import '../../monetization/presentation/inline_ad.dart';
+import '../../rewards/presentation/unlock.dart';
 import '../../reader/presentation/reader_page.dart';
+import '../../scanner/domain/entities/scan_mode.dart';
 import '../../scanner/presentation/add_content.dart';
+import '../../../core/widgets/text.dart';
 
 /// Hub for everything that works on files, beyond scanning.
 class ToolsView extends StatelessWidget {
@@ -41,14 +48,142 @@ class ToolsView extends StatelessWidget {
     }
   }
 
+  Future<void> _tablePhoto(BuildContext context) async {
+    final camera = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              key: const ValueKey('table-camera'),
+              leading: const Icon(AppIcons.camera),
+              title: const Text('Scan a table with the camera'),
+              onTap: () => Navigator.pop(ctx, true),
+            ),
+            ListTile(
+              key: const ValueKey('table-gallery'),
+              leading: const Icon(AppIcons.gallery),
+              title: const Text('Choose a photo of a table'),
+              onTap: () => Navigator.pop(ctx, false),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (camera == null || !context.mounted) return;
+    if (camera) {
+      startScan(context, mode: ScanMode.table);
+    } else {
+      await startImport(context, mode: ScanMode.table);
+    }
+  }
+
+  /// Tools made for one country or region; the person's own group comes first, the others wait in a folded list.
+  Map<ToolRegion, List<_Tool>> _regionTools(BuildContext context) => {
+    ToolRegion.india: <_Tool>[
+      _Tool(
+        icon: AppIcons.qr,
+        color: 0xFF16A34A,
+        title: 'UPI payment QR',
+        tier: CoinTier.light,
+        hint: 'Make a code to get paid; scanner reads it',
+        onTap: () => context.push('/qr-upi'),
+      ),
+      _Tool(
+        icon: AppIcons.receipt,
+        color: 0xFF0F766E,
+        title: 'GST invoice',
+        hint: 'CGST, SGST, IGST, HSN and UPI code',
+        onTap: () => context.push('/gst-invoice'),
+      ),
+    ],
+    ToolRegion.usa: <_Tool>[
+      _Tool(
+        icon: AppIcons.receipt,
+        color: 0xFF1D4ED8,
+        title: 'US invoice',
+        hint: 'Sales tax, discount, shipping, balance due',
+        onTap: () => context.push('/us-invoice'),
+      ),
+    ],
+    ToolRegion.gulf: <_Tool>[
+      _Tool(
+        icon: AppIcons.receipt,
+        color: 0xFF047857,
+        title: 'Saudi VAT invoice',
+        hint: 'Arabic and English, 15% VAT, QR code',
+        onTap: () => context.push('/zatca-invoice'),
+      ),
+    ],
+    ToolRegion.europe: <_Tool>[
+      _Tool(
+        icon: AppIcons.qr,
+        color: 0xFF1D4ED8,
+        title: 'Payment QR (SEPA)',
+        tier: CoinTier.light,
+        hint: 'Make a Girocode; scanner reads it',
+        onTap: () => context.push('/qr-payment'),
+      ),
+      _Tool(
+        icon: AppIcons.receipt,
+        color: 0xFF0F766E,
+        title: 'E-invoice viewer',
+        hint: 'Factur-X, ZUGFeRD, XRechnung, FatturaPA',
+        onTap: () => context.push('/einvoice'),
+      ),
+      _Tool(icon: AppIcons.sheet, color: 0xFF7C3AED, title: 'Invoice maker', hint: 'VAT, IBAN, DIN 5008 layout', onTap: () => context.push('/invoice')),
+      _Tool(icon: AppIcons.user, color: 0xFF0284C7, title: 'CV maker', hint: 'European style, as a PDF', onTap: () => context.push('/cv')),
+      _Tool(
+        icon: AppIcons.receipt,
+        color: 0xFFB45309,
+        title: 'VAT refund receipts',
+        hint: 'Tax-free shopping and deadlines',
+        onTap: () => context.push('/vat-refund'),
+      ),
+      _Tool(
+        icon: AppIcons.signature,
+        color: 0xFF4338CA,
+        title: 'Sign with certificate',
+        hint: 'Your .p12/.pfx; check PDF signatures',
+        onTap: () => context.push('/pdf-certificate'),
+      ),
+      // EUROPE-TOOLS
+    ],
+  };
+
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(listenable: Region.toolsChanged, builder: _build);
+  }
+
+  Widget _build(BuildContext context, Widget? _) {
+    final byRegion = _regionTools(context);
+    final mine = Region.toolRegion;
+    final own = byRegion[mine] ?? const <_Tool>[];
+    final others = [
+      for (final e in byRegion.entries)
+        if (e.key != mine && e.value.isNotEmpty) e,
+    ];
     return ListView(
       padding: contentPadding(context),
       children: [
+        const _FeaturedTool(),
+        if (own.isNotEmpty) ...[
+          _SectionLabel(trf('For {region}', {'region': tr(mine.label)})),
+          _ToolGrid(own),
+        ],
         const _SectionLabel('PDF and documents'),
         _ToolGrid([
-          _Tool(icon: AppIcons.reader, color: 0xFF2563EB, title: 'Read PDF or Word', hint: 'Open, zoom and read', onTap: () => _openReader(context)),
+          _Tool(
+            icon: AppIcons.reader,
+            color: 0xFF2563EB,
+            title: 'Read PDF or Word',
+            tier: CoinTier.free,
+            hint: 'Open, zoom and read',
+            onTap: () => _openReader(context),
+          ),
           _Tool(
             icon: AppIcons.edit,
             color: 0xFFE5322D,
@@ -99,7 +234,26 @@ class ToolsView extends StatelessWidget {
             hint: 'Split, rotate, page numbers',
             onTap: () => context.push('/pdf-pages'),
           ),
-          _Tool(icon: AppIcons.signature, color: 0xFF0D9488, title: 'Signature', hint: 'Draw once, sign anywhere', onTap: () => context.push('/signature')),
+          _Tool(
+            icon: AppIcons.signature,
+            color: 0xFF0D9488,
+            title: 'Signature',
+            tier: CoinTier.light,
+            hint: 'Draw once, sign anywhere',
+            onTap: () => context.push('/signature'),
+          ),
+          _Tool(icon: AppIcons.formFill, color: 0xFF2563EB, title: 'Fill a PDF form', hint: 'Boxes, text, date, ticks', onTap: () => context.push('/pdf-form')),
+          _Tool(
+            icon: AppIcons.markRedact,
+            color: 0xFF111827,
+            title: 'Hide text in a PDF',
+            hint: 'Black out for good',
+            onTap: () => context.push('/pdf-redact'),
+          ),
+          _Tool(icon: AppIcons.crop, color: 0xFFDB2777, title: 'Crop PDF pages', hint: 'Cut margins', onTap: () => context.push('/pdf-crop')),
+          _Tool(icon: AppIcons.pdfImage, color: 0xFF0EA5E9, title: 'PDF to pictures', hint: 'Pages or inner images', onTap: () => context.push('/pdf-images')),
+          _Tool(icon: AppIcons.flatten, color: 0xFF64748B, title: 'Flatten PDF', hint: 'Make notes permanent', onTap: () => context.push('/pdf-flatten')),
+          _Tool(icon: AppIcons.fileDiff, color: 0xFF7C3AED, title: 'Compare two PDFs', hint: 'See what changed', onTap: () => context.push('/compare-pdf')),
         ]),
         const _SectionLabel('Office files'),
         _ToolGrid([
@@ -110,6 +264,14 @@ class ToolsView extends StatelessWidget {
             hint: 'Open, edit, convert',
             onTap: () => context.push('/office-sheets'),
           ),
+          _Tool(icon: AppIcons.table, color: 0xFF16A34A, title: 'Table to Excel', hint: 'Photo of a table to a sheet', onTap: () => _tablePhoto(context)),
+          _Tool(
+            icon: AppIcons.receipt,
+            color: 0xFFD97706,
+            title: 'Receipts to Excel',
+            hint: 'Bills, totals and months',
+            onTap: () => context.push('/expenses'),
+          ),
           _Tool(
             icon: AppIcons.slides,
             color: 0xFFD24726,
@@ -118,6 +280,8 @@ class ToolsView extends StatelessWidget {
             onTap: () => context.push('/office-slides'),
           ),
         ]),
+        // Between two groups of tools, with space around it, never next to a tool that could be tapped by mistake.
+        const InlineAd(),
         const _SectionLabel('Photo tools'),
         _ToolGrid([
           _Tool(
@@ -127,7 +291,21 @@ class ToolsView extends StatelessWidget {
             hint: 'Right size, clean background',
             onTap: () => context.push('/passport-photo'),
           ),
-          _Tool(icon: AppIcons.idCopy, color: 0xFFD97706, title: 'ID card copy', hint: 'Both sides on one page', onTap: () => context.push('/id-card')),
+          _Tool(
+            icon: AppIcons.idCopy,
+            color: 0xFFD97706,
+            title: 'ID card copy',
+            tier: CoinTier.light,
+            hint: 'Both sides on one page',
+            onTap: () => context.push('/id-card'),
+          ),
+          _Tool(
+            icon: AppIcons.shield,
+            color: 0xFF0F766E,
+            title: 'Safe ID copy',
+            hint: 'Cover numbers, mark what it is for',
+            onTap: () => context.push('/safe-id'),
+          ),
           _Tool(
             icon: AppIcons.photoCompress,
             color: 0xFF059669,
@@ -145,7 +323,64 @@ class ToolsView extends StatelessWidget {
           ),
         ]),
         const _SectionLabel('More tools'),
-        _ToolGrid([_Tool(icon: AppIcons.qr, color: 0xFF334155, title: 'QR code generator', hint: 'Links, text and Wi-Fi', onTap: () => context.push('/qr'))]),
+        _ToolGrid([
+          _Tool(
+            icon: AppIcons.scanQr,
+            color: 0xFF0F766E,
+            title: 'Scan QR or barcode',
+            tier: CoinTier.light,
+            hint: 'Open, save or join',
+            onTap: () => context.push('/qr-scan'),
+          ),
+          _Tool(
+            icon: AppIcons.qr,
+            color: 0xFF334155,
+            title: 'QR code generator',
+            tier: CoinTier.light,
+            hint: 'Links, text and Wi-Fi',
+            onTap: () => context.push('/qr'),
+          ),
+          _Tool(
+            icon: AppIcons.receipt,
+            color: 0xFFB45309,
+            title: 'Amount in words',
+            tier: CoinTier.light,
+            hint: 'For cheques and invoices',
+            onTap: () => context.push('/amount-words'),
+          ),
+          _Tool(
+            icon: AppIcons.cards,
+            color: 0xFF7C3AED,
+            title: 'Loyalty cards',
+            tier: CoinTier.light,
+            hint: 'Show card codes at the till',
+            onTap: () => context.push('/cards'),
+          ),
+          _Tool(
+            icon: AppIcons.checklist,
+            color: 0xFF0EA5E9,
+            title: 'Checklists',
+            tier: CoinTier.light,
+            hint: 'Papers for life events',
+            onTap: () => context.push('/checklists'),
+          ),
+          _Tool(
+            icon: AppIcons.packet,
+            color: 0xFF4F46E5,
+            title: 'Application packet',
+            hint: 'Papers in one PDF, within a size limit',
+            onTap: () => context.push('/packet'),
+          ),
+          _Tool(
+            icon: AppIcons.calendar,
+            color: 0xFF047857,
+            title: 'Hijri calendar',
+            tier: CoinTier.light,
+            hint: 'Convert dates, Ramadan and Eid reminders',
+            onTap: () => context.push('/hijri'),
+          ),
+        ]),
+        if (others.isNotEmpty) _OtherCountries(groups: others),
         const SizedBox(height: AppSpacing.md),
         const Card(
           child: Padding(
@@ -170,13 +405,50 @@ class ToolsView extends StatelessWidget {
   }
 }
 
+/// Tools made for other countries: folded away unless the person asked to see every country's tools.
+class _OtherCountries extends StatefulWidget {
+  const _OtherCountries({required this.groups});
+  final List<MapEntry<ToolRegion, List<_Tool>>> groups;
+
+  @override
+  State<_OtherCountries> createState() => _OtherCountriesState();
+}
+
+class _OtherCountriesState extends State<_OtherCountries> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final open = _open || Region.showAllTools;
+    final count = widget.groups.fold<int>(0, (n, g) => n + g.value.length);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.md),
+        Card(
+          margin: EdgeInsets.zero,
+          child: ListTile(
+            key: const ValueKey('other-countries'),
+            title: const Text('Tools for other countries'),
+            subtitle: Text(trf('{n} tools, kept out of the way', {'n': count})),
+            trailing: Icon(open ? Icons.expand_less : Icons.expand_more),
+            onTap: Region.showAllTools ? null : () => setState(() => _open = !_open),
+          ),
+        ),
+        if (open)
+          for (final g in widget.groups) ...[_SectionLabel(tr(g.key.label)), _ToolGrid(g.value)],
+      ],
+    );
+  }
+}
+
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
   final String text;
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(AppSpacing.xs, AppSpacing.md, 0, AppSpacing.sm + 2),
+    padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.xs, AppSpacing.md, 0, AppSpacing.sm + 2),
     child: Row(
       children: [
         Container(
@@ -194,13 +466,65 @@ class _SectionLabel extends StatelessWidget {
   );
 }
 
+/// The OCR tool, first on the page: pictures and PDFs to text, with translation and a voice.
+class _FeaturedTool extends StatelessWidget {
+  const _FeaturedTool();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+    child: Card(
+      key: const ValueKey('tool-ocr'),
+      margin: EdgeInsets.zero,
+      color: AppColors.primarySoft,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () async {
+          if (await requestToolAccess(context, CoinFeature.readText) && context.mounted) context.push('/ocr-tool');
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(12)),
+                child: const Icon(AppIcons.ocr, color: Colors.white),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('OCR and translate', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    SizedBox(height: 2),
+                    Text(
+                      'Read text from pictures and PDFs, translate it and listen to it',
+                      style: TextStyle(fontSize: 13, height: 1.35, color: AppColors.inkMuted),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(AppIcons.translate, color: AppColors.primary),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class _Tool {
-  const _Tool({required this.icon, required this.color, required this.title, required this.hint, required this.onTap});
+  const _Tool({required this.icon, required this.color, required this.title, required this.hint, required this.onTap, this.tier = CoinTier.heavy});
   final IconData icon;
   final int color;
   final String title;
   final String hint;
   final VoidCallback onTap;
+
+  /// What the tool costs a Free user each use.
+  final CoinTier tier;
 }
 
 /// Tiles in rows of two (three on wide screens); each row is as tall as its tallest tile.
@@ -250,7 +574,9 @@ class _ToolTile extends StatelessWidget {
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: tool.onTap,
+        onTap: () async {
+          if (await requestToolAccess(context, CoinFeature.tool(tool.title, tool.tier)) && context.mounted) tool.onTap();
+        },
         child: Stack(
           children: [
             Positioned(
@@ -272,7 +598,7 @@ class _ToolTile extends StatelessWidget {
                     height: 46,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [light, accent]),
+                      gradient: LinearGradient(begin: AlignmentDirectional.topStart, end: AlignmentDirectional.bottomEnd, colors: [light, accent]),
                       boxShadow: [BoxShadow(color: accent.withValues(alpha: 0.32), blurRadius: 10, offset: const Offset(0, 4))],
                     ),
                     child: Icon(tool.icon, color: Colors.white, size: 24),

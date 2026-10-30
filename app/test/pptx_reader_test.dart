@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scanvault/features/office/slides/data/pptx_package.dart';
-import 'package:scanvault/features/office/slides/data/slide_reader.dart';
-import 'package:scanvault/features/office/slides/domain/slide_model.dart';
+import 'package:doculoom/features/office/slides/data/pptx_package.dart';
+import 'package:doculoom/features/office/slides/data/slide_reader.dart';
+import 'package:doculoom/features/office/slides/domain/slide_model.dart';
 
 Future<PptxDeck> open(String name) async => PptxDeck.open(File('test/fixtures/office/$name').readAsBytesSync());
 

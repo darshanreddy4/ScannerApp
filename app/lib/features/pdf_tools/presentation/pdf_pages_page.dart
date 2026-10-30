@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:path_provider/path_provider.dart';
@@ -16,6 +16,8 @@ import '../../../core/widgets/responsive.dart';
 import '../../export/domain/repositories/export_repository.dart';
 import '../domain/pdf_pages.dart';
 import 'pdf_pages_cubit.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 /// Pick, remove, turn and split the pages of a PDF, and print page numbers, a header or a footer on them.
 class PdfPagesPage extends StatelessWidget {
@@ -209,7 +211,7 @@ class _SelectBarState extends State<_SelectBar> {
                 enabled: !busy,
                 keyboardType: TextInputType.text,
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9,;\-– ]'))],
-                decoration: InputDecoration(isDense: true, hintText: 'Select pages, for example 1-3, 5', errorText: state.rangeError, errorMaxLines: 3),
+                decoration: InputDecoration(isDense: true, hintText: tr('Select pages, for example 1-3, 5'), errorText: state.rangeError, errorMaxLines: 3),
                 onSubmitted: cubit.selectRanges,
               ),
             ),
@@ -373,7 +375,7 @@ class _ActionsState extends State<_Actions> {
               enabled: !busy,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(3)],
-              decoration: const InputDecoration(isDense: true, labelText: 'Pages in each file'),
+              decoration: InputDecoration(isDense: true, labelText: tr('Pages in each file')),
               onChanged: (v) {
                 final n = int.tryParse(v);
                 if (n != null && n > 0) cubit.setSplitEvery(n);
@@ -384,7 +386,7 @@ class _ActionsState extends State<_Actions> {
               controller: _ranges,
               enabled: !busy,
               inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9,;\-– ]'))],
-              decoration: const InputDecoration(isDense: true, labelText: 'One file per part', hintText: '1-3, 4-6, 7-'),
+              decoration: InputDecoration(isDense: true, labelText: tr('One file per part'), hintText: tr('1-3, 4-6, 7-')),
               onChanged: cubit.setSplitRanges,
             ),
           Padding(
@@ -406,7 +408,7 @@ class _ActionsState extends State<_Actions> {
             leading: const Icon(AppIcons.edit, color: AppColors.primary),
             title: const Text('Page numbers, header, footer', style: TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Text(marks.isEmpty ? 'Off' : 'On', style: const TextStyle(fontSize: 12.5)),
-            childrenPadding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
+            childrenPadding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
             expandedCrossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Wrap(
@@ -441,7 +443,7 @@ class _ActionsState extends State<_Actions> {
                 controller: _header,
                 enabled: !busy,
                 maxLength: 80,
-                decoration: const InputDecoration(isDense: true, labelText: 'Header (top of every page)', counterText: ''),
+                decoration: InputDecoration(isDense: true, labelText: tr('Header (top of every page)'), counterText: ''),
                 onChanged: (v) => cubit.setMarks(cubit.state.marks.copyWith(header: v)),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -449,7 +451,7 @@ class _ActionsState extends State<_Actions> {
                 controller: _footer,
                 enabled: !busy,
                 maxLength: 80,
-                decoration: const InputDecoration(isDense: true, labelText: 'Footer (bottom of every page)', counterText: ''),
+                decoration: InputDecoration(isDense: true, labelText: tr('Footer (bottom of every page)'), counterText: ''),
                 onChanged: (v) => cubit.setMarks(cubit.state.marks.copyWith(footer: v)),
               ),
               SwitchListTile(

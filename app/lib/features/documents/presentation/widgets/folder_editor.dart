@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../domain/entities/scanned_document.dart';
 import 'folder_style.dart';
+import '../../../../core/widgets/text.dart';
+import '../../../../core/i18n/tr.dart';
 
 typedef FolderEdit = ({String name, FolderStyle style});
 
@@ -64,7 +66,7 @@ class _FolderEditorState extends State<_FolderEditor> {
                     controller: _name,
                     autofocus: widget.folder == null,
                     textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(hintText: 'Folder name'),
+                    decoration: InputDecoration(hintText: tr('Folder name')),
                     onSubmitted: (_) => _save(),
                   ),
                 ),

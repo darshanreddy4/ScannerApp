@@ -69,7 +69,7 @@ class DocumentSignerProcessor implements DocumentSigner {
       return SignedFile(path: sources.single.path, name: '${document.name} signed.jpg', mimeType: 'image/jpeg', pages: 1, signedPages: 1);
     }
     final target = p.join(dir.path, '${document.name.replaceAll(RegExp(r'[^\w\-. ]', unicode: true), '_')}_signed_$unique.pdf');
-    await Isolate.run(() => buildPdf(sources, ExportQuality.high, target));
+    await buildPdfInBackground(sources, ExportQuality.high, target);
     for (final s in sources) {
       if (s.path.startsWith(dir.path)) await File(s.path).delete().then((_) {}, onError: (_) {});
     }

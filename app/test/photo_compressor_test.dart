@@ -4,9 +4,9 @@ import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:scanvault/core/error/failures.dart';
-import 'package:scanvault/features/photo_tools/data/image_compressor.dart';
-import 'package:scanvault/features/photo_tools/domain/photo_compressor.dart';
+import 'package:doculoom/core/error/failures.dart';
+import 'package:doculoom/features/photo_tools/data/image_compressor.dart';
+import 'package:doculoom/features/photo_tools/domain/photo_compressor.dart';
 
 /// A smooth picture with grain, which compresses like a real photo.
 img.Image _photo(int w, int h, {int seed = 1}) {

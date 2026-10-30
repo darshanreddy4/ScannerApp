@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -20,6 +20,8 @@ import '../data/watermark_stamp.dart';
 import '../domain/watermark.dart';
 import '../domain/watermark_service.dart';
 import 'watermark_cubit.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 /// Puts a business name, logo or words such as CONFIDENTIAL over photos and PDF pages.
 class WatermarkPage extends StatelessWidget {
@@ -219,7 +221,7 @@ class _InputRow extends StatelessWidget {
         ),
         title: Text(input.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Text(detail, style: TextStyle(fontSize: 12.5, color: failed ? AppColors.danger : (done ? AppColors.success : AppColors.inkMuted))),
-        trailing: running ? null : IconButton(tooltip: 'Remove', icon: const Icon(AppIcons.close, size: 18), onPressed: onRemove),
+        trailing: running ? null : IconButton(tooltip: tr('Remove'), icon: const Icon(AppIcons.close, size: 18), onPressed: onRemove),
       ),
     );
   }
@@ -520,7 +522,7 @@ class _WatermarkTextFieldState extends State<_WatermarkTextField> {
     maxLines: 3,
     maxLength: 120,
     textCapitalization: TextCapitalization.sentences,
-    decoration: const InputDecoration(hintText: 'For example CONFIDENTIAL', counterText: ''),
+    decoration: InputDecoration(hintText: tr('For example CONFIDENTIAL'), counterText: ''),
     onChanged: widget.onChanged,
   );
 }
@@ -742,13 +744,13 @@ class _BusinessDialogState extends State<_BusinessDialog> {
               controller: _name,
               maxLength: 60,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(labelText: 'Business name', counterText: ''),
+              decoration: InputDecoration(labelText: tr('Business name'), counterText: ''),
             ),
             const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _details,
               maxLength: 80,
-              decoration: const InputDecoration(labelText: 'Second line', hintText: 'GST number, phone or website', counterText: ''),
+              decoration: InputDecoration(labelText: tr('Second line'), hintText: tr('GST number, phone or website'), counterText: ''),
             ),
             const SizedBox(height: AppSpacing.md),
             Row(
@@ -766,7 +768,7 @@ class _BusinessDialogState extends State<_BusinessDialog> {
                 ),
                 if (shown != null)
                   IconButton(
-                    tooltip: 'Remove logo',
+                    tooltip: tr('Remove logo'),
                     icon: const Icon(AppIcons.close, size: 18),
                     onPressed: () => setState(() {
                       _logo = null;

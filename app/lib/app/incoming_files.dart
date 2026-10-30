@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:path/path.dart' as p;
@@ -10,7 +10,9 @@ import '../features/reader/presentation/reader_page.dart';
 import '../features/scanner/presentation/add_content.dart';
 import '../features/scanner/presentation/bloc/scan_session_cubit.dart';
 import '../features/settings/presentation/settings_cubit.dart';
+import 'quick_actions.dart';
 import 'router.dart';
+import '../core/widgets/text.dart';
 
 enum IncomingKind { pdf, docx, xlsx, csv, pptx, image, unsupported }
 
@@ -25,9 +27,9 @@ IncomingKind classifyIncoming(String path, String mime) {
   return IncomingKind.unsupported;
 }
 
-/// Opens files other apps send here ("Open with" and "Share to ScanVault").
+/// Opens files other apps send here ("Open with" and "Share to Doculoom").
 class IncomingFiles {
-  static const _channel = MethodChannel('scanvault/incoming');
+  static const _channel = MethodChannel('doculoom/incoming');
   static bool _started = false;
 
   /// Call once the first frame is up so the router can take a push.
@@ -48,6 +50,13 @@ class IncomingFiles {
     final context = appRouter.routerDelegate.navigatorKey.currentContext;
     if (raw is! List || raw.isEmpty || context == null) return;
     final items = [for (final e in raw) Map<String, String>.from(e as Map)];
+
+    // A shortcut, the widget or a quick-settings tile.
+    final action = quickActionFrom(items.map((i) => i['action']).whereType<String>().firstOrNull);
+    if (action != null) {
+      await runQuickAction(context, action);
+      return;
+    }
 
     if (items.any((i) => i.containsKey('error')) && items.every((i) => i.containsKey('error'))) {
       _say(context, 'This file could not be opened.');
@@ -84,7 +93,7 @@ class IncomingFiles {
       if (!hasSession) session.start(defaultFilter: context.read<SettingsCubit>().state.defaultFilter);
       await importImagePaths(context, images, append: hasSession);
     } else {
-      _say(context, 'ScanVault opens PDF, Word, Excel, CSV, PowerPoint, JPG and PNG files.');
+      _say(context, 'Doculoom opens PDF, Word, Excel, CSV, PowerPoint, JPG and PNG files.');
     }
   }
 

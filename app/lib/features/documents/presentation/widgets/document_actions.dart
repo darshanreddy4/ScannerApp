@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
@@ -15,9 +15,14 @@ import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/dialogs.dart';
 import '../../../../core/widgets/feedback.dart';
 import '../../../export/domain/entities/export_options.dart';
+import '../../../export/data/share_packager.dart';
 import '../../../export/domain/repositories/export_repository.dart';
 import '../../../export/domain/usecases/export_usecases.dart';
 import '../../../monetization/domain/repositories/monetization_contracts.dart';
+import '../../../ocr/domain/text_repository.dart';
+import '../../../ocr/presentation/read_document_text.dart';
+import '../../../tables/presentation/table_page.dart';
+import '../../../speech/presentation/read_aloud_page.dart';
 import '../../../monetization/presentation/plan_cubit.dart';
 import '../../../qr/presentation/qr_share_page.dart';
 import '../../../scanner/presentation/bloc/scan_session_cubit.dart';
@@ -27,9 +32,13 @@ import '../../../security/domain/auth_service.dart';
 import '../../../settings/domain/feature_access.dart';
 import '../../../settings/presentation/settings_cubit.dart';
 import '../../domain/entities/compress_level.dart';
+import '../bloc/documents_cubit.dart';
+import '../../../reminders/domain/reminder_service.dart';
 import '../../domain/entities/scanned_document.dart';
 import '../../domain/usecases/document_usecases.dart';
 import 'document_widgets.dart' show confirmDestructive, pickFolder, DocThumb;
+import 'share_options_sheet.dart';
+import '../../../../core/widgets/text.dart';
 
 enum DocAction {
   sharePdf,
@@ -37,6 +46,9 @@ enum DocAction {
   shareDocx,
   shareQr,
   extractText,
+  readAloud,
+  tableToSheet,
+  contact,
   saveFiles,
   saveGallery,
   print,
@@ -52,6 +64,7 @@ enum DocAction {
   pin,
   tags,
   date,
+  expiry,
 }
 
 /// Asks the phone owner to confirm with fingerprint, face, PIN, pattern or password.
@@ -111,6 +124,36 @@ Future<Result<T>> _do<T>(BuildContext context, Future<Result<T>> future) async {
   return result;
 }
 
+/// Asks how the PDF should be sent (size, password, ZIP), then builds that one copy and opens the share sheet.
+/// The saved document is never changed: every step works on a temporary copy.
+Future<void> shareDocumentPdf(BuildContext context, ScannedDocument doc) async {
+  final options = await showShareOptions(context, title: doc.title);
+  if (options == null || !context.mounted) return;
+  final plan = context.read<PlanCubit>().state;
+  final quality = options.size.effective(context.read<SettingsCubit>().state.exportQuality);
+  final packed = await _do(
+    context,
+    runBusy(context, 'Preparing file', () async {
+      final built = await sl<ExportDocument>()(document: doc, format: ExportFormat.pdf, quality: quality);
+      final path = built.valueOrNull;
+      if (path == null) return Err<PackedShare>(built.failureOrNull!);
+      return sl<SharePackager>().pack(pdfPath: path, password: options.password, zip: options.zip);
+    }),
+  );
+  final file = packed.valueOrNull;
+  if (file == null || !context.mounted) return;
+  await _do(context, sl<ShareService>().shareFile(path: file.path, mimeType: file.mimeType, subject: doc.title));
+  await sl<AdService>().showInterstitialIfEligible(plan);
+}
+
+Future<void> _shareAs(BuildContext context, ScannedDocument doc, ExportFormat format) async {
+  final plan = context.read<PlanCubit>().state;
+  final path = await _build(context, doc, format);
+  if (path == null || !context.mounted) return;
+  await _do(context, sl<ShareFile>()(path: path, format: format, subject: doc.title));
+  await sl<AdService>().showInterstitialIfEligible(plan);
+}
+
 Future<String?> _build(BuildContext context, ScannedDocument doc, ExportFormat format) async {
   final quality = context.read<SettingsCubit>().state.exportQuality;
   final result = await _do(context, runBusy(context, 'Preparing file', () => sl<ExportDocument>()(document: doc, format: format, quality: quality)));
@@ -142,13 +185,11 @@ Future<void> _run(
   VoidCallback? onDeleted,
 ) async {
   switch (action) {
-    case DocAction.sharePdf || DocAction.shareDocx:
-      final format = action == DocAction.sharePdf ? ExportFormat.pdf : ExportFormat.docx;
-      final plan = context.read<PlanCubit>().state;
-      final path = await _build(context, doc, format);
-      if (path == null || !context.mounted) return;
-      await _do(context, sl<ShareFile>()(path: path, format: format, subject: doc.title));
-      await sl<AdService>().showInterstitialIfEligible(plan);
+    case DocAction.sharePdf:
+      await shareDocumentPdf(context, doc);
+
+    case DocAction.shareDocx:
+      await _shareAs(context, doc, ExportFormat.docx);
 
     case DocAction.shareImages:
       await _do(
@@ -169,6 +210,31 @@ Future<void> _run(
 
     case DocAction.extractText:
       await context.push('/ocr', extra: doc);
+
+    case DocAction.tableToSheet:
+      await context.push(
+        '/table',
+        extra: TableArgs(title: doc.title, imagePaths: [for (final pg in doc.pages) pg.imagePath]),
+      );
+
+    case DocAction.readAloud:
+      // Text that was read before is used as it is; otherwise the pages are read now.
+      final saved = (await sl<TextRepository>().loadText(doc.id)).valueOrNull;
+      var text = saved == null ? '' : saved.map((p) => p.plain).where((t) => t.trim().isNotEmpty).join('\n\n');
+      if (text.isEmpty && context.mounted) {
+        final read = await readDocumentText(context, doc);
+        if (read == null) return;
+        text = read;
+      }
+      if (!context.mounted) return;
+      await context.push(
+        '/read-aloud',
+        extra: ReadAloudArgs(title: doc.title, text: text),
+      );
+
+    case DocAction.contact:
+      final text = await readDocumentText(context, doc);
+      if (text != null && context.mounted) await context.push('/contact', extra: text);
 
     case DocAction.saveFiles:
       final path = await _build(context, doc, ExportFormat.pdf);
@@ -282,6 +348,42 @@ Future<void> _run(
       if (!(await _do(context, sl<UpdateDocumentMeta>()(doc.id, tags: tags))).isOk) return;
       await refresh();
 
+    case DocAction.expiry:
+      var change = true;
+      if (doc.expiresAt != null) {
+        final choice = await showDialog<String>(
+          context: context,
+          builder: (ctx) => SimpleDialog(
+            title: Text('Expiry: ${formatDate(doc.expiresAt!)}'),
+            children: [
+              SimpleDialogOption(key: const ValueKey('expiry-change'), onPressed: () => Navigator.pop(ctx, 'change'), child: const Text('Change the date')),
+              SimpleDialogOption(key: const ValueKey('expiry-remove'), onPressed: () => Navigator.pop(ctx, 'remove'), child: const Text('Remove the date')),
+            ],
+          ),
+        );
+        if (choice == null || !context.mounted) return;
+        change = choice == 'change';
+        if (!change) {
+          if (!(await _do(context, sl<UpdateDocumentMeta>()(doc.id, clearExpiry: true))).isOk) return;
+          if (context.mounted) await replanReminders(context);
+          await refresh();
+          return;
+        }
+      }
+      final now = DateTime.now();
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: doc.expiresAt ?? DateTime(now.year + 1, now.month, now.day),
+        firstDate: DateTime(2000),
+        lastDate: DateTime(now.year + 40),
+        helpText: 'When does it expire?',
+      );
+      if (picked == null || !context.mounted) return;
+      if (!(await _do(context, sl<UpdateDocumentMeta>()(doc.id, expires: DateTime(picked.year, picked.month, picked.day, 12)))).isOk) return;
+      if (context.mounted) await replanReminders(context);
+      if (context.mounted) await offerExpiryReminders(context);
+      await refresh();
+
     case DocAction.date:
       final day = await showDatePicker(
         context: context,
@@ -296,6 +398,46 @@ Future<void> _run(
       if (!(await _do(context, sl<UpdateDocumentMeta>()(doc.id, date: when))).isOk) return;
       await refresh();
   }
+}
+
+/// Reloads the library, which plans the reminders again from the new or removed date.
+Future<void> replanReminders(BuildContext context) async {
+  DocumentsCubit cubit;
+  try {
+    cubit = context.read<DocumentsCubit>();
+  } catch (_) {
+    return;
+  }
+  await cubit.load();
+}
+
+/// The first time a date is set, explains the reminders and shows the system question for notifications.
+Future<void> offerExpiryReminders(BuildContext context) async {
+  if (!sl.isRegistered<ReminderService>() || !context.read<SettingsCubit>().state.expiryReminders) return;
+  final service = sl<ReminderService>();
+  if (!await service.shouldExplain() || !context.mounted) return;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Get a reminder?'),
+      content: const Text(
+        'Doculoom can send a notification 30 days before, 7 days before and on the day this document expires. Document names stay out of the notification unless you turn that on in Settings.',
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Not now')),
+        FilledButton(
+          key: const ValueKey('reminder-allow'),
+          style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Allow notifications'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true) return;
+  await service.askOnce();
+  // The reminders were planned while notifications were still off.
+  if (context.mounted) await replanReminders(context);
 }
 
 // Sheet
@@ -352,6 +494,9 @@ class _ActionsSheetState extends State<_ActionsSheet> {
           _Row(icon: AppIcons.docx, label: 'Share as Word (DOCX)', onTap: () => _pick(DocAction.shareDocx)),
           _Row(icon: AppIcons.qr, label: 'Share with QR code', onTap: () => _pick(DocAction.shareQr)),
           _Row(icon: AppIcons.ocr, label: 'Extract text (OCR)', onTap: () => _pick(DocAction.extractText)),
+          _Row(icon: AppIcons.speak, label: 'Read aloud', onTap: () => _pick(DocAction.readAloud)),
+          _Row(icon: AppIcons.sheet, label: 'Table to spreadsheet', onTap: () => _pick(DocAction.tableToSheet)),
+          _Row(icon: AppIcons.person, label: 'Contact from card', onTap: () => _pick(DocAction.contact)),
           _Row(icon: AppIcons.emptyDocs, label: 'Move to folder', onTap: () => _pick(DocAction.move)),
           _Expander(
             icon: AppIcons.editDocument,
@@ -393,6 +538,12 @@ class _ActionsSheetState extends State<_ActionsSheet> {
               _Row(icon: AppIcons.tag, label: 'Tags', indent: true, onTap: () => _pick(DocAction.tags)),
               _Row(icon: AppIcons.copy, label: 'Duplicate', indent: true, onTap: () => _pick(DocAction.duplicate)),
               _Row(icon: AppIcons.timer, label: 'Date and time', indent: true, onTap: () => _pick(DocAction.date)),
+              _Row(
+                icon: AppIcons.timer,
+                label: doc.expiresAt == null ? 'Set expiry date' : 'Expiry: ${formatDate(doc.expiresAt!)}',
+                indent: true,
+                onTap: () => _pick(DocAction.expiry),
+              ),
             ],
           ),
         ],
@@ -510,7 +661,7 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListTile(
     dense: true,
-    contentPadding: EdgeInsets.only(left: indent ? AppSpacing.xl : AppSpacing.md, right: AppSpacing.md),
+    contentPadding: EdgeInsetsDirectional.only(start: indent ? AppSpacing.xl : AppSpacing.md, end: AppSpacing.md),
     enabled: onTap != null,
     leading: Icon(icon, size: 20, color: onTap == null ? AppColors.inkMuted : AppColors.ink),
     title: Text(label),
@@ -571,7 +722,7 @@ class _CompressDialog extends StatelessWidget {
     title: const Text('Compress document'),
     children: [
       const Padding(
-        padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
+        padding: EdgeInsetsDirectional.fromSTEB(24, 0, 24, 8),
         child: Text('The original photos are replaced by the smaller version. This cannot be undone.', style: TextStyle(color: AppColors.inkMuted)),
       ),
       for (final level in CompressLevel.values)
@@ -597,7 +748,7 @@ class _SplitDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: const Text('Split document'),
-    contentPadding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
+    contentPadding: const EdgeInsetsDirectional.fromSTEB(0, 12, 0, 0),
     content: SizedBox(
       width: double.maxFinite,
       child: Column(
@@ -605,7 +756,7 @@ class _SplitDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Padding(
-            padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
+            padding: EdgeInsetsDirectional.fromSTEB(24, 0, 24, 8),
             child: Text('Choose where the new document starts. Earlier pages stay here.', style: TextStyle(color: AppColors.inkMuted)),
           ),
           Flexible(

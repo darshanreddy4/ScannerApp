@@ -1,8 +1,9 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -14,9 +15,12 @@ import '../../../core/widgets/responsive.dart';
 import '../../documents/domain/entities/scanned_document.dart';
 import '../../export/domain/repositories/export_repository.dart';
 import '../../settings/presentation/settings_cubit.dart';
+import '../../speech/presentation/read_aloud_page.dart';
 import '../domain/ocr_models.dart';
 import 'markdown_math_view.dart';
 import 'ocr_cubit.dart';
+import '../../../core/widgets/text.dart';
+import '../../../core/i18n/tr.dart';
 
 /// Reads the text of a saved document on the phone and shows it with headings, lists and typeset formulas.
 class OcrPage extends StatelessWidget {
@@ -64,7 +68,7 @@ class _OcrView extends StatelessWidget {
             actions: [
               if (ready)
                 IconButton(
-                  tooltip: 'Copy all text',
+                  tooltip: tr('Copy all text'),
                   icon: const Icon(AppIcons.copy),
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: state.fullMarkdown));
@@ -73,12 +77,19 @@ class _OcrView extends StatelessWidget {
                 ),
               if (ready)
                 PopupMenuButton<String>(
-                  tooltip: 'More',
+                  tooltip: tr('More'),
                   icon: const Icon(AppIcons.more),
                   onSelected: (v) {
                     switch (v) {
                       case 'share':
                         _share(context, state.fullMarkdown);
+                      case 'speak':
+                        context.push(
+                          '/read-aloud',
+                          extra: ReadAloudArgs(title: document.title, text: state.pages.map((p) => p.plain).join('\n\n')),
+                        );
+                      case 'contact':
+                        context.push('/contact', extra: state.pages.map((p) => p.plain).join('\n'));
                       case 'again':
                         context.read<OcrCubit>().run();
                       case 'delete':
@@ -86,6 +97,8 @@ class _OcrView extends StatelessWidget {
                     }
                   },
                   itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'speak', child: Text('Read aloud')),
+                    PopupMenuItem(value: 'contact', child: Text('Create a contact (business card)')),
                     PopupMenuItem(value: 'share', child: Text('Share as Markdown file')),
                     PopupMenuItem(value: 'again', child: Text('Read the pages again')),
                     PopupMenuItem(value: 'delete', child: Text('Delete extracted text')),
@@ -143,7 +156,7 @@ class _Start extends StatelessWidget {
         DropdownButtonFormField<OcrScript>(
           initialValue: state.script,
           isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Language of the text', prefixIcon: Icon(AppIcons.language, size: 20)),
+          decoration: InputDecoration(labelText: tr('Language of the text'), prefixIcon: Icon(AppIcons.language, size: 20)),
           items: [for (final s in OcrScript.values) DropdownMenuItem(value: s, child: Text(s.label))],
           onChanged: (s) {
             if (s != null) context.read<OcrCubit>().setScript(s);
@@ -227,20 +240,20 @@ class _ResultState extends State<_Result> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, 0),
+          padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, 0),
           child: Wrap(
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               if (state.pages.length > 1) ...[
                 IconButton(
-                  tooltip: 'Previous page',
+                  tooltip: tr('Previous page'),
                   onPressed: state.selected > 0 ? () => cubit.selectPage(state.selected - 1) : null,
                   icon: const Icon(AppIcons.back),
                 ),
                 Text('Page ${state.selected + 1} of ${state.pages.length}', style: const TextStyle(fontWeight: FontWeight.w600)),
                 IconButton(
-                  tooltip: 'Next page',
+                  tooltip: tr('Next page'),
                   onPressed: state.selected < state.pages.length - 1 ? () => cubit.selectPage(state.selected + 1) : null,
                   icon: const Icon(AppIcons.next),
                 ),
@@ -272,7 +285,7 @@ class _ResultState extends State<_Result> {
                           expands: true,
                           textAlignVertical: TextAlignVertical.top,
                           style: const TextStyle(fontFamily: 'monospace', fontSize: 14, height: 1.4),
-                          decoration: const InputDecoration(hintText: 'Text with Markdown. Formulas go between \$ signs.'),
+                          decoration: InputDecoration(hintText: tr('Text with Markdown. Formulas go between \$ signs.')),
                           onChanged: (_) => setState(() {}),
                         ),
                       ),
