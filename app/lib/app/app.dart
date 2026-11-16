@@ -24,7 +24,7 @@ class DoculoomApp extends StatelessWidget {
       providers: [
         BlocProvider(create: (_) => sl<PlanCubit>()..load()),
         BlocProvider(create: (_) => sl<SettingsCubit>()..load()),
-        BlocProvider(create: (_) => sl<CoinsCubit>()..claimDaily()),
+        BlocProvider(create: (_) => sl<CoinsCubit>()..load()),
         BlocProvider(create: (_) => sl<DocumentsCubit>()..load()),
         BlocProvider(create: (_) => sl<ScanSessionCubit>()),
       ],

@@ -225,12 +225,12 @@ Future<SortChoice?> askSort(BuildContext context, {required String columnName}) 
   );
 }
 
-enum SaveAction { share, saveToFiles }
+enum SaveAction { share, saveToFiles, template, library }
 
 typedef SaveChoice = ({SheetExportFormat format, SaveAction action});
 
 /// "Save or share" sheet: pick a format, then share it or save it to Files.
-Future<SaveChoice?> askSave(BuildContext context, {bool allowPdf = true}) => showModalBottomSheet<SaveChoice>(
+Future<SaveChoice?> askSave(BuildContext context, {bool xlsxOnly = false}) => showModalBottomSheet<SaveChoice>(
   context: context,
   showDragHandle: true,
   isScrollControlled: true,
@@ -247,7 +247,7 @@ Future<SaveChoice?> askSave(BuildContext context, {bool allowPdf = true}) => sho
               const Text('Save or share', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
               const SizedBox(height: 8),
               for (final f in SheetExportFormat.values)
-                if (allowPdf || f != SheetExportFormat.pdf)
+                if (!xlsxOnly || f == SheetExportFormat.xlsx)
                   RadioListTile<SheetExportFormat>(
                     key: ValueKey('format_${f.extension}'),
                     contentPadding: EdgeInsets.zero,
@@ -260,12 +260,20 @@ Future<SaveChoice?> askSave(BuildContext context, {bool allowPdf = true}) => sho
                     onChanged: (v) => setState(() => format = v!),
                   ),
               const SizedBox(height: 8),
+              FilledButton.icon(
+                key: const ValueKey('save_library'),
+                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
+                onPressed: () => Navigator.pop(context, (format: format, action: SaveAction.library)),
+                icon: const Icon(AppIcons.library, size: 18),
+                label: const Text('Save in Doculoom'),
+              ),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
-                    child: FilledButton.icon(
+                    child: OutlinedButton.icon(
                       key: const ValueKey('save_share'),
-                      style: FilledButton.styleFrom(minimumSize: const Size(0, 46)),
+                      style: OutlinedButton.styleFrom(minimumSize: const Size(0, 46)),
                       onPressed: () => Navigator.pop(context, (format: format, action: SaveAction.share)),
                       icon: const Icon(AppIcons.share, size: 18),
                       label: const Text('Share'),
@@ -282,6 +290,15 @@ Future<SaveChoice?> askSave(BuildContext context, {bool allowPdf = true}) => sho
                     ),
                   ),
                 ],
+              ),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                  key: const ValueKey('save_template'),
+                  onPressed: () => Navigator.pop(context, (format: SheetExportFormat.xlsx, action: SaveAction.template)),
+                  icon: const Icon(AppIcons.tplBlank, size: 18),
+                  label: const Text('Save as my template'),
+                ),
               ),
             ],
           ),

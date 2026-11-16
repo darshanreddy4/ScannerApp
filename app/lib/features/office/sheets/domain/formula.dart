@@ -692,7 +692,8 @@ class FormulaEngine {
     'SMALL',
     'RAND',
     'RANDBETWEEN',
-    'CHOOSE', 'MAXA', 'MINA', 'AVERAGEA', 'IFS', 'SWITCH', 'SUMSQ', 'COUNTIFS', 'SUMIFS',
+    'CHOOSE', 'MAXA', 'MINA', 'AVERAGEA', 'IFS', 'SWITCH', 'SUMSQ', 'COUNTIFS', 'SUMIFS', //
+    ..._moreFunctions,
   };
 
   void _arity(_Call c, int min, [int? max]) {
@@ -1052,6 +1053,9 @@ class FormulaEngine {
         return _conditional(name, a);
       case 'SUMIFS':
       case 'COUNTIFS':
+      case 'AVERAGEIFS':
+      case 'MAXIFS':
+      case 'MINIFS':
         return _multiConditional(name, a);
       case 'VLOOKUP':
       case 'HLOOKUP':
@@ -1061,8 +1065,447 @@ class FormulaEngine {
       case 'MATCH':
         return _match(a);
     }
+    return _more(name, a, c);
+  }
+
+  // region more functions: statistics, dates, finance, lookup, text and maths
+
+  double _serialOf(DateTime d) => NumberFormatter.dateToSerial(DateTime(d.year, d.month, d.day), date1904: workbook.date1904).floorToDouble();
+
+  DateTime _dateOf(double serial) {
+    if (serial < 0) throw const FormulaError('#NUM!');
+    final d = NumberFormatter.serialToDate(serial.floorToDouble(), date1904: workbook.date1904);
+    return DateTime(d.year, d.month, d.day);
+  }
+
+  static int _daysInMonth(int year, int month) => DateTime(year, month + 1, 0).day;
+
+  Set<double> _holidays(Object? arg) => {for (final v in arg is _Area ? _areaValues(arg) : [arg]) if (v is double) v.floorToDouble()};
+
+  bool _isWorkday(double serial, Set<double> holidays) {
+    final wd = _dateOf(serial).weekday;
+    return wd < 6 && !holidays.contains(serial);
+  }
+
+  /// An argument that was typed; an omitted one, as in XLOOKUP(a,b,c,,-1), arrives as empty text.
+  bool _given(List<Object?> a, int i) => a.length > i && !(a[i] is String && (a[i]! as String).isEmpty);
+
+  List<Object?> _flat(Object? x) {
+    if (x is! _Area) return [x];
+    return [
+      for (final row in _grid(x)) ...row,
+    ];
+  }
+
+  double _percentile(List<double> sorted, double k) {
+    if (sorted.isEmpty || k < 0 || k > 1) throw const FormulaError('#NUM!');
+    final pos = k * (sorted.length - 1);
+    final lo = pos.floor(), hi = pos.ceil();
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+  }
+
+  double _variance(List<double> v, {required bool sample}) {
+    if (v.length < (sample ? 2 : 1)) throw const FormulaError('#DIV/0!');
+    final mean = v.fold<double>(0, (s, x) => s + x) / v.length;
+    final sumSq = v.fold<double>(0, (s, x) => s + (x - mean) * (x - mean));
+    return sumSq / (sample ? v.length - 1 : v.length);
+  }
+
+  /// The two number lists of CORREL, SLOPE and the like, taken in pairs.
+  (List<double>, List<double>) _pairs(Object? first, Object? second) {
+    final a = <double>[], b = <double>[];
+    final xs = _flat(first), ys = _flat(second);
+    if (xs.length != ys.length) throw const FormulaError('#N/A');
+    for (var i = 0; i < xs.length; i++) {
+      if (xs[i] is double && ys[i] is double) {
+        a.add(xs[i]! as double);
+        b.add(ys[i]! as double);
+      }
+    }
+    if (a.length < 2) throw const FormulaError('#DIV/0!');
+    return (a, b);
+  }
+
+  double _gcd(int a, int b) {
+    while (b != 0) {
+      final t = a % b;
+      a = b;
+      b = t;
+    }
+    return a.abs().toDouble();
+  }
+
+  double _factorial(double x) {
+    final n = x.truncate();
+    if (n < 0 || n > 170) throw const FormulaError('#NUM!');
+    var r = 1.0;
+    for (var i = 2; i <= n; i++) {
+      r *= i;
+    }
+    return r;
+  }
+
+  Object? _xlookup(List<Object?> a) {
+    if (a.length < 3 || a[1] is! _Area || a[2] is! _Area) throw const FormulaError('#VALUE!');
+    final key = _scalar(a[0]);
+    final keys = _flat(a[1]);
+    final results = _flat(a[2]);
+    final mode = _given(a, 4) ? _num(a[4]).truncate() : 0;
+    final reverse = _given(a, 5) && _num(a[5]).truncate() < 0;
+    final order = reverse ? List.generate(keys.length, (i) => keys.length - 1 - i) : List.generate(keys.length, (i) => i);
+    int? found;
+    for (final i in order) {
+      final v = keys[i];
+      if (v == null) continue;
+      final hit = mode == 2 && v is String && key is String ? _Criteria.wildcard(key).hasMatch(v) : _matchesLoose(v, key);
+      if (hit) {
+        found = i;
+        break;
+      }
+    }
+    if (found == null && (mode == -1 || mode == 1)) {
+      // Exact match first; otherwise the next smaller (-1) or next larger (1) value.
+      double? best;
+      for (var i = 0; i < keys.length; i++) {
+        final v = keys[i];
+        if (v == null || v.runtimeType != key.runtimeType || v is! double || key is! double) continue;
+        if (mode == -1 ? v < key : v > key) {
+          if (best == null || (mode == -1 ? v > best : v < best)) {
+            best = v;
+            found = i;
+          }
+        }
+      }
+    }
+    if (found == null || found >= results.length) {
+      if (a.length > 3 && a[3] != null) return _scalar(a[3]);
+      throw const FormulaError('#N/A');
+    }
+    return results[found];
+  }
+
+  Object? _more(String name, List<Object?> a, _Call c) {
+    double n(int i) => _num(a[i]);
+    String t(int i) => _text(a[i]);
+    double opt(int i, double d) => _given(a, i) ? _num(a[i]) : d;
+    switch (name) {
+      // ---- lookup
+      case 'XLOOKUP':
+        return _xlookup(a);
+      case 'LOOKUP':
+        _arity(c, 2, 3);
+        if (a[1] is! _Area) throw const FormulaError('#VALUE!');
+        final key = _scalar(a[0]);
+        final keys = _flat(a[1]);
+        final results = a.length > 2 ? _flat(a[2]) : keys;
+        var at = -1;
+        for (var i = 0; i < keys.length; i++) {
+          final v = keys[i];
+          if (v == null || v.runtimeType != key.runtimeType) continue;
+          if (_compareValues(v, key) <= 0) {
+            at = i;
+          } else {
+            break;
+          }
+        }
+        if (at < 0 || at >= results.length) throw const FormulaError('#N/A');
+        return results[at];
+      // ---- text
+      case 'TEXTJOIN':
+        _arity(c, 3);
+        final skip = _bool(a[1]);
+        final parts = <String>[];
+        for (final x in a.skip(2)) {
+          for (final v in _flat(x)) {
+            final s = _text(v);
+            if (skip && s.isEmpty) continue;
+            parts.add(s);
+          }
+        }
+        return parts.join(t(0));
+      case 'REPLACE':
+        _arity(c, 4, 4);
+        final s = t(0);
+        final start = n(1).truncate(), len = n(2).truncate();
+        if (start < 1 || len < 0) throw const FormulaError('#VALUE!');
+        final from = math.min(start - 1, s.length);
+        return s.substring(0, from) + t(3) + s.substring(math.min(s.length, from + len));
+      case 'CODE':
+        if (t(0).isEmpty) throw const FormulaError('#VALUE!');
+        return t(0).codeUnitAt(0).toDouble();
+      case 'CHAR':
+        final code = n(0).truncate();
+        if (code < 1 || code > 255) throw const FormulaError('#VALUE!');
+        return String.fromCharCode(code);
+      case 'CLEAN':
+        return t(0).replaceAll(RegExp(r'[\u0000-\u001F]'), '');
+      case 'T':
+        final v = _scalar(a[0]);
+        return v is String ? v : '';
+      case 'N':
+        final v = _scalar(a[0]);
+        return v is double ? v : (v is bool ? (v ? 1.0 : 0.0) : 0.0);
+      case 'TEXTBEFORE':
+      case 'TEXTAFTER':
+        _arity(c, 2, 3);
+        final s = t(0), d = t(1);
+        final instance = a.length > 2 ? n(2).truncate() : 1;
+        if (d.isEmpty || instance < 1) throw const FormulaError('#VALUE!');
+        var at = -1, from = 0;
+        for (var i = 0; i < instance; i++) {
+          at = s.indexOf(d, from);
+          if (at < 0) throw const FormulaError('#N/A');
+          from = at + d.length;
+        }
+        return name == 'TEXTBEFORE' ? s.substring(0, at) : s.substring(at + d.length);
+      // ---- dates
+      case 'DATEDIF':
+        _arity(c, 3, 3);
+        final s = _dateOf(n(0)), e = _dateOf(n(1));
+        final days = _serialOf(e) - _serialOf(s);
+        if (days < 0) throw const FormulaError('#NUM!');
+        var months = (e.year - s.year) * 12 + e.month - s.month;
+        if (e.day < s.day) months--;
+        return switch (t(2).toUpperCase()) {
+          'Y' => (months ~/ 12).toDouble(),
+          'M' => months.toDouble(),
+          'D' => days,
+          'YM' => (months % 12).toDouble(),
+          'MD' => (e.day >= s.day ? e.day - s.day : e.day - s.day + _daysInMonth(e.month == 1 ? e.year - 1 : e.year, e.month == 1 ? 12 : e.month - 1)).toDouble(),
+          'YD' => () {
+            var anniversary = DateTime(e.year, s.month, math.min(s.day, _daysInMonth(e.year, s.month)));
+            if (anniversary.isAfter(e)) anniversary = DateTime(e.year - 1, s.month, math.min(s.day, _daysInMonth(e.year - 1, s.month)));
+            return _serialOf(e) - _serialOf(anniversary);
+          }(),
+          _ => throw const FormulaError('#NUM!'),
+        };
+      case 'EDATE':
+      case 'EOMONTH':
+        _arity(c, 2, 2);
+        final s = _dateOf(n(0));
+        final months = n(1).truncate();
+        final total = s.year * 12 + (s.month - 1) + months;
+        final y = total ~/ 12, m = total % 12 + 1;
+        final day = name == 'EOMONTH' ? _daysInMonth(y, m) : math.min(s.day, _daysInMonth(y, m));
+        return _serialOf(DateTime(y, m, day));
+      case 'DAYS':
+        _arity(c, 2, 2);
+        return n(0).floorToDouble() - n(1).floorToDouble();
+      case 'NETWORKDAYS':
+        _arity(c, 2, 3);
+        final holidays = a.length > 2 ? _holidays(a[2]) : <double>{};
+        final from = n(0).floorToDouble(), to = n(1).floorToDouble();
+        final lo = math.min(from, to), hi = math.max(from, to);
+        var count = 0;
+        for (var d = lo; d <= hi; d++) {
+          if (_isWorkday(d, holidays)) count++;
+        }
+        return (from <= to ? count : -count).toDouble();
+      case 'WORKDAY':
+        _arity(c, 2, 3);
+        final holidays = a.length > 2 ? _holidays(a[2]) : <double>{};
+        var d = n(0).floorToDouble();
+        var left = n(1).truncate();
+        final step = left < 0 ? -1.0 : 1.0;
+        left = left.abs();
+        while (left > 0) {
+          d += step;
+          if (_isWorkday(d, holidays)) left--;
+        }
+        return d;
+      case 'WEEKNUM':
+        _arity(c, 1, 2);
+        final d = _dateOf(n(0));
+        final type = a.length > 1 ? n(1).truncate() : 1;
+        if (type != 1 && type != 2) throw const FormulaError('#NUM!');
+        final jan1 = DateTime(d.year, 1, 1);
+        final offset = type == 1 ? jan1.weekday % 7 : jan1.weekday - 1;
+        final dayOfYear = (_serialOf(d) - _serialOf(jan1)).toInt() + 1;
+        return ((dayOfYear - 1 + offset) ~/ 7 + 1).toDouble();
+      // ---- statistics
+      case 'STDEV':
+      case 'STDEV.S':
+        return math.sqrt(_variance(_numbers(a), sample: true));
+      case 'STDEVP':
+      case 'STDEV.P':
+        return math.sqrt(_variance(_numbers(a), sample: false));
+      case 'VAR':
+      case 'VAR.S':
+        return _variance(_numbers(a), sample: true);
+      case 'VARP':
+      case 'VAR.P':
+        return _variance(_numbers(a), sample: false);
+      case 'RANK':
+      case 'RANK.EQ':
+        _arity(c, 2, 3);
+        if (a[1] is! _Area) throw const FormulaError('#VALUE!');
+        final x = n(0);
+        final values = _numbers([a[1]]);
+        if (!values.contains(x)) throw const FormulaError('#N/A');
+        final ascending = a.length > 2 && n(2) != 0;
+        return 1.0 + values.where((v) => ascending ? v < x : v > x).length;
+      case 'PERCENTILE':
+      case 'PERCENTILE.INC':
+        _arity(c, 2, 2);
+        return _percentile(_numbers([a[0]])..sort(), n(1));
+      case 'QUARTILE':
+      case 'QUARTILE.INC':
+        _arity(c, 2, 2);
+        final q = n(1).truncate();
+        if (q < 0 || q > 4) throw const FormulaError('#NUM!');
+        return _percentile(_numbers([a[0]])..sort(), q / 4);
+      case 'MODE':
+      case 'MODE.SNGL':
+        final values = _numbers(a);
+        final counts = <double, int>{};
+        for (final v in values) {
+          counts[v] = (counts[v] ?? 0) + 1;
+        }
+        double? best;
+        var bestCount = 1;
+        for (final v in values) {
+          if (counts[v]! > bestCount) {
+            best = v;
+            bestCount = counts[v]!;
+          }
+        }
+        if (best == null) throw const FormulaError('#N/A');
+        return best;
+      case 'CORREL':
+      case 'SLOPE':
+      case 'INTERCEPT':
+      case 'FORECAST':
+      case 'FORECAST.LINEAR':
+        final forecast = name.startsWith('FORECAST');
+        _arity(c, forecast ? 3 : 2, forecast ? 3 : 2);
+        // SLOPE and INTERCEPT take (known_y, known_x); FORECAST takes (x, known_y, known_x).
+        final (ys, xs) = forecast ? _pairs(a[1], a[2]) : _pairs(a[0], a[1]);
+        final mx = xs.fold<double>(0, (s, v) => s + v) / xs.length, my = ys.fold<double>(0, (s, v) => s + v) / ys.length;
+        var sxy = 0.0, sxx = 0.0, syy = 0.0;
+        for (var i = 0; i < xs.length; i++) {
+          sxy += (xs[i] - mx) * (ys[i] - my);
+          sxx += (xs[i] - mx) * (xs[i] - mx);
+          syy += (ys[i] - my) * (ys[i] - my);
+        }
+        if (name == 'CORREL') {
+          if (sxx == 0 || syy == 0) throw const FormulaError('#DIV/0!');
+          return sxy / math.sqrt(sxx * syy);
+        }
+        if (sxx == 0) throw const FormulaError('#DIV/0!');
+        final slope = sxy / sxx;
+        if (name == 'SLOPE') return slope;
+        final intercept = my - slope * mx;
+        return forecast ? intercept + slope * n(0) : intercept;
+      case 'SUBTOTAL':
+        _arity(c, 2);
+        final code = n(0).truncate() % 100;
+        final target = const {1: 'AVERAGE', 2: 'COUNT', 3: 'COUNTA', 4: 'MAX', 5: 'MIN', 6: 'PRODUCT', 7: 'STDEV', 8: 'STDEVP', 9: 'SUM', 10: 'VAR', 11: 'VARP'}[code];
+        if (target == null) throw const FormulaError('#VALUE!');
+        return _fixed(target, a.sublist(1), c);
+      // ---- maths
+      case 'FACT':
+        return _factorial(n(0));
+      case 'COMBIN':
+      case 'PERMUT':
+        _arity(c, 2, 2);
+        final total = n(0).truncate(), k = n(1).truncate();
+        if (total < 0 || k < 0 || k > total) throw const FormulaError('#NUM!');
+        var r = 1.0;
+        for (var i = 0; i < k; i++) {
+          r *= (total - i);
+          if (name == 'COMBIN') r /= (i + 1);
+        }
+        return r.roundToDouble();
+      case 'GCD':
+      case 'LCM':
+        final ints = _numbers(a).map((v) => v.truncate()).toList();
+        if (ints.isEmpty || ints.any((v) => v < 0)) throw const FormulaError('#NUM!');
+        var acc = ints.first;
+        for (final v in ints.skip(1)) {
+          if (name == 'GCD') {
+            acc = _gcd(acc, v).toInt();
+          } else {
+            acc = acc == 0 || v == 0 ? 0 : (acc ~/ _gcd(acc, v).toInt()) * v;
+          }
+        }
+        return acc.toDouble();
+      case 'SIN':
+        return math.sin(n(0));
+      case 'COS':
+        return math.cos(n(0));
+      case 'TAN':
+        return math.tan(n(0));
+      case 'ASIN':
+      case 'ACOS':
+        if (n(0).abs() > 1) throw const FormulaError('#NUM!');
+        return name == 'ASIN' ? math.asin(n(0)) : math.acos(n(0));
+      case 'ATAN':
+        return math.atan(n(0));
+      case 'ATAN2':
+        _arity(c, 2, 2);
+        if (n(0) == 0 && n(1) == 0) throw const FormulaError('#DIV/0!');
+        return math.atan2(n(1), n(0));
+      case 'RADIANS':
+        return n(0) * math.pi / 180;
+      case 'DEGREES':
+        return n(0) * 180 / math.pi;
+      case 'QUOTIENT':
+        _arity(c, 2, 2);
+        if (n(1) == 0) throw const FormulaError('#DIV/0!');
+        return (n(0) / n(1)).truncateToDouble();
+      case 'MROUND':
+        _arity(c, 2, 2);
+        if (n(1) == 0) return 0.0;
+        if (n(0) != 0 && n(0).sign != n(1).sign) throw const FormulaError('#NUM!');
+        final q = n(0) / n(1);
+        return q.sign * (q.abs() + 0.5 + 1e-9).floorToDouble() * n(1);
+      case 'ISEVEN':
+        return n(0).truncate().isEven;
+      case 'ISODD':
+        return n(0).truncate().isOdd;
+      // ---- loans and savings
+      case 'PMT':
+      case 'FV':
+      case 'PV':
+      case 'NPER':
+        _arity(c, 3, 5);
+        final rate = n(0), type = opt(4, 0) == 0 ? 0.0 : 1.0;
+        if (name == 'NPER') {
+          final pmt = n(1), pv = n(2), fv = opt(3, 0);
+          if (rate == 0) {
+            if (pmt == 0) throw const FormulaError('#NUM!');
+            return -(pv + fv) / pmt;
+          }
+          final z = pmt * (1 + rate * type) / rate;
+          final ratio = (-fv + z) / (pv + z);
+          if (ratio <= 0) throw const FormulaError('#NUM!');
+          return math.log(ratio) / math.log(1 + rate);
+        }
+        final nper = n(1), x = n(2), other = opt(3, 0);
+        final growth = math.pow(1 + rate, nper).toDouble();
+        switch (name) {
+          case 'PMT':
+            if (nper == 0) throw const FormulaError('#NUM!');
+            return rate == 0 ? -(x + other) / nper : -(rate * (other + x * growth)) / ((1 + rate * type) * (growth - 1));
+          case 'FV':
+            return rate == 0 ? -(other + x * nper) : -(other * growth + x * (1 + rate * type) * (growth - 1) / rate);
+          default:
+            return rate == 0 ? -(other + x * nper) : -(other + x * (1 + rate * type) * (growth - 1) / rate) / growth;
+        }
+      case 'NPV':
+        _arity(c, 2);
+        final rate = n(0);
+        if (rate == -1) throw const FormulaError('#DIV/0!');
+        var total = 0.0, i = 1;
+        for (final v in _numbers(a.sublist(1))) {
+          total += v / math.pow(1 + rate, i++);
+        }
+        return total;
+    }
     throw UnsupportedFormula(name);
   }
+
+  // endregion
 
   Object? _conditional(String name, List<Object?> a) {
     if (a.length < 2 || a[0] is! _Area) throw const FormulaError('#VALUE!');
@@ -1090,8 +1533,9 @@ class FormulaEngine {
   }
 
   Object? _multiConditional(String name, List<Object?> a) {
-    final sumArea = name == 'SUMIFS' ? a.first : null;
-    final pairs = name == 'SUMIFS' ? a.sublist(1) : a;
+    final valued = name != 'COUNTIFS';
+    final sumArea = valued ? a.first : null;
+    final pairs = valued ? a.sublist(1) : a;
     if (pairs.length < 2 || pairs.length.isOdd || (sumArea != null && sumArea is! _Area)) throw const FormulaError('#VALUE!');
     final areas = <_Area>[];
     final tests = <_Criteria>[];
@@ -1103,6 +1547,7 @@ class FormulaEngine {
     final first = areas.first;
     final maxR = _clipRow(first.sheet, first.r2), maxC = _clipCol(first.sheet, first.c2);
     var total = 0.0, count = 0;
+    final matched = <double>[];
     for (var r = first.r1; r <= maxR; r++) {
       for (var cc = first.c1; cc <= maxC; cc++) {
         var ok = true;
@@ -1114,11 +1559,20 @@ class FormulaEngine {
         count++;
         if (sumArea is _Area) {
           final v = _read(sumArea.sheet, sumArea.r1 + (r - first.r1), sumArea.c1 + (cc - first.c1));
-          if (v is double) total += v;
+          if (v is double) {
+            total += v;
+            matched.add(v);
+          }
         }
       }
     }
-    return name == 'COUNTIFS' ? count.toDouble() : total;
+    return switch (name) {
+      'COUNTIFS' => count.toDouble(),
+      'AVERAGEIFS' => matched.isEmpty ? throw const FormulaError('#DIV/0!') : total / matched.length,
+      'MAXIFS' => matched.isEmpty ? 0.0 : matched.reduce(math.max),
+      'MINIFS' => matched.isEmpty ? 0.0 : matched.reduce(math.min),
+      _ => total,
+    };
   }
 
   Object? _lookup(bool horizontal, List<Object?> a) {
@@ -1215,6 +1669,15 @@ class FormulaEngine {
     return found + 1.0;
   }
 }
+
+/// Functions added after the first set: statistics, dates, loans, lookups and more text and maths.
+const _moreFunctions = {
+  'AVERAGEIFS', 'MAXIFS', 'MINIFS', 'XLOOKUP', 'LOOKUP', 'TEXTJOIN', 'DATEDIF', 'EDATE', 'EOMONTH', 'DAYS', 'NETWORKDAYS', 'WORKDAY', 'WEEKNUM', 'MROUND', //
+  'STDEV', 'STDEV.S', 'STDEV.P', 'STDEVP', 'VAR', 'VAR.S', 'VAR.P', 'VARP', 'RANK', 'RANK.EQ', 'PERCENTILE', 'PERCENTILE.INC', 'QUARTILE', 'QUARTILE.INC',
+  'MODE', 'MODE.SNGL', 'CORREL', 'SLOPE', 'INTERCEPT', 'FORECAST', 'FORECAST.LINEAR', 'SUBTOTAL', 'FACT', 'COMBIN', 'PERMUT', 'GCD', 'LCM', 'SIN', 'COS',
+  'TAN', 'ASIN', 'ACOS', 'ATAN', 'ATAN2', 'RADIANS', 'DEGREES', 'QUOTIENT', 'ISEVEN', 'ISODD', 'REPLACE', 'CODE', 'CHAR', 'CLEAN', 'T', 'N', 'TEXTBEFORE',
+  'TEXTAFTER', 'PMT', 'FV', 'PV', 'NPER', 'NPV',
+};
 
 /// The condition of SUMIF, COUNTIF and similar functions: a value, a comparison such as ">=5", or text with * and ? wildcards.
 class _Criteria {

@@ -44,6 +44,7 @@ class FakeTranslator implements TranslationService {
   var failDownload = false;
   Object? failTranslate;
   Completer<void>? hold;
+  Completer<void>? holdDownload;
   final detectCalls = <String>[];
 
   @override
@@ -58,6 +59,7 @@ class FakeTranslator implements TranslationService {
   @override
   Future<bool> download(String code) async {
     downloads.add(code);
+    if (holdDownload != null) await holdDownload!.future;
     if (failDownload) return false;
     downloaded.add(code);
     return true;

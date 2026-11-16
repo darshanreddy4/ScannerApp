@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
@@ -75,6 +76,9 @@ enum OfficeConversion {
 
 const _xlsxMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
+/// Top level so the closure cannot capture the caller's callbacks, which cannot be sent to another isolate.
+Future<Uint8List> _csvToXlsxInBackground(Uint8List bytes) => Isolate.run(() => writeXlsx(workbookFromCsv(parseCsv(decodeCsvBytes(bytes)))));
+
 /// Runs the Office conversions. Everything happens on the device.
 class OfficeConverter {
   OfficeConverter({required Future<Directory> Function() workDir, this.slideConversions}) : _workDir = workDir;
@@ -116,7 +120,7 @@ class OfficeConverter {
           return files;
         case OfficeConversion.csvToXlsx:
           final bytes = await File(inputs.first).readAsBytes();
-          final data = await Isolate.run(() => writeXlsx(workbookFromCsv(parseCsv(decodeCsvBytes(bytes)))));
+          final data = await _csvToXlsxInBackground(bytes);
           final name = '${p.basenameWithoutExtension(inputs.first)}.xlsx';
           final path = p.join(out.path, name);
           await File(path).writeAsBytes(data, flush: true);

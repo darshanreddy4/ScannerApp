@@ -18,14 +18,15 @@ import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/text.dart';
 import '../../export/domain/repositories/export_repository.dart';
 import '../../importer/domain/importer.dart';
+import '../../documents/presentation/library_picker.dart';
 import '../../reader/presentation/reader_page.dart';
 import '../data/pdf_signing.dart';
 import '../data/signing_service.dart';
 
 Future<String?> _pickPdf() async {
   try {
-    final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['pdf']);
-    return picked.isEmpty ? null : picked.first.path;
+    final picked = await pickFilePaths(null, allowedExtensions: const ['pdf']);
+    return picked.isEmpty ? null : picked.first;
   } catch (_) {
     return null;
   }

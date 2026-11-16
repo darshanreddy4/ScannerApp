@@ -1,0 +1,50 @@
+title: Doculoom: Skaner PDF i edytor
+short: Skanuj, edytuj i podpisuj PDF, kompresuj, udostępniaj. Prywatnie, bez internetu.
+---
+Doculoom zamienia telefon w skaner dokumentów i zestaw narzędzi do plików PDF, Office i zdjęć. Twoje dokumenty zostają na telefonie: nie trzeba zakładać konta, a skanowanie, odczyt tekstu i narzędzia PDF działają offline.
+
+SKANOWANIE
+• Skanuj strony aparatem, a Doculoom wykryje krawędzie, lub zaimportuj zdjęcia, pliki PDF i Word
+• Skanowanie wielu stron, ponowne kadrowanie, obracanie, zmiana kolejności stron i jeden filtr dla wszystkich stron
+• Filtry dla tekstu, koloru oraz czerni i bieli
+• Tryby skanowania dla dokumentów, paragonów, wizytówek i dowodów tożsamości
+• Odczytuj tekst ze skanu (OCR) na urządzeniu, przeszukuj go później, kopiuj go lub zamień wizytówkę w kontakt
+
+NARZĘDZIA PDF
+• Kompresuj, łącz, dziel, przycinaj i numeruj strony
+• Zabezpiecz PDF hasłem lub odblokuj plik, który możesz otworzyć
+• Wypełniaj formularze, rysuj, dodawaj tekst i podpisuj dokumenty zapisanym podpisem
+• Zasłaniaj prywatne dane narzędziem do redagowania
+• Porównaj dwa pliki PDF i zobacz, co się zmieniło
+• Czytaj pliki PDF i Word bez importowania
+
+NARZĘDZIA OFFICE I DO ZDJĘĆ
+• Otwieraj, edytuj i konwertuj pliki Excel, CSV i PowerPoint
+• Tabela ze zdjęcia do Excela oraz paragony do arkusza
+• Zdjęcia do paszportu i dowodu w odpowiednim rozmiarze dla około 40 krajów
+• Kompresuj zdjęcia do wybranego rozmiaru, dodawaj znak wodny, usuwaj ukryte dane ze zdjęć
+• Skopiuj obie strony dowodu tożsamości na jedną stronę
+
+KODY QR I UDOSTĘPNIANIE
+• Skanuj i twórz kody QR i kody kreskowe, z historią, nad którą masz kontrolę
+• Udostępnij PDF bez zmian, mniejszy, z hasłem lub w pliku ZIP. Zmienia się tylko udostępniana kopia
+• Udostępnij plik kodem QR w tej samej sieci Wi-Fi lub zaszyfrowanym linkiem, który wygasa
+
+FAKTURY, CV I PRZYPOMNIENIA
+• Kreator faktur z formatami GST (Indie), amerykańskim podatkiem od sprzedaży i saudyjskim ZATCA
+• Kody QR do płatności, paragony do zwrotu VAT, kreator CV i listy kontrolne
+• Przypomnienia o wygaśnięciu paszportów, polis i innych dokumentów oraz przypomnienia o datach Hidżry
+
+PRYWATNOŚĆ I KONTROLA
+• Bez logowania. Dokumenty są przechowywane tylko w prywatnej pamięci aplikacji
+• Zablokuj dokument lub folder odciskiem palca, twarzą albo blokadą ekranu telefonu
+• Twórz szyfrowane kopie zapasowe z wybranym przez siebie hasłem
+• Usuń jeden dokument lub wszystko w Ustawieniach w dowolnej chwili
+• Dostępna w 17 językach
+
+REKLAMY I MONETY
+Wersja bezpłatna pokazuje reklamy Google AdMob. Skanowanie, zapisywanie, przeglądanie, wyszukiwanie i udostępnianie PDF są zawsze bezpłatne. Niektóre narzędzia wymagają monet. Każdego dnia dostajesz kilka monet za darmo i możesz zdobyć więcej lub przepustkę czasową, oglądając dobrowolnie krótkie filmy. Monety nie mają wartości pieniężnej.
+
+Pytania lub uwagi? Otwórz Ustawienia > O aplikacji > Pomoc i wsparcie albo napisz na darshandmg399@gmail.com.
+
+Polityka prywatności: https://darshanreddy4.github.io/doculoom-privacy-policy/

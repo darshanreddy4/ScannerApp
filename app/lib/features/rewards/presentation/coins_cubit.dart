@@ -10,8 +10,20 @@ import '../domain/coin_wallet.dart';
 enum UnlockCover { none, pass, grace, freeDaily }
 
 class CoinsState extends Equatable {
-  const CoinsState({this.balance = 0, this.adsToday = 0, this.watching = false, this.dailyCap, this.passUntil, this.passMinutes, this.passProgress = 0});
+  const CoinsState({
+    this.balance = 0,
+    this.adsToday = 0,
+    this.watching = false,
+    this.dailyCap,
+    this.passUntil,
+    this.passMinutes,
+    this.passProgress = 0,
+    this.dailyClaimed = true,
+  });
   final int balance;
+
+  /// Whether today's free coins were claimed; true until the wallet has been read, so no claim button flashes.
+  final bool dailyClaimed;
 
   final int adsToday;
 
@@ -44,10 +56,11 @@ class CoinsState extends Equatable {
     passUntil: snapshot != null ? snapshot.passUntil : passUntil,
     passMinutes: snapshot != null ? snapshot.passMinutes : passMinutes,
     passProgress: snapshot?.passProgress ?? passProgress,
+    dailyClaimed: snapshot?.dailyClaimed ?? dailyClaimed,
   );
 
   @override
-  List<Object?> get props => [balance, adsToday, watching, dailyCap, passUntil, passMinutes, passProgress];
+  List<Object?> get props => [balance, adsToday, watching, dailyCap, passUntil, passMinutes, passProgress, dailyClaimed];
 }
 
 class CoinsCubit extends Cubit<CoinsState> {
@@ -71,7 +84,7 @@ class CoinsCubit extends Cubit<CoinsState> {
     if (!isClosed) emit(state.copyWith(snapshot: s));
   }
 
-  /// Gives the day's free coins once; returns how many were added.
+  /// Gives the day's free coins when the person asks for them; returns how many were added.
   Future<int> claimDaily() async {
     final added = await _wallet.claimDaily(CoinRules.dailyCoins);
     await load();

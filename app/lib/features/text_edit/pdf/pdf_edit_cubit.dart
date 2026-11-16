@@ -13,11 +13,18 @@ import '../../reader/data/pdf_text_edit.dart';
 
 /// What was changed so far, kept as a value so it can be put back by Undo.
 class PdfEdits extends Equatable {
-  const PdfEdits({this.lines = const {}, this.added = const []});
+  const PdfEdits({this.lines = const {}, this.added = const [], this.marks = const [], this.pictures = const []});
 
   /// New text of lines, by "page:line". Empty text means the line is removed.
   final Map<String, String> lines;
   final List<AddedText> added;
+
+  /// Highlights, cover-ups, boxes and lines drawn on pages.
+  final List<AddedMark> marks;
+  final List<AddedPicture> pictures;
+
+  PdfEdits copyWith({Map<String, String>? lines, List<AddedText>? added, List<AddedMark>? marks, List<AddedPicture>? pictures}) =>
+      PdfEdits(lines: lines ?? this.lines, added: added ?? this.added, marks: marks ?? this.marks, pictures: pictures ?? this.pictures);
 
   static String keyOf(int page, int line) => '$page:$line';
 
@@ -26,12 +33,20 @@ class PdfEdits extends Equatable {
   PdfEditPlan toPlan() => PdfEditPlan(
     edits: [for (final e in lines.entries) LineEdit(page: int.parse(e.key.split(':')[0]), line: int.parse(e.key.split(':')[1]), text: e.value)],
     additions: added,
+    marks: marks,
+    pictures: pictures,
   );
 
-  bool get isEmpty => lines.isEmpty && added.isEmpty;
+  bool get isEmpty => lines.isEmpty && added.isEmpty && marks.isEmpty && pictures.isEmpty;
 
   @override
-  List<Object?> get props => [lines, added.length, ...added.map((a) => '${a.page}${a.x}${a.y}${a.text}${a.sizePt}${a.rgb}${a.bold}${a.italic}${a.family}')];
+  List<Object?> get props => [
+    lines,
+    added.length,
+    ...added.map((a) => '${a.page}${a.x}${a.y}${a.text}${a.sizePt}${a.rgb}${a.bold}${a.italic}${a.family}'),
+    ...marks.map((m) => '${m.page}${m.kind}${m.x0}${m.y0}${m.x1}${m.y1}${m.rgb}${m.widthPt}'),
+    ...pictures.map((p) => '${p.page}${p.x}${p.y}${p.w}${p.bytes.length}'),
+  ];
 }
 
 class PdfEditState extends Equatable {
@@ -146,26 +161,26 @@ class PdfEditCubit extends Cubit<PdfEditState> {
     } else {
       next[key] = clean;
     }
-    _set(PdfEdits(lines: next, added: state.edits.added));
+    _set(state.edits.copyWith(lines: next));
     return null;
   }
 
   void deleteLine(int page, int line) {
     final next = Map.of(state.edits.lines)..[PdfEdits.keyOf(page, line)] = '';
-    _set(PdfEdits(lines: next, added: state.edits.added));
+    _set(state.edits.copyWith(lines: next));
   }
 
   /// Puts a line back as it was in the file.
   void restoreLine(int page, int line) {
     final next = Map.of(state.edits.lines)..remove(PdfEdits.keyOf(page, line));
-    _set(PdfEdits(lines: next, added: state.edits.added));
+    _set(state.edits.copyWith(lines: next));
   }
 
   String? addText(AddedText text) {
     final bad = unsupportedCharacters(text.text);
     if (bad.isNotEmpty) return 'These characters cannot be used: $bad. Use Western letters, numbers and common symbols.';
     if (text.text.trim().isEmpty) return null;
-    _set(PdfEdits(lines: state.edits.lines, added: [...state.edits.added, text]));
+    _set(state.edits.copyWith(added: [...state.edits.added, text]));
     return null;
   }
 
@@ -178,13 +193,67 @@ class PdfEditCubit extends Cubit<PdfEditState> {
     } else {
       next[index] = text;
     }
-    _set(PdfEdits(lines: state.edits.lines, added: next));
+    _set(state.edits.copyWith(added: next));
     return null;
   }
 
   void removeAdded(int index) {
     final next = [...state.edits.added]..removeAt(index);
-    _set(PdfEdits(lines: state.edits.lines, added: next));
+    _set(state.edits.copyWith(added: next));
+  }
+
+  /// Draws a highlight, cover-up, box or line. Too small a drawing (a tap) is ignored.
+  void addMark(AddedMark mark) {
+    final small = mark.kind == 'line' ? (mark.x1 - mark.x0).abs() + (mark.y1 - mark.y0).abs() < 0.01 : (mark.x1 - mark.x0).abs() < 0.01 || (mark.y1 - mark.y0).abs() < 0.005;
+    if (small) return;
+    _set(state.edits.copyWith(marks: [...state.edits.marks, mark]));
+  }
+
+  void replaceMark(int index, AddedMark mark) {
+    final next = [...state.edits.marks]..[index] = mark;
+    _set(state.edits.copyWith(marks: next));
+  }
+
+  void removeMark(int index) => _set(state.edits.copyWith(marks: [...state.edits.marks]..removeAt(index)));
+
+  /// Puts a JPG or PNG picture on a page.
+  void addPicture(AddedPicture picture) => _set(state.edits.copyWith(pictures: [...state.edits.pictures, picture]));
+
+  void replacePicture(int index, AddedPicture picture) {
+    final next = [...state.edits.pictures]..[index] = picture;
+    _set(state.edits.copyWith(pictures: next));
+  }
+
+  void removePicture(int index) => _set(state.edits.copyWith(pictures: [...state.edits.pictures]..removeAt(index)));
+
+  /// Takes a line out of the file's text and puts [picture] (the new words drawn as a picture) in its place, as one change.
+  void replaceLineWithPicture(int page, int line, AddedPicture picture) {
+    final lines = Map.of(state.edits.lines)..[PdfEdits.keyOf(page, line)] = '';
+    _set(state.edits.copyWith(lines: lines, pictures: [...state.edits.pictures, picture]));
+  }
+
+  /// Retypes a line of a scanned page: [cover] hides the old writing, and new [text] or a [picture] of it goes over it, as one change.
+  String? addScanEdit(AddedMark cover, {AddedText? text, AddedPicture? picture}) {
+    if (text != null) {
+      final bad = unsupportedCharacters(text.text);
+      if (bad.isNotEmpty) return 'These characters cannot be used: $bad. Use Western letters, numbers and common symbols.';
+    }
+    _set(
+      state.edits.copyWith(
+        marks: [...state.edits.marks, cover],
+        added: text == null || text.text.trim().isEmpty ? null : [...state.edits.added, text],
+        pictures: picture == null ? null : [...state.edits.pictures, picture],
+      ),
+    );
+    return null;
+  }
+
+  /// Moves added text to a new place, as shares of the page.
+  void moveAdded(int index, double x, double y) {
+    final a = state.edits.added[index];
+    final next = [...state.edits.added]
+      ..[index] = AddedText(page: a.page, x: x.clamp(0.0, 0.97), y: y.clamp(0.02, 0.99), text: a.text, sizePt: a.sizePt, rgb: a.rgb, bold: a.bold, italic: a.italic, family: a.family);
+    _set(state.edits.copyWith(added: next));
   }
 
   void undo() {

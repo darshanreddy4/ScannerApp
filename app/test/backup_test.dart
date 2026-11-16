@@ -193,8 +193,8 @@ void main() {
       files = Directory.systemTemp.createTempSync('sv_bk_files');
       a = DocumentRepositoryImpl(DocumentLocalDataSource(rootDir: rootA));
       b = DocumentRepositoryImpl(DocumentLocalDataSource(rootDir: rootB));
-      backupA = LocalBackupService(documents: a, folders: a, tempDir: () async => work, iterations: _iterations);
-      backupB = LocalBackupService(documents: b, folders: b, tempDir: () async => work, iterations: _iterations);
+      backupA = LocalBackupService(documents: a, folders: a, files: a, tempDir: () async => work, iterations: _iterations);
+      backupB = LocalBackupService(documents: b, folders: b, files: b, tempDir: () async => work, iterations: _iterations);
     });
 
     tearDown(() {
@@ -273,6 +273,30 @@ void main() {
       expect(folders.single.color, 0xFF112233);
       expect(contract.folderId, folders.single.id);
       expect(work.listSync().whereType<Directory>().where((d) => p.basename(d.path).startsWith('restore_')), isEmpty, reason: 'temporary files are removed');
+    });
+
+    test('files kept in the library come back with their folder, flags and content', () async {
+      final folder = (await a.createFolder('Work')).valueOrNull!;
+      final src = File(p.join(files.path, 'Budget.xlsx'))..writeAsBytesSync(_bytes(400, 7));
+      final kept = (await a.saveFile(title: 'Budget 2026', sourcePath: src.path, folderId: folder.id)).valueOrNull!;
+      await a.updateMeta(kept.id, favorite: true, tags: ['money']);
+      await a.saveDocument(title: 'Receipt', pages: [page('r1')]);
+
+      final made = (await backupA.create(password: 'long enough pw', outputPath: path('files.svbackup'))).valueOrNull!;
+      expect(made.documents, 2);
+      final restored = (await backupB.restore(path: path('files.svbackup'), password: 'long enough pw')).valueOrNull!;
+      expect(restored.added, 2);
+
+      final docs = (await b.listDocuments()).valueOrNull!;
+      final budget = docs.firstWhere((d) => d.title == 'Budget 2026');
+      expect(budget.isFile, isTrue);
+      expect(budget.fileExtension, 'xlsx');
+      expect(budget.favorite, isTrue);
+      expect(budget.tags, ['money']);
+      expect(File(budget.filePath!).readAsBytesSync(), src.readAsBytesSync());
+      expect(budget.folderId, (await b.listFolders()).valueOrNull!.single.id);
+      final again = (await backupB.restore(path: path('files.svbackup'), password: 'long enough pw')).valueOrNull!;
+      expect(again.added, 0, reason: 'restoring twice adds nothing');
     });
 
     test('restoring again adds nothing twice, and a partly present library gets only what is missing', () async {

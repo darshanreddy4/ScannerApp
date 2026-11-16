@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:file_picker/file_picker.dart';
+import '../features/documents/presentation/library_picker.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -37,8 +37,8 @@ enum QuickAction {
 QuickAction? quickActionFrom(String? id) => QuickAction.values.where((a) => a.id == id).firstOrNull;
 
 Future<String?> _pickPdfOrWord() async {
-  final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['pdf', 'docx']);
-  return picked.isEmpty ? null : picked.first.path;
+  final picked = await pickFilePaths(null, allowedExtensions: const ['pdf', 'docx']);
+  return picked.isEmpty ? null : picked.first;
 }
 
 void _openScan(BuildContext context) {

@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
@@ -21,8 +21,8 @@ import '../domain/einvoice.dart';
 
 Future<String?> _pickInvoice() async {
   try {
-    final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['pdf', 'xml']);
-    return picked.isEmpty ? null : picked.first.path;
+    final picked = await pickFilePaths(null, allowedExtensions: const ['pdf', 'xml']);
+    return picked.isEmpty ? null : picked.first;
   } catch (_) {
     return null;
   }

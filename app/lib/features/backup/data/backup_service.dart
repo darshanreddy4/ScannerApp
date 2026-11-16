@@ -48,12 +48,15 @@ class LocalBackupService implements BackupService {
     required DocumentRepository documents,
     required FolderRepository folders,
     required Future<Directory> Function() tempDir,
+    LibraryFileRepository? files,
     this.iterations = defaultBackupIterations,
   }) : _docs = documents,
+       _files = files,
        _folders = folders,
        _tempDir = tempDir;
 
   final DocumentRepository _docs;
+  final LibraryFileRepository? _files;
   final FolderRepository _folders;
   final Future<Directory> Function() _tempDir;
   final int iterations;
@@ -70,6 +73,24 @@ class LocalBackupService implements BackupService {
     var pageCount = 0;
     for (var d = 0; d < docs.length; d++) {
       final doc = docs[d];
+      if (doc.isFile) {
+        if (!File(doc.filePath!).existsSync()) continue;
+        final name = 'd$d/file/${p.basename(doc.filePath!)}';
+        files.add((name, doc.filePath!));
+        docJson.add({
+          'title': doc.title,
+          'createdAt': doc.createdAt.millisecondsSinceEpoch,
+          'updatedAt': doc.updatedAt.millisecondsSinceEpoch,
+          'folder': doc.folderId,
+          'favorite': doc.favorite,
+          'pinned': doc.pinned,
+          'locked': doc.locked,
+          'tags': doc.tags,
+          'expires': doc.expiresAt?.millisecondsSinceEpoch,
+          'file': name,
+        });
+        continue;
+      }
       final pages = <Map<String, Object?>>[];
       for (var i = 0; i < doc.pages.length; i++) {
         final page = doc.pages[i];
@@ -206,6 +227,26 @@ class LocalBackupService implements BackupService {
           continue;
         }
         final pages = <NewPage>[];
+        final fileName = d['file'] as String?;
+        final fileRepo = _files;
+        if (fileName != null && fileRepo != null) {
+          final source = File(p.join(dir.path, fileName));
+          if (!source.existsSync()) continue;
+          final saved = _need(await fileRepo.saveFile(title: title, sourcePath: source.path, folderId: folderIds[d['folder'] as String? ?? '']));
+          _need(
+            await _docs.updateMeta(
+              saved.id,
+              favorite: d['favorite'] == true,
+              pinned: d['pinned'] == true,
+              locked: d['locked'] == true,
+              tags: [for (final t in (d['tags'] as List? ?? const [])) t.toString()],
+              date: DateTime.fromMillisecondsSinceEpoch(created),
+              expires: d['expires'] is int ? DateTime.fromMillisecondsSinceEpoch(d['expires'] as int) : null,
+            ),
+          );
+          added++;
+          continue;
+        }
         for (final pg in (d['pages'] as List? ?? const []).cast<Map<String, Object?>>()) {
           final image = File(p.join(dir.path, pg['image'] as String? ?? ''));
           if (!image.existsSync()) continue;

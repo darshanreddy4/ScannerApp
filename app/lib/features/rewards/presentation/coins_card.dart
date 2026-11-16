@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../../core/widgets/style_kit.dart';
 import '../../monetization/domain/repositories/monetization_contracts.dart';
 import '../domain/coin_rules.dart';
 import 'coin_burst.dart';
@@ -38,6 +39,11 @@ class CoinsCard extends StatelessWidget {
     });
   }
 
+  Future<void> _claim(BuildContext context) async {
+    final added = await context.read<CoinsCubit>().claimDaily();
+    if (added > 0 && context.mounted) showCoinsEarned(context, added);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<CoinsCubit>().state;
@@ -49,17 +55,48 @@ class CoinsCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              key: const ValueKey('coins-daily'),
               children: [
-                const Icon(AppIcons.coins, color: AppColors.warning),
+                const GradientIconTile(icon: AppIcons.catGift, color: Color(0xFFDB2777), size: 38),
+                const SizedBox(width: AppSpacing.sm + 4),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Daily bonus', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                      Text(trf('+{n} coins, once a day', {'n': CoinRules.dailyCoins}), style: const TextStyle(fontSize: 12.5, color: AppColors.inkMuted)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                FilledButton(
+                  key: const ValueKey('coins-claim'),
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
+                  onPressed: state.dailyClaimed ? null : () => _claim(context),
+                  child: Text(state.dailyClaimed ? 'Claimed' : 'Claim'),
+                ),
+              ],
+            ),
+            const Divider(height: AppSpacing.lg),
+            Row(
+              children: [
+                const GradientIconTile(icon: AppIcons.coins, color: Color(0xFFF59E0B), size: 38),
                 const SizedBox(width: AppSpacing.sm),
                 // Counts up to the new balance when coins are added.
-                TweenAnimationBuilder<double>(
-                  tween: Tween(end: state.balance.toDouble()),
-                  duration: const Duration(milliseconds: 900),
-                  curve: Curves.easeOut,
-                  builder: (_, v, _) => Text(trf('{n} coins', {'n': v.round()}), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                Expanded(
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(end: state.balance.toDouble()),
+                    duration: const Duration(milliseconds: 900),
+                    curve: Curves.easeOut,
+                    builder: (_, v, _) => Text(
+                      trf('{n} coins', {'n': v.round()}),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    ),
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: AppSpacing.sm),
                 FilledButton.icon(
                   onPressed: !state.canWatch || state.watching ? null : () => _watch(context),
                   // The theme's buttons are full width; inside a Row they need a finite minimum.

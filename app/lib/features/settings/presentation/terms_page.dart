@@ -15,7 +15,8 @@ class TermsPage extends StatelessWidget {
     ('1. Agreement', 'By installing or using Doculoom you agree to these terms and to the Privacy Policy. If you do not agree, please do not use the app.'),
     (
       '2. What the app does',
-      'Doculoom lets you scan, import, edit, organise, print, share and lock documents on your phone. Everything is processed and stored on your device.',
+      'Doculoom lets you scan, import, edit, organise, print, share and lock documents on your phone, and gives you tools to translate text, make invoices, CVs, application packets and safe ID copies, keep loyalty cards and checklists, and convert Hijri dates. '
+          'Your documents and what you make with the tools are processed and stored on your device. The exceptions are ads and the optional internet sharing, which are described in the Privacy Policy.',
     ),
     (
       '3. Your content',
@@ -30,8 +31,8 @@ class TermsPage extends StatelessWidget {
     ),
     (
       '5. Ads',
-      'The free app shows ads provided by Google AdMob. Ads are shown by a third party; we do not control their content. '
-          'Please do not click ads in order to inflate our earnings.',
+      'The free app shows ads provided by Google AdMob, including rewarded videos that you choose to watch. Ads are shown by a third party; we do not control their content. '
+          'Please do not click ads in order to inflate our earnings. Ads are turned off while a pass is active.',
     ),
     (
       '6. Licence',
@@ -51,27 +52,56 @@ class TermsPage extends StatelessWidget {
           'The service is provided without any promise that it will always be available, and a file may be unavailable before it expires.',
     ),
     (
-      '9. Coins and rewarded videos',
-      'Free users can watch a short video to earn coins and spend them on features such as editing saved pages or sharing with a QR code. Coins are a convenience, not money: they have no cash value, cannot be sold, transferred or refunded, '
-          'and are stored only on your phone, so they are lost if you uninstall the app or clear its data. A video must be watched to the end to earn coins, and there is a daily limit. '
-          'Do not use tricks, automation or modified apps to get coins. We may change prices, rewards and limits, and we may reset coins that were obtained unfairly.',
+      '9. Coins, passes and rewarded videos',
+      'Free users can watch a short video to earn coins, receive a small number of free coins each day, and spend them on tools. By watching enough videos you can also earn a pass, which opens every tool and turns ads off for a set time. '
+          'Coins and passes are a convenience, not money: they have no cash value, cannot be sold, transferred or refunded, and a pass ends when its time runs out. '
+          'They are stored only on your phone, so they are lost if you uninstall the app or clear its storage; "Delete all my data" does not remove them. A video must be watched to the end to count, and there is a daily limit. '
+          'Videos need an internet connection and your consent to ads where the law requires it. '
+          'Do not use tricks, automation or modified apps to get coins or passes. We may change prices, rewards, pass lengths and limits, and we may reset coins or passes that were obtained unfairly.',
     ),
     (
-      '10. No warranty',
+      '10. Invoices, tax and calendar tools',
+      'The GST, Saudi VAT, US invoice and receipt tools work out amounts from the rates and details you enter and make a PDF on your phone. They are a convenience, not tax, legal or accounting advice. '
+          'Rates change and differ by place, so you are responsible for the rates, numbers and amounts on every invoice and for following the tax rules that apply to you. '
+          'These tools do not connect to any tax authority or government portal and do not register, report or file anything for you. An invoice made here is not an e-invoice with an IRN, and the Saudi invoice covers only the first phase of e-invoicing and is not an approved ZATCA system. '
+          'Hijri dates follow the Umm al-Qura calendar. Where the new moon is sighted a month can start a day or two later, so check the date before you rely on it for prayer, fasting, Eid or any legal purpose.',
+    ),
+    (
+      '11. IDs, cards and signatures',
+      'Only copy, cover or share an ID, card or other document that you are entitled to copy and share, and only for a lawful purpose. Do not use the app to forge, alter or misuse a document or to pretend to be someone else. '
+          'A safe ID copy hides only what you or the app cover: look at the copy yourself before you hand it over, because we cannot promise that everything sensitive is covered. '
+          'A picture of a signature is not a certified digital signature and may not be accepted for some legal documents. '
+          'Loyalty card barcodes may not scan at every till, and a card note is not protected, so do not write a PIN or password in it.',
+    ),
+    (
+      '12. Reminders, text reading and translation',
+      'Reminders depend on the phone\'s own alarm and battery settings. Some phones stop apps in the background, so a reminder can be late or missing; check the battery steps under "Reminders not arriving?" in the app, and do not rely on a reminder alone for a deadline that matters. '
+          'Text reading (OCR) and translation are done by machine and can contain mistakes. Check the result, and have important text translated or checked by a qualified person. '
+          'Some translations of the app itself may also contain mistakes.',
+    ),
+    (
+      '13. No warranty',
       'The app is provided "as is" and "as available". Scans, text layout, colours, imports of PDF and Word files, and print results may differ from the original. '
           'Check important documents (contracts, IDs, legal or financial papers) before relying on a copy.',
     ),
     (
-      '11. Limit of liability',
-      'To the fullest extent the law allows, we are not liable for lost data, lost profit, or indirect or consequential damage arising from use of the app. '
+      '14. Limit of liability',
+      'To the fullest extent the law allows, we are not liable for lost data, lost profit, a missed reminder, a wrong tax amount, or indirect or consequential damage arising from use of the app. '
           'Nothing in these terms limits liability that cannot be limited by law, including your rights as a consumer.',
     ),
     (
-      '12. Changes and ending',
+      '15. Governing law',
+      'These terms are governed by the laws of India, and the courts in Karnataka, India, can settle disputes about them, but this does not take away any right you have under the mandatory consumer laws of the place where you live.',
+    ),
+    (
+      '16. Changes and ending',
       'We may update the app and these terms. If a change matters, we will tell you in the app. Continuing to use the app after a change means you accept it. '
           'You can stop using the app at any time by uninstalling it. We may stop offering it at any time.',
     ),
-    ('13. Contact', 'Questions about these terms: use Settings > About > Help and support.'),
+    (
+      '17. Contact',
+      'Doculoom is published by darshandmg (Darshan M G), Ranibennur, Karnataka, India. Questions about these terms: use Settings > About > Help and support, or write to the email address below.',
+    ),
   ];
 
   @override

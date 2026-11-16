@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart' hide Text;
-import 'package:image_picker/image_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 
 import '../../../app/di.dart';
 import '../../../core/i18n/tr.dart';
@@ -11,7 +11,7 @@ import '../../qr/domain/scan_services.dart';
 import '../../qr/presentation/qr_scan_page.dart' show CodeCameraBuilder, defaultCameraBuilder;
 import '../../scanner/data/datasources/camera_access.dart';
 
-Future<String?> _pickPicture() async => (await ImagePicker().pickImage(source: ImageSource.gallery))?.path;
+Future<String?> _pickPicture() async => (await pickPhotoPaths(null, multiple: false)).firstOrNull;
 
 /// Reads the code on a card, with the camera or from a picture, and hands it back. Nothing leaves the phone.
 class CardScanPage extends StatefulWidget {

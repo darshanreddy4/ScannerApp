@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -45,11 +45,7 @@ class _CleanView extends StatelessWidget {
 
   Future<void> _files(BuildContext context) async {
     try {
-      final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['jpg', 'jpeg', 'png']);
-      final paths = [
-        for (final f in picked)
-          if (f.path != null) f.path!,
-      ];
+      final paths = await pickFilePaths(context, allowedExtensions: const ['jpg', 'jpeg', 'png'], allowMultiple: true);
       if (paths.isEmpty || !context.mounted) return;
       await context.read<PrivacyCleanCubit>().add(paths);
     } catch (_) {

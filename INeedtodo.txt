@@ -1,0 +1,38 @@
+Still needs you; I can't do these from the code
+
+1. Replace all test ad IDs, and the AdMob app ID, with real ones.
+2. Create the consent message in AdMob under Privacy & messaging, or the consent form never shows.
+3. Set a real privacy policy URL and support email at build time. Both default to empty, and Play requires the URL.
+4. Create a release signing key. Without key.properties the release build is signed with the debug key, which Play rejects.
+5. In Play Console, complete:
+ a. the ads declaration
+ b. the advertising ID declaration
+ c. the Data safety form
+ d. the content rating
+ e. the target audience (13+ keeps you out of the Families rules)
+ f. the foreground-service declaration, for QR sharing
+6. The Data safety form must also cover the encrypted "Anywhere" share relay and AdMob's data.
+
+
+
+During the 14 days:
+
+Upload the version code 3 bundle to the closed test if you haven't yet. It fixes the startup crash, so testers on release 1 can't open the app. Start it today.
+Keep at least 12 testers opted in the whole time. If someone leaves and you drop below 12, the count can reset. Add 3 to 5 extra testers to stay safe.
+Ask testers to open the app a few times and try scanning, PDF tools and sharing. Google looks at real testing activity, and you'll use their feedback in the production application.
+Check Play Console each few days:
+Quality > Android vitals > Crashes and ANRs.
+Pre-launch report.
+Any tester feedback.
+Don't use real ads on the test build. Keep the test ad IDs until the 14 days are done.
+Prepare for production while you wait
+
+Create the AdMob app and the four ad units, and publish the consent message. Guide 05 in the repo walks through it.
+Ask for production access when the button turns active. You'll answer questions about your test, so keep notes on what testers found and what you fixed.
+Change the keystore passwords, since they were shared in chat.
+Host app-ads.txt on your developer website after launch.
+Build the production bundle with real ad IDs and a version code higher than any earlier upload, such as 4.
+After approval
+
+Create the production release and upload the real-ads bundle. Add mapping.txt so crashes are readable.
+Roll it out. The first review can take a few days.

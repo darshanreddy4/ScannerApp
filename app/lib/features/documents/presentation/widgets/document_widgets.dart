@@ -1,5 +1,6 @@
 import '../../../monetization/presentation/inline_ad.dart';
 import 'folder_style.dart';
+import 'home_top_bar.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart' hide Text;
@@ -14,6 +15,7 @@ import '../../../../core/widgets/feedback.dart';
 import '../../domain/entities/scanned_document.dart';
 import '../bloc/documents_cubit.dart';
 import 'expiring_banner.dart';
+import '../library_actions.dart';
 import 'document_actions.dart';
 import '../../../../core/widgets/text.dart';
 import '../../../../core/i18n/tr.dart';
@@ -107,6 +109,11 @@ class DocMenuButton extends StatelessWidget {
 Future<void> openDocument(BuildContext context, ScannedDocument doc) async {
   if (doc.locked && !await confirmOwner(context, 'Unlock "${doc.title}"', allowIfUnavailable: true)) return;
   if (!context.mounted) return;
+  if (doc.isFile) {
+    await openLibraryFile(context, doc);
+    if (context.mounted) context.read<DocumentsCubit>().load();
+    return;
+  }
   await context.push('/document/${doc.id}');
   if (context.mounted) context.read<DocumentsCubit>().load();
 }
@@ -134,6 +141,28 @@ class DocThumb extends StatelessWidget {
         color: AppColors.primarySoft,
         child: Center(child: Icon(AppIcons.lock, color: AppColors.primary)),
       );
+    if (document.isFile) {
+      final color = libraryKindColor(document.fileKind);
+      return ColoredBox(
+        color: color.withAlpha(28),
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(libraryKindIcon(document.fileKind), color: color),
+                  const SizedBox(height: 4),
+                  Text(document.fileExtension.toUpperCase(), style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return cover == null
         ? const Icon(AppIcons.document, color: AppColors.inkMuted)
         : Image.file(
@@ -236,7 +265,7 @@ class DocumentListTile extends StatelessWidget {
                       spacing: 6,
                       runSpacing: 4,
                       children: [
-                        _PagesChip(count: document.pageCount),
+                        _PagesChip(count: document.pageCount, kind: document.isFile ? document.fileKind : null),
                         if (document.expiresAt != null) ExpiryChip(expires: document.expiresAt!),
                       ],
                     ),
@@ -281,8 +310,11 @@ class _Flags extends StatelessWidget {
 }
 
 class _PagesChip extends StatelessWidget {
-  const _PagesChip({required this.count});
+  const _PagesChip({required this.count, this.kind});
   final int count;
+
+  /// Set for a file kept in the library, which shows its kind instead of a page count.
+  final LibraryFileKind? kind;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -291,10 +323,10 @@ class _PagesChip extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(AppIcons.document, size: 12, color: AppColors.primary),
+        Icon(kind == null ? AppIcons.document : libraryKindIcon(kind!), size: 12, color: AppColors.primary),
         const SizedBox(width: 4),
         Text(
-          pagesLabel(count),
+          kind == null ? pagesLabel(count) : tr(kind!.label),
           style: const TextStyle(color: AppColors.primaryDark, fontSize: 11, fontWeight: FontWeight.w600),
         ),
       ],
@@ -331,7 +363,7 @@ class DocumentGridCard extends StatelessWidget {
                     color: AppColors.background,
                     child: DocThumb(document: document, cacheWidth: 420),
                   ),
-                  Positioned(top: 8, left: 8, child: _PagesChip(count: document.pageCount)),
+                  Positioned(top: 8, left: 8, child: _PagesChip(count: document.pageCount, kind: document.isFile ? document.fileKind : null)),
                   if (selecting) Positioned(top: 8, right: 8, child: SelectionBadge(order: order)),
                 ],
               ),
@@ -434,8 +466,11 @@ class DocumentsCollection extends StatelessWidget {
 
 /// App bar that turns into a contextual action bar (merge, move, delete) while documents are selected.
 class DocumentsAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const DocumentsAppBar({super.key, required this.title});
+  const DocumentsAppBar({super.key, required this.title, this.home = false});
   final String title;
+
+  /// The Documents page itself, which carries the language, text size and coins buttons.
+  final bool home;
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight + 1);
@@ -500,7 +535,9 @@ class DocumentsAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final selection = context.select((DocumentsCubit c) => c.state.selection);
+    final hasFile = context.select((DocumentsCubit c) => c.state.documents.any((d) => d.isFile && c.state.selection.contains(d.id)));
     if (selection.isEmpty) {
+      if (home) return HomeTopBar(title: title);
       return AppBar(
         title: Text(title),
         bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider()),
@@ -513,11 +550,11 @@ class DocumentsAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Text('${selection.length} selected'),
       actions: [
         IconButton(
-          tooltip: selection.length < 2 ? 'Select at least 2 documents to merge' : 'Merge into one document',
+          tooltip: hasFile ? 'Only scanned documents can be merged' : (selection.length < 2 ? 'Select at least 2 documents to merge' : 'Merge into one document'),
           icon: const Icon(AppIcons.merge),
-          onPressed: selection.length < 2 ? null : () => _merge(context),
+          onPressed: selection.length < 2 || hasFile ? null : () => _merge(context),
         ),
-        IconButton(tooltip: tr('Make an application packet'), icon: const Icon(AppIcons.packet), onPressed: () => _packet(context)),
+        IconButton(tooltip: tr('Make an application packet'), icon: const Icon(AppIcons.packet), onPressed: hasFile ? null : () => _packet(context)),
         IconButton(tooltip: tr('Move to folder'), icon: const Icon(AppIcons.emptyDocs), onPressed: () => _move(context)),
         IconButton(
           tooltip: tr('Delete'),

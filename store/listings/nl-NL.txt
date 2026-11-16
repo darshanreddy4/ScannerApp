@@ -1,0 +1,50 @@
+title: Doculoom: PDF-scanner & tools
+short: Scan documenten, bewerk en onderteken pdf's, comprimeer en deel. Privé, offline.
+---
+Doculoom verandert je telefoon in een documentscanner en een gereedschapskist voor pdf's, Office-bestanden en foto's. Je documenten blijven op je telefoon: je hoeft geen account aan te maken en scannen, tekst lezen en de pdf-tools werken offline.
+
+SCANNEN
+• Scan pagina's met de camera en laat Doculoom de randen vinden, of importeer foto's, pdf's en Word-bestanden
+• Scannen van meerdere pagina's, opnieuw bijsnijden, draaien, pagina's herschikken en één filter op alle pagina's toepassen
+• Filters voor tekst, kleur en zwart-wit
+• Scanmodi voor documenten, bonnetjes, visitekaartjes en identiteitsbewijzen
+• Lees de tekst in een scan (OCR) op het apparaat, zoek er later in, kopieer hem of maak van een visitekaartje een contact
+
+PDF-TOOLS
+• Pagina's comprimeren, samenvoegen, splitsen, bijsnijden en nummeren
+• Een pdf met een wachtwoord vergrendelen of een pdf ontgrendelen die je kunt openen
+• Formulieren invullen, tekenen, tekst toevoegen en documenten ondertekenen met je opgeslagen handtekening
+• Privégegevens afdekken met de redactietool
+• Twee pdf's vergelijken en zien wat er veranderd is
+• Pdf- en Word-bestanden lezen zonder ze te importeren
+
+OFFICE- EN FOTOTOOLS
+• Excel-, CSV- en PowerPoint-bestanden openen, bewerken en converteren
+• Tabel uit een foto naar Excel en bonnetjes naar een spreadsheet
+• Pasfoto's en id-foto's in het juiste formaat voor ongeveer 40 landen
+• Foto's comprimeren tot een doelgrootte, een watermerk toevoegen en verborgen gegevens uit foto's verwijderen
+• Beide kanten van een identiteitskaart op één pagina kopiëren
+
+QR EN DELEN
+• QR-codes en streepjescodes scannen en maken, met een geschiedenis die jij beheert
+• Deel een pdf zoals hij is, kleiner, met een wachtwoord of in een ZIP. Alleen de gedeelde kopie verandert
+• Deel een bestand met een QR-code op hetzelfde wifi-netwerk of met een versleutelde link die verloopt
+
+FACTUREN, CV EN HERINNERINGEN
+• Factuurmaker met GST (India), Amerikaanse verkoopbelasting en Saoedische ZATCA-lay-outs
+• Betaal-QR-codes, btw-terugvraagbonnen, een cv-maker en een checklisttool
+• Verloopherinneringen voor paspoorten, polissen en andere documenten, en herinneringen voor Hijri-datums
+
+PRIVACY EN CONTROLE
+• Geen aanmelding. Documenten worden alleen in de privéopslag van de app bewaard
+• Vergrendel een document of map met de vingerafdruk, het gezicht of de schermvergrendeling van je telefoon
+• Maak versleutelde back-ups met een wachtwoord dat je zelf kiest
+• Verwijder op elk moment één document of alles via Instellingen
+• Beschikbaar in 17 talen
+
+ADVERTENTIES EN MUNTEN
+De gratis versie toont advertenties van Google AdMob. Een pdf scannen, opslaan, bekijken, doorzoeken en delen is altijd gratis. Sommige tools gebruiken munten. Je krijgt elke dag een paar gratis munten en je kunt er meer of een tijdpas mee verdienen door vrijwillig korte video's te bekijken. Munten hebben geen geldwaarde.
+
+Vragen of feedback? Open Instellingen > Info > Help en ondersteuning, of mail naar darshandmg399@gmail.com.
+
+Privacybeleid: https://darshanreddy4.github.io/doculoom-privacy-policy/

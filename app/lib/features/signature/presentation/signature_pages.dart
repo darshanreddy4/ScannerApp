@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -528,8 +529,8 @@ class _PhotoViewState extends State<_PhotoView> {
       } else if (source == 'gallery') {
         path = (await ImagePicker().pickImage(source: ImageSource.gallery))?.path;
       } else {
-        final picked = await FilePicker.pickFiles(type: FileType.image);
-        path = picked.isEmpty ? null : picked.first.path;
+        final picked = await pickFilePaths(context, type: FileType.image);
+        path = picked.isEmpty ? null : picked.first;
       }
       if (path == null || !context.mounted) return;
       await context.read<SignaturePhotoCubit>().pick(path);

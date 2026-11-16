@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -183,8 +184,8 @@ class _ChooseStep extends StatelessWidget {
                 onPressed: state.busy
                     ? null
                     : () => _pick(context, () async {
-                        final picked = await FilePicker.pickFiles(type: FileType.image);
-                        return picked.isEmpty ? null : picked.first.path;
+                        final picked = await pickFilePaths(context, type: FileType.image);
+                        return picked.isEmpty ? null : picked.first;
                       }),
                 icon: const Icon(AppIcons.importFile, size: 18),
                 label: const Text('Files'),

@@ -6,6 +6,10 @@ import 'package:xml/xml.dart';
 
 import '../domain/formula_refs.dart';
 import '../domain/sheet_model.dart';
+import 'chart_xml.dart';
+import 'cond_xml.dart';
+import 'validation_xml.dart';
+import '../domain/cond_format.dart';
 import 'styles_xml.dart';
 
 class XlsxFormatException implements Exception {
@@ -67,6 +71,7 @@ Workbook readXlsx(Uint8List bytes) {
   final stylesXml = stylesDoc == null ? null : StylesXml(stylesDoc, theme);
   final styles = StyleTable(stylesXml?.readStyles());
   styles.originalCount = styles.styles.length;
+  final dxfs = stylesXml?.readDxfs() ?? const <DxfStyle>[];
 
   final sheets = <Sheet>[];
   final sheetsEl = _kids(wb, 'sheets').firstOrNull;
@@ -79,6 +84,9 @@ Workbook readXlsx(Uint8List bytes) {
       final doc = _xmlOrNull(archive, path);
       if (doc == null) continue;
       final sheet = _readSheet(doc, name, path, shared);
+      sheet.condRules.addAll(readCondFormatting(doc.rootElement, dxfs, theme));
+      sheet.validations.addAll(readValidations(doc.rootElement));
+      sheet.charts.addAll(readSheetCharts(archive, path, doc.rootElement));
       sheet.hidden = s.getAttribute('state') == 'hidden' || s.getAttribute('state') == 'veryHidden';
       sheets.add(sheet);
     }

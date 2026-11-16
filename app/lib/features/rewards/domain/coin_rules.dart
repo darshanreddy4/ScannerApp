@@ -4,7 +4,7 @@ abstract final class CoinRules {
   static const rewardPerAd = 10;
 
   /// Coins given the first time the app is used each day.
-  static const dailyCoins = 3;
+  static const dailyCoins = 20;
 
   /// Videos that can be watched for coins per calendar day; null means no limit.
   static const int? dailyAdCap = null;
@@ -71,7 +71,7 @@ class PassTier {
   int get hashCode => minutes;
 }
 
-const passTiers = <PassTier>[PassTier(30, 5), PassTier(120, 12), PassTier(360, 20), PassTier(1440, 23)];
+const passTiers = <PassTier>[PassTier(30, 5), PassTier(120, 12), PassTier(360, 18), PassTier(1440, 23)];
 
 /// The filters that come with every scan and stay free; the others cost a coin.
 const freeFilterNames = {'original', 'auto', 'magicColor', 'documentBw', 'grayscale'};

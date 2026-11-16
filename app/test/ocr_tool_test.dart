@@ -733,6 +733,58 @@ void main() {
       expect(find.byKey(const ValueKey('langdata-error')), findsNothing);
     });
 
+    testWidgets('the download list shows each language\'s size with a Download button, and a bar moves while one downloads', (tester) async {
+      translator.downloaded.add('en');
+      await open(tester);
+      await tester.tap(find.byKey(const ValueKey('ocrtool-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Language data on this phone'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('langdata-download')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const ValueKey('lang-search')), 'French');
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: find.byKey(const ValueKey('lang-fr')), matching: find.text('About 30 MB')), findsOneWidget);
+      expect(find.byKey(const ValueKey('lang-download-fr')), findsOneWidget);
+      await tester.enterText(find.byKey(const ValueKey('lang-search')), 'English');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('lang-download-en')), findsNothing, reason: 'English is already on the phone');
+      await tester.enterText(find.byKey(const ValueKey('lang-search')), 'French');
+      await tester.pumpAndSettle();
+
+      translator.holdDownload = Completer<void>();
+      await tester.tap(find.byKey(const ValueKey('lang-download-fr')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byKey(const ValueKey('langdata-progress')), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const ValueKey('langdata-progress')), matching: find.byType(LinearProgressIndicator)), findsOneWidget);
+      expect(find.textContaining('about 30 MB'), findsWidgets);
+
+      translator.holdDownload!.complete();
+      await settle(tester);
+      expect(find.byKey(const ValueKey('langdata-progress')), findsNothing);
+      expect(find.byKey(const ValueKey('langdata-fr')), findsOneWidget);
+    });
+
+    testWidgets('the download list and its progress bar fit a small phone with large text', (tester) async {
+      await open(tester, width: 320, height: 568, scale: 1.4);
+      await tester.tap(find.byKey(const ValueKey('ocrtool-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Language data on this phone'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('langdata-download')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('lang-download-af')), findsOneWidget);
+      translator.holdDownload = Completer<void>();
+      await tester.tap(find.byKey(const ValueKey('lang-download-af')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byKey(const ValueKey('langdata-progress')), findsOneWidget);
+      translator.holdDownload!.complete();
+      await settle(tester);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('a small phone with large text does not overflow', (tester) async {
       translator.downloaded.addAll(['en', 'hi']);
       await open(tester, width: 320, height: 568, scale: 1.4);

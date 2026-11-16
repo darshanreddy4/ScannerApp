@@ -1,0 +1,50 @@
+title: Doculoom: Scanner PDF & outils
+short: Scannez, modifiez et signez des PDF, compressez, partagez. Privé, hors ligne.
+---
+Doculoom transforme votre téléphone en scanner de documents et en boîte à outils pour les PDF, les fichiers Office et les photos. Vos documents restent sur votre téléphone : aucun compte à créer, et la numérisation, la lecture du texte et les outils PDF fonctionnent hors ligne.
+
+NUMÉRISER
+• Numérisez des pages avec l'appareil photo et laissez Doculoom détecter les bords, ou importez des photos, des PDF et des fichiers Word
+• Numérisation de plusieurs pages, recadrage, rotation, réorganisation et un filtre pour toutes les pages
+• Filtres pour le texte, la couleur et le noir et blanc
+• Modes de numérisation pour les documents, les reçus, les cartes de visite et les pièces d'identité
+• Lisez le texte d'un scan (OCR) sur l'appareil, recherchez-le plus tard, copiez-le ou transformez une carte de visite en contact
+
+OUTILS PDF
+• Compressez, fusionnez, divisez, recadrez et numérotez les pages
+• Protégez un PDF par mot de passe ou déverrouillez-en un que vous pouvez ouvrir
+• Remplissez des formulaires, dessinez, ajoutez du texte et signez avec votre signature enregistrée
+• Masquez les informations privées avec l'outil de caviardage
+• Comparez deux PDF et voyez ce qui a changé
+• Lisez des fichiers PDF et Word sans les importer
+
+OUTILS OFFICE ET PHOTO
+• Ouvrez, modifiez et convertissez des fichiers Excel, CSV et PowerPoint
+• Tableau d'une photo vers Excel, et reçus vers un tableur
+• Photos d'identité et de passeport à la bonne taille pour environ 40 pays
+• Compressez des photos à une taille cible, ajoutez un filigrane, supprimez les données cachées des photos
+• Copiez les deux faces d'une carte d'identité sur une seule page
+
+QR ET PARTAGE
+• Scannez et créez des codes QR et des codes-barres, avec un historique que vous contrôlez
+• Partagez un PDF tel quel, plus léger, avec un mot de passe ou dans un ZIP. Seule la copie partagée change
+• Partagez un fichier par code QR sur le même Wi-Fi, ou avec un lien chiffré qui expire
+
+FACTURES, CV ET RAPPELS
+• Générateur de factures avec les formats GST (Inde), taxe de vente américaine et ZATCA (Arabie saoudite)
+• Codes QR de paiement, reçus de remboursement de TVA, créateur de CV et liste de contrôle
+• Rappels d'expiration pour les passeports, les contrats et autres documents, et rappels de dates hégiriennes
+
+CONFIDENTIALITÉ ET CONTRÔLE
+• Aucune connexion. Les documents sont stockés uniquement dans l'espace privé de l'application
+• Verrouillez un document ou un dossier avec l'empreinte, le visage ou le verrouillage d'écran de votre téléphone
+• Créez des sauvegardes chiffrées avec le mot de passe de votre choix
+• Supprimez un document, ou tout, depuis les Paramètres à tout moment
+• Disponible en 17 langues
+
+PUBLICITÉS ET PIÈCES
+La version gratuite affiche des publicités Google AdMob. Numériser, enregistrer, consulter, rechercher et partager un PDF sont toujours gratuits. Certains outils utilisent des pièces. Vous recevez quelques pièces gratuites chaque jour et pouvez en gagner davantage, ou un pass temporaire, en choisissant de regarder de courtes vidéos. Les pièces n'ont aucune valeur monétaire.
+
+Des questions ou des remarques ? Ouvrez Paramètres > À propos > Aide et assistance, ou écrivez à darshandmg399@gmail.com.
+
+Politique de confidentialité : https://darshanreddy4.github.io/doculoom-privacy-policy/

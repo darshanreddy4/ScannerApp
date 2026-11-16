@@ -16,6 +16,7 @@ abstract final class AppIcons {
   static const IconData bot = LucideIcons.bot;
   static const IconData ocr = LucideIcons.scanText;
   static const IconData language = LucideIcons.languages;
+  static const IconData globe = LucideIcons.globe;
   static const IconData database = LucideIcons.database;
   static const IconData cpu = LucideIcons.cpu;
 
@@ -177,6 +178,11 @@ abstract final class AppIcons {
   static const IconData sheet = LucideIcons.fileSpreadsheet;
   static const IconData slides = LucideIcons.presentation;
   static const IconData bold = LucideIcons.bold;
+  static const IconData listBullet = LucideIcons.list;
+  static const IconData listNumbered = LucideIcons.listOrdered;
+  static const IconData newDocument = LucideIcons.filePlus;
+  static const IconData study = LucideIcons.graduationCap;
+  static const IconData work = LucideIcons.briefcase;
   static const IconData italic = LucideIcons.italic;
   static const IconData underline = LucideIcons.underline;
   static const IconData alignLeft = LucideIcons.alignLeft;

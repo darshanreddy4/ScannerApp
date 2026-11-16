@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/error/result.dart';
 import '../../documents/domain/entities/scanned_document.dart';
+import '../../documents/data/library_files.dart';
 import '../domain/entities/export_options.dart';
 import '../domain/repositories/export_repository.dart';
 import '../../../core/utils/region.dart';
@@ -56,19 +57,26 @@ class ExportRepositoryImpl implements ExportRepository {
 }
 
 class SharePlusService implements ShareService {
+  SharePlusService({LibraryFiles? library}) : _library = library;
+  final LibraryFiles? _library;
+
   @override
   Future<Result<void>> shareFile({required String path, required String mimeType, String? subject}) =>
       shareFiles(paths: [path], mimeType: mimeType, subject: subject);
 
   @override
-  Future<Result<void>> shareFiles({required List<String> paths, required String mimeType, String? subject}) => guard(() async {
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [for (final p in paths) XFile(p, mimeType: mimeType)],
-        subject: subject,
-      ),
-    );
-  }, onError: (e) => ExportFailure('The share sheet could not be opened.', cause: e));
+  Future<Result<void>> shareFiles({required List<String> paths, required String mimeType, String? subject}) async {
+    final result = await guard(() async {
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [for (final p in paths) XFile(p, mimeType: mimeType)],
+          subject: subject,
+        ),
+      );
+    }, onError: (e) => ExportFailure('The share sheet could not be opened.', cause: e));
+    if (result.failureOrNull == null) await _library?.keep(paths);
+    return result;
+  }
 
   @override
   Future<Result<void>> shareText({required String text, String? subject}) => guard(() async {
@@ -77,21 +85,32 @@ class SharePlusService implements ShareService {
 }
 
 class DeviceSaveService implements SaveService {
-  @override
-  Future<Result<bool>> saveToFiles({required String sourcePath, required String fileName, required String mimeType}) => guard(() async {
-    final bytes = await File(sourcePath).readAsBytes();
-    final saved = await FilePicker.saveFile(fileName: fileName, bytes: bytes, mimeType: mimeType);
-    return saved != null;
-  }, onError: (e) => StorageFailure('The file could not be saved.', cause: e));
+  DeviceSaveService({LibraryFiles? library}) : _library = library;
+  final LibraryFiles? _library;
 
   @override
-  Future<Result<int>> saveImagesToGallery(List<String> paths) => guard(() async {
-    if (!await Gal.hasAccess(toAlbum: true) && !await Gal.requestAccess(toAlbum: true)) {
-      throw const PermissionFailure('Allow photo access in Settings to save images to your gallery.');
-    }
-    for (final path in paths) {
-      await Gal.putImage(path, album: 'Doculoom');
-    }
-    return paths.length;
-  }, onError: (e) => StorageFailure('The images could not be saved to your gallery.', cause: e));
+  Future<Result<bool>> saveToFiles({required String sourcePath, required String fileName, required String mimeType}) async {
+    final result = await guard(() async {
+      final bytes = await File(sourcePath).readAsBytes();
+      final saved = await FilePicker.saveFile(fileName: fileName, bytes: bytes, mimeType: mimeType);
+      return saved != null;
+    }, onError: (e) => StorageFailure('The file could not be saved.', cause: e));
+    if (result.valueOrNull == true) await _library?.keep([sourcePath]);
+    return result;
+  }
+
+  @override
+  Future<Result<int>> saveImagesToGallery(List<String> paths) async {
+    final result = await guard(() async {
+      if (!await Gal.hasAccess(toAlbum: true) && !await Gal.requestAccess(toAlbum: true)) {
+        throw const PermissionFailure('Allow photo access in Settings to save images to your gallery.');
+      }
+      for (final path in paths) {
+        await Gal.putImage(path, album: 'Doculoom');
+      }
+      return paths.length;
+    }, onError: (e) => StorageFailure('The images could not be saved to your gallery.', cause: e));
+    if (result.failureOrNull == null) await _library?.keep(paths);
+    return result;
+  }
 }

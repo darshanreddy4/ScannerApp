@@ -54,6 +54,7 @@ import '../features/rewards/domain/coin_wallet.dart';
 import '../features/rewards/presentation/coins_cubit.dart';
 import 'app_config.dart';
 import '../features/documents/data/datasources/document_local_data_source.dart';
+import '../features/documents/data/library_files.dart';
 import '../features/documents/data/repositories/document_repository_impl.dart';
 import '../features/documents/domain/repositories/document_repository.dart';
 import '../features/documents/domain/usecases/document_usecases.dart';
@@ -177,6 +178,8 @@ void configureDependencies() {
     ..registerLazySingleton(() => DocumentRepositoryImpl(sl()))
     ..registerLazySingleton<DocumentRepository>(() => sl<DocumentRepositoryImpl>())
     ..registerLazySingleton<FolderRepository>(() => sl<DocumentRepositoryImpl>())
+    ..registerLazySingleton<LibraryFileRepository>(() => sl<DocumentRepositoryImpl>())
+    ..registerLazySingleton(() => LibraryFiles(documents: sl(), files: sl()))
     ..registerLazySingleton(() => ListDocuments(sl()))
     ..registerLazySingleton(() => GetDocument(sl()))
     ..registerLazySingleton(() => SaveDocument(sl()))
@@ -204,9 +207,9 @@ void configureDependencies() {
     ..registerLazySingleton(
       () => ReminderService(sl(), extras: (now, showNames) async => planHijriReminders(await const HijriReminderStore().load(), now, showNames: showNames)),
     )
-    ..registerLazySingleton<BackupService>(() => LocalBackupService(documents: sl(), folders: sl(), tempDir: getTemporaryDirectory))
-    ..registerLazySingleton<ShareService>(() => SharePlusService())
-    ..registerLazySingleton<SaveService>(() => DeviceSaveService())
+    ..registerLazySingleton<BackupService>(() => LocalBackupService(documents: sl(), folders: sl(), files: sl(), tempDir: getTemporaryDirectory))
+    ..registerLazySingleton<ShareService>(() => SharePlusService(library: sl()))
+    ..registerLazySingleton<SaveService>(() => DeviceSaveService(library: sl()))
     ..registerLazySingleton<AuthService>(() => LocalAuthService())
     ..registerLazySingleton(() => ExportDocument(sl()))
     ..registerLazySingleton(() => ShareFile(sl()))
@@ -235,6 +238,7 @@ void configureDependencies() {
         renameFolder: sl(),
         updateFolderMeta: sl(),
         deleteFolder: sl(),
+        library: sl(),
       ),
     )
     ..registerLazySingleton<CameraAccess>(() => const SystemCameraAccess())

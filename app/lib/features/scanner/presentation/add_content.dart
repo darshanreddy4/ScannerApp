@@ -4,8 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
-
+import '../../documents/presentation/library_picker.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
@@ -39,9 +38,9 @@ Future<void> startImport(BuildContext context, {String? folderId, bool append = 
   }
 
   try {
-    final files = await ImagePicker().pickMultiImage();
-    if (files.isEmpty || !context.mounted) return;
-    await importImagePaths(context, [for (final f in files) f.path], append: append);
+    final paths = await pickPhotoPaths(context);
+    if (paths.isEmpty || !context.mounted) return;
+    await importImagePaths(context, paths, append: append);
   } catch (_) {
     if (context.mounted) showFailure(context, const PermissionFailure('Photo library access is unavailable.'));
   }
@@ -78,8 +77,8 @@ Future<void> startImportFile(BuildContext context, ImportKind kind, {String? fol
 
   final String? path;
   try {
-    final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: kind.extensions);
-    path = picked.isEmpty ? null : picked.first.path;
+    final picked = await pickFilePaths(context, allowedExtensions: kind.extensions);
+    path = picked.isEmpty ? null : picked.first;
   } catch (_) {
     if (context.mounted) showFailure(context, const PermissionFailure('The file picker is unavailable.'));
     return;
@@ -126,9 +125,9 @@ Future<void> startCombineFiles(BuildContext context, {String? folderId}) async {
   final settings = context.read<SettingsCubit>().state;
   session.start(defaultFilter: settings.defaultFilter, folderId: folderId);
 
-  final List<PlatformFile> picked;
+  final List<String> picked;
   try {
-    picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['pdf', 'docx']);
+    picked = await pickFilePaths(context, allowedExtensions: const ['pdf', 'docx'], allowMultiple: true);
   } catch (_) {
     if (context.mounted) showFailure(context, const PermissionFailure('The file picker is unavailable.'));
     return;
@@ -141,9 +140,7 @@ Future<void> startCombineFiles(BuildContext context, {String? folderId}) async {
   }
 
   final ok = await runWithProgress(context, session, () async {
-    for (final f in picked) {
-      final path = f.path;
-      if (path == null) continue;
+    for (final path in picked) {
       final kind = path.toLowerCase().endsWith('.pdf') ? ImportKind.pdf : ImportKind.docx;
       if (!await session.importDocumentFile(kind, path)) return false;
     }

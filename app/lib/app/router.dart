@@ -1,6 +1,8 @@
 import 'package:go_router/go_router.dart';
 
 import '../features/documents/domain/entities/scanned_document.dart';
+import '../features/documents/domain/library_target.dart';
+import '../features/documents/presentation/text_file_page.dart';
 import '../features/documents/presentation/pages/document_detail_page.dart';
 import '../features/documents/presentation/pages/folder_page.dart';
 import '../features/documents/presentation/pages/home_page.dart';
@@ -13,6 +15,7 @@ import '../features/backup/presentation/backup_page.dart';
 import '../features/contacts/presentation/contact_page.dart';
 import '../features/text_edit/docx/docx_edit_page.dart';
 import '../features/text_edit/pdf/pdf_edit_page.dart';
+import '../features/office/slides/domain/slide_presets.dart';
 import '../features/office/slides/presentation/slides_page.dart';
 import '../features/photo_tools/presentation/compress_photo_page.dart';
 import '../features/id_card/presentation/id_card_page.dart';
@@ -180,7 +183,11 @@ final GoRouter appRouter = GoRouter(
         ),
         GoRoute(
           path: 'slides',
-          builder: (_, state) => SlidesPage(path: state.extra is String ? state.extra! as String : null),
+          builder: (_, state) => SlidesPage(
+            path: state.extra is String ? state.extra! as String : (state.extra is LibraryTarget ? (state.extra! as LibraryTarget).path : null),
+            libraryId: state.extra is LibraryTarget ? (state.extra! as LibraryTarget).id : null,
+            preset: state.extra is DeckPreset ? state.extra! as DeckPreset : null,
+          ),
         ),
         GoRoute(
           path: 'sheet',
@@ -201,11 +208,21 @@ final GoRouter appRouter = GoRouter(
         ),
         GoRoute(
           path: 'pdf-edit',
-          builder: (_, state) => PdfEditPage(path: state.extra! as String),
+          builder: (_, state) {
+            final extra = state.extra;
+            return extra is LibraryTarget ? PdfEditPage(path: extra.path, libraryId: extra.id) : PdfEditPage(path: extra! as String);
+          },
         ),
         GoRoute(
           path: 'docx-edit',
-          builder: (_, state) => DocxEditPage(path: state.extra! as String),
+          builder: (_, state) {
+            final extra = state.extra;
+            return extra is LibraryTarget ? DocxEditPage(path: extra.path, libraryId: extra.id) : DocxEditPage(path: extra! as String);
+          },
+        ),
+        GoRoute(
+          path: 'text-file',
+          builder: (_, state) => TextFilePage(path: (state.extra! as LibraryTarget).path),
         ),
         GoRoute(
           path: 'reader',

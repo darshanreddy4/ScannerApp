@@ -5,7 +5,7 @@ import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
+import '../../../documents/presentation/library_picker.dart';
 
 import '../../../../app/di.dart';
 import '../../../../app/router_observer.dart';
@@ -38,7 +38,6 @@ class _CameraView extends StatefulWidget {
 }
 
 class _CameraViewState extends State<_CameraView> with WidgetsBindingObserver, RouteAware {
-  final _picker = ImagePicker();
   CameraCubit get _camera => context.read<CameraCubit>();
   ScanSessionCubit get _session => context.read<ScanSessionCubit>();
 
@@ -132,9 +131,9 @@ class _CameraViewState extends State<_CameraView> with WidgetsBindingObserver, R
   Future<void> _pickFromGallery() async {
     final showCrop = context.read<SettingsCubit>().state.showCropAfterCapture;
     try {
-      final files = await _picker.pickMultiImage();
-      if (files.isEmpty || !mounted) return;
-      final ok = await _session.importMany([for (final f in files) f.path]);
+      final paths = await pickPhotoPaths(context);
+      if (paths.isEmpty || !mounted) return;
+      final ok = await _session.importMany(paths);
       if (!mounted) return;
       if (!ok) {
         if (_session.state.error != null) showFailure(context, _session.state.error!);

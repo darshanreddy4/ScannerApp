@@ -3,12 +3,19 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:doculoom/app/di.dart';
 import 'package:doculoom/core/theme/app_theme.dart';
+import 'package:doculoom/features/documents/data/datasources/document_local_data_source.dart';
+import 'package:doculoom/features/documents/data/library_files.dart';
+import 'package:doculoom/features/documents/data/repositories/document_repository_impl.dart';
 import 'package:doculoom/features/text_edit/docx/docx_document.dart';
 import 'package:doculoom/features/text_edit/docx/docx_edit_cubit.dart';
 import 'package:doculoom/features/text_edit/docx/docx_edit_page.dart';
 
 void main() {
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
   late Directory work;
   setUp(() => work = Directory.systemTemp.createTempSync('docx_edit_page'));
   tearDown(() => work.deleteSync(recursive: true));
@@ -88,9 +95,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('fmt-bold')));
     await tester.pumpAndSettle();
     expect(paragraph(cubit, 'Last paragraph').spans.every((s) => s.bold), isTrue);
+    await tester.ensureVisible(find.byKey(const ValueKey('align-center')));
     await tester.tap(find.byKey(const ValueKey('align-center')));
     await tester.pumpAndSettle();
     expect(paragraph(cubit, 'Last paragraph').align, 'center');
+    await tester.ensureVisible(find.byKey(const ValueKey('fmt-bold')));
     await tester.tap(find.byKey(const ValueKey('fmt-bold')));
     await tester.pumpAndSettle();
     expect(paragraph(cubit, 'Last paragraph').spans.any((s) => s.bold), isFalse, reason: 'tapping again turns it off');
@@ -181,6 +190,72 @@ void main() {
     expect(saved.existsSync(), isTrue);
     expect(DocxDocument.open(saved.readAsBytesSync()).paragraphText(cubit.document.paragraphCount - 1), 'Final words');
     expect(cubit.state.modified, isFalse);
+  });
+
+  testWidgets('Save in Doculoom keeps the file in the library, and saving again replaces it', (tester) async {
+    final root = Directory.systemTemp.createTempSync('docx_lib_root');
+    addTearDown(() => root.deleteSync(recursive: true));
+    final repo = DocumentRepositoryImpl(DocumentLocalDataSource(rootDir: root));
+    await sl.reset();
+    sl.registerSingleton(LibraryFiles(documents: repo, files: repo, rootDir: () async => root, tempDir: () async => work));
+    addTearDown(sl.reset);
+
+    final cubit = await open(tester);
+    Future<void> saveInLibrary() async {
+      await tester.tap(find.byKey(const ValueKey('docx-save')));
+      for (var i = 0; i < 20 && find.byKey(const ValueKey('save-library')).evaluate().isEmpty; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-library')));
+      for (var i = 0; i < 20 && find.text('Saved in Doculoom').evaluate().isEmpty; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+      }
+      expect(find.text('Saved in Doculoom'), findsOneWidget);
+      ScaffoldMessenger.of(tester.element(find.byType(Scaffold).first)).clearSnackBars();
+      await tester.pumpAndSettle();
+      expect(find.text('Saved in Doculoom'), findsNothing);
+    }
+
+    cubit.commitText(paragraph(cubit, 'Last paragraph').index, 'First version');
+    await tester.pump();
+    await saveInLibrary();
+    var docs = (await tester.runAsync(repo.listDocuments))!.valueOrNull!;
+    expect(docs, hasLength(1));
+    expect(docs.single.title, 'sample');
+    expect(docs.single.fileExtension, 'docx');
+    expect(DocxDocument.open(File(docs.single.filePath!).readAsBytesSync()).paragraphText(cubit.document.paragraphCount - 1), 'First version');
+
+    cubit.commitText(paragraph(cubit, 'First version').index, 'Second version');
+    await tester.pump();
+    await saveInLibrary();
+    docs = (await tester.runAsync(repo.listDocuments))!.valueOrNull!;
+    expect(docs, hasLength(1), reason: 'the same document gets a new version');
+    expect(DocxDocument.open(File(docs.single.filePath!).readAsBytesSync()).paragraphText(cubit.document.paragraphCount - 1), 'Second version');
+  });
+
+  testWidgets('the header and footer dialog sets the text and page numbers', (tester) async {
+    final cubit = await open(tester);
+    expect(cubit.headerFooter.header, isEmpty);
+    await tester.tap(find.byKey(const ValueKey('docx-header-footer')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('hf-header')), 'Science project');
+    await tester.enterText(find.byKey(const ValueKey('hf-footer')), 'Class 9B');
+    await tester.tap(find.byKey(const ValueKey('hf-numbers')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('hf-apply')));
+    await tester.pumpAndSettle();
+    final now = cubit.headerFooter;
+    expect((now.header, now.footer, now.pageNumbers), ('Science project', 'Class 9B', true));
+    expect(cubit.state.modified, isTrue);
+
+    await tester.tap(find.byKey(const ValueKey('docx-header-footer')));
+    await tester.pumpAndSettle();
+    expect(find.text('Science project'), findsOneWidget, reason: 'the dialog starts from what is there');
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('leaving with unsaved changes asks first', (tester) async {

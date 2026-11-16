@@ -67,7 +67,17 @@ abstract final class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surface,
         indicatorColor: AppColors.primarySoft,
-        labelTextStyle: WidgetStatePropertyAll(const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        indicatorShape: const StadiumBorder(),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(color: states.contains(WidgetState.selected) ? AppColors.primary : AppColors.inkMuted),
+        ),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontSize: 12,
+            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
+            color: states.contains(WidgetState.selected) ? AppColors.primary : AppColors.inkMuted,
+          ),
+        ),
       ),
       snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
       bottomSheetTheme: const BottomSheetThemeData(

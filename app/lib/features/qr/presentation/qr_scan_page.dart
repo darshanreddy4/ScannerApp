@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../app/di.dart';
@@ -24,7 +24,7 @@ typedef CodeCameraBuilder = Widget Function(BuildContext context, void Function(
 
 Widget defaultCameraBuilder(BuildContext context, void Function(List<DetectedCode>) onDetect) => _CameraScanView(onDetect: onDetect);
 
-Future<String?> _pickPicture() async => (await ImagePicker().pickImage(source: ImageSource.gallery))?.path;
+Future<String?> _pickPicture() async => (await pickPhotoPaths(null, multiple: false)).firstOrNull;
 
 /// Reads QR codes and barcodes with the camera or from a picture. Nothing is sent anywhere.
 class QrScanPage extends StatelessWidget {

@@ -152,6 +152,19 @@ void main() {
       expect(find.byKey(const ValueKey('coins-passes')), findsOneWidget);
     });
 
+    testWidgets('the daily bonus waits until the person taps Claim, and can be claimed once', (tester) async {
+      final h = await show(tester, wallet: MemoryWallet(balance: 12, dailyClaim: 10));
+      expect(find.text('Daily bonus'), findsOneWidget);
+      expect(h.wallet.balance, 12, reason: 'opening the card gives nothing');
+
+      await tester.tap(find.byKey(const ValueKey('coins-claim')));
+      await tester.pumpAndSettle();
+      expect(h.wallet.balance, 22);
+      expect(find.text('22 coins'), findsOneWidget);
+      expect(find.text('Claimed'), findsOneWidget);
+      expect(tester.widget<FilledButton>(find.byKey(const ValueKey('coins-claim'))).onPressed, isNull);
+    });
+
     testWidgets('watching a video adds coins and says so', (tester) async {
       final h = await show(tester, ads: ScriptedAds([RewardResult.earned]));
       await tester.tap(find.text('+10'));
@@ -208,13 +221,13 @@ void main() {
 
     testWidgets('the button stays on however many videos were watched', (tester) async {
       await show(tester, wallet: MemoryWallet(balance: 3, adsToday: 200));
-      expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNotNull);
+      expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, '+10')).onPressed, isNotNull);
     });
 
     testWidgets('the button is off for the rest of the day after a set limit', (tester) async {
       await show(tester, wallet: MemoryWallet(balance: 3, adsToday: 10), dailyAdCap: 10);
       expect(find.textContaining('all of today'), findsOneWidget);
-      final button = tester.widget<FilledButton>(find.byType(FilledButton));
+      final button = tester.widget<FilledButton>(find.widgetWithText(FilledButton, '+10'));
       expect(button.onPressed, isNull);
     });
   });

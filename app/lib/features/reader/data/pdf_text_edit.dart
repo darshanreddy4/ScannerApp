@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:image/image.dart' as img;
+
 import '../../pdf_tools/data/security/pdf_model.dart';
 import '../../pdf_tools/data/security/pdf_rewriter.dart';
 import 'pdf_page_reader.dart';
@@ -224,10 +226,48 @@ class AddedText {
 }
 
 class PdfEditPlan {
-  const PdfEditPlan({this.edits = const [], this.additions = const []});
+  const PdfEditPlan({this.edits = const [], this.additions = const [], this.marks = const [], this.pictures = const []});
   final List<LineEdit> edits;
   final List<AddedText> additions;
-  bool get isEmpty => edits.isEmpty && additions.isEmpty;
+  final List<AddedMark> marks;
+  final List<AddedPicture> pictures;
+  bool get isEmpty => edits.isEmpty && additions.isEmpty && marks.isEmpty && pictures.isEmpty;
+}
+
+/// The kinds of drawing that can be added to a page.
+const markKinds = ['highlight', 'cover', 'box', 'line'];
+
+/// A drawing on a page: a highlight (colour shows through the text), a cover-up (solid colour that hides what is under it), a box outline or a line.
+/// Corners are shares of the shown page from the top left; a line runs from ([x0], [y0]) to ([x1], [y1]).
+class AddedMark {
+  const AddedMark({required this.page, required this.kind, required this.x0, required this.y0, required this.x1, required this.y1, this.rgb = 0xFFEB3B, this.widthPt = 2});
+  final int page;
+  final String kind;
+  final double x0;
+  final double y0;
+  final double x1;
+  final double y1;
+  final int rgb;
+  final double widthPt;
+
+  AddedMark moved(double dx, double dy) => AddedMark(page: page, kind: kind, x0: x0 + dx, y0: y0 + dy, x1: x1 + dx, y1: y1 + dy, rgb: rgb, widthPt: widthPt);
+}
+
+/// A picture placed on a page. [x] and [y] are the top left corner and [w] the width, all as shares of the shown page; the height follows the picture's shape.
+class AddedPicture {
+  const AddedPicture({required this.page, required this.x, required this.y, required this.w, required this.bytes, required this.aspect});
+  final int page;
+  final double x;
+  final double y;
+  final double w;
+
+  /// The file as picked (JPG or PNG).
+  final Uint8List bytes;
+
+  /// Width divided by height of the picture.
+  final double aspect;
+
+  AddedPicture copyWith({double? x, double? y, double? w}) => AddedPicture(page: page, x: x ?? this.x, y: y ?? this.y, w: w ?? this.w, bytes: bytes, aspect: aspect);
 }
 
 const _cp1252Specials = {
@@ -292,7 +332,7 @@ Uint8List applyPdfEdits(Uint8List bytes, PdfEditPlan plan) {
 
   PdfStream stream(Uint8List data) => PdfStream(PdfDict({'Filter': const PdfName('FlateDecode')}), Uint8List.fromList(zlib.encode(data)));
 
-  final editPages = {for (final e in plan.edits) e.page, for (final a in plan.additions) a.page};
+  final editPages = {for (final e in plan.edits) e.page, for (final a in plan.additions) a.page, for (final m in plan.marks) m.page, for (final pic in plan.pictures) pic.page};
   for (final pageNo in editPages) {
     if (pageNo < 0 || pageNo >= pages.length) continue;
     final info = pages[pageNo];
@@ -303,6 +343,43 @@ Uint8List applyPdfEdits(Uint8List bytes, PdfEditPlan plan) {
 
     final remove = <int>{};
     final drawn = StringBuffer();
+    final xobjects = <String, PdfRef>{};
+    var usesMultiply = false;
+
+    // Drawings and pictures go first, so retyped and added text is always on top.
+    String rgbOf(int rgb) => '${_n(((rgb >> 16) & 255) / 255)} ${_n(((rgb >> 8) & 255) / 255)} ${_n((rgb & 255) / 255)}';
+    String point(double u, double v) {
+      final (ux, uy) = read.geometry.toPageUnits(u.clamp(0.0, 1.0), v.clamp(0.0, 1.0));
+      return '${_n(ux)} ${_n(uy)}';
+    }
+
+    for (final m in plan.marks.where((m) => m.page == pageNo)) {
+      final l = math.min(m.x0, m.x1), r = math.max(m.x0, m.x1), t = math.min(m.y0, m.y1), b = math.max(m.y0, m.y1);
+      final path = '${point(l, t)} m ${point(r, t)} l ${point(r, b)} l ${point(l, b)} l h';
+      switch (m.kind) {
+        case 'highlight':
+          usesMultiply = true;
+          drawn.write('q /SVMul gs ${rgbOf(m.rgb)} rg $path f Q\n');
+        case 'cover':
+          drawn.write('q ${rgbOf(m.rgb)} rg $path f Q\n');
+        case 'box':
+          drawn.write('q ${rgbOf(m.rgb)} RG ${_n(m.widthPt)} w $path S Q\n');
+        case 'line':
+          drawn.write('q ${rgbOf(m.rgb)} RG ${_n(m.widthPt)} w 1 J ${point(m.x0, m.y0)} m ${point(m.x1, m.y1)} l S Q\n');
+      }
+    }
+    for (final pic in plan.pictures.where((p) => p.page == pageNo)) {
+      final encoded = _encodePicture(pic.bytes);
+      if (encoded == null) throw const PdfEditException('A picture could not be read. Use a JPG or PNG picture.');
+      if (encoded.mask != null) encoded.main.dict['SMask'] = PdfRef(addObject(encoded.mask!), 0);
+      final name = 'SVI${xobjects.length + 1}';
+      xobjects[name] = PdfRef(addObject(encoded.main), 0);
+      final h = pic.w * read.geometry.aspect / math.max(0.01, pic.aspect);
+      final (blx, bly) = read.geometry.toPageUnits(pic.x, pic.y + h);
+      final (brx, bry) = read.geometry.toPageUnits(pic.x + pic.w, pic.y + h);
+      final (tlx, tly) = read.geometry.toPageUnits(pic.x, pic.y);
+      drawn.write('q ${_n(brx - blx)} ${_n(bry - bly)} ${_n(tlx - blx)} ${_n(tly - bly)} ${_n(blx)} ${_n(bly)} cm /$name Do Q\n');
+    }
     for (final e in plan.edits.where((e) => e.page == pageNo)) {
       if (e.line < 0 || e.line >= built.length) continue;
       final b = built[e.line];
@@ -349,8 +426,18 @@ Uint8List applyPdfEdits(Uint8List bytes, PdfEditPlan plan) {
     if (drawn.isNotEmpty) contents = [...contents, PdfRef(addObject(stream(Uint8List.fromList(latin1.encode(drawn.toString())))), 0)];
     info.dict['Contents'] = PdfArray(contents);
 
-    if (fonts.isNotEmpty) {
+    if (fonts.isNotEmpty || xobjects.isNotEmpty || usesMultiply) {
       final resources = PdfDict(Map.of(info.resources?.entries ?? const <String, PdfObj>{}));
+      if (xobjects.isNotEmpty) {
+        final xo = PdfDict(Map.of(file.dict(resources['XObject'])?.entries ?? const <String, PdfObj>{}));
+        xobjects.forEach((name, ref) => xo[name] = ref);
+        resources['XObject'] = xo;
+      }
+      if (usesMultiply) {
+        final gs = PdfDict(Map.of(file.dict(resources['ExtGState'])?.entries ?? const <String, PdfObj>{}));
+        gs['SVMul'] = PdfDict({'Type': const PdfName('ExtGState'), 'BM': const PdfName('Multiply')});
+        resources['ExtGState'] = gs;
+      }
       final fontDict = PdfDict(Map.of(file.dict(resources['Font'])?.entries ?? const <String, PdfObj>{}));
       fonts.forEach((base, name) {
         fontDict[name] = PdfRef(
@@ -370,6 +457,59 @@ Uint8List applyPdfEdits(Uint8List bytes, PdfEditPlan plan) {
     }
   }
   return writePdfDocument(doc);
+}
+
+/// A picture as PDF image parts: JPEG data for opaque pictures, plain colours plus a transparency mask for pictures with see-through parts.
+({PdfStream main, PdfStream? mask})? _encodePicture(Uint8List bytes) {
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) return null;
+  var image = img.bakeOrientation(decoded);
+  const longest = 1600;
+  if (image.width > longest || image.height > longest) {
+    image = image.width >= image.height ? img.copyResize(image, width: longest) : img.copyResize(image, height: longest);
+  }
+  final rgba = image.convert(format: img.Format.uint8, numChannels: 4).getBytes(order: img.ChannelOrder.rgba);
+  var transparent = false;
+  for (var i = 3; i < rgba.length; i += 4) {
+    if (rgba[i] != 255) {
+      transparent = true;
+      break;
+    }
+  }
+  PdfDict base(String filter) => PdfDict({
+    'Type': const PdfName('XObject'),
+    'Subtype': const PdfName('Image'),
+    'Width': PdfInt(image.width),
+    'Height': PdfInt(image.height),
+    'ColorSpace': const PdfName('DeviceRGB'),
+    'BitsPerComponent': const PdfInt(8),
+    'Filter': PdfName(filter),
+  });
+  if (!transparent) {
+    final jpg = img.encodeJpg(image.convert(format: img.Format.uint8, numChannels: 3), quality: 88);
+    return (main: PdfStream(base('DCTDecode'), Uint8List.fromList(jpg)), mask: null);
+  }
+  final rgb = Uint8List(image.width * image.height * 3);
+  final alpha = Uint8List(image.width * image.height);
+  for (var i = 0, p = 0, a = 0; i < rgba.length; i += 4) {
+    rgb[p++] = rgba[i];
+    rgb[p++] = rgba[i + 1];
+    rgb[p++] = rgba[i + 2];
+    alpha[a++] = rgba[i + 3];
+  }
+  final mask = PdfStream(
+    PdfDict({
+      'Type': const PdfName('XObject'),
+      'Subtype': const PdfName('Image'),
+      'Width': PdfInt(image.width),
+      'Height': PdfInt(image.height),
+      'ColorSpace': const PdfName('DeviceGray'),
+      'BitsPerComponent': const PdfInt(8),
+      'Filter': const PdfName('FlateDecode'),
+    }),
+    Uint8List.fromList(zlib.encode(alpha)),
+  );
+  return (main: PdfStream(base('FlateDecode'), Uint8List.fromList(zlib.encode(rgb))), mask: mask);
 }
 
 /// The page's instructions with the given letters (indices into the page's glyph list) replaced by equal spacing, so other text stays where it was.

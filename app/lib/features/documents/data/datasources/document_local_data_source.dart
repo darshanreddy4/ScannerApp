@@ -15,7 +15,7 @@ class DocumentLocalDataSource {
   DocumentLocalDataSource({Database? database, Directory? rootDir}) : _db = database, _root = rootDir;
 
   static const _dbName = 'doculoom.db';
-  static const _version = 8;
+  static const _version = 9;
 
   Database? _db;
   Directory? _root;
@@ -53,7 +53,8 @@ class DocumentLocalDataSource {
             pinned INTEGER NOT NULL DEFAULT 0,
             locked INTEGER NOT NULL DEFAULT 0,
             tags TEXT,
-            expires_at INTEGER
+            expires_at INTEGER,
+            file_path TEXT
           )''');
         await db.execute('''
           CREATE TABLE pages(
@@ -121,6 +122,10 @@ class DocumentLocalDataSource {
         if (from < 8) {
           final have = {for (final c in await db.rawQuery('PRAGMA table_info(documents)')) c['name']};
           if (!have.contains('expires_at')) await db.execute('ALTER TABLE documents ADD COLUMN expires_at INTEGER');
+        }
+        if (from < 9) {
+          final have = {for (final c in await db.rawQuery('PRAGMA table_info(documents)')) c['name']};
+          if (!have.contains('file_path')) await db.execute('ALTER TABLE documents ADD COLUMN file_path TEXT');
         }
       },
     );
@@ -193,7 +198,7 @@ class DocumentLocalDataSource {
     for (final row in pages) {
       byDoc.putIfAbsent(row['document_id'] as String, () => []).add(_pageFrom(row, root));
     }
-    return [for (final d in docs) _docFrom(d, byDoc[d['id']] ?? const [])];
+    return [for (final d in docs) _docFrom(d, byDoc[d['id']] ?? const [], root)];
   }
 
   Future<ScannedDocument?> get(String id) async {
@@ -202,7 +207,7 @@ class DocumentLocalDataSource {
     if (docs.isEmpty) return null;
     final pages = await db.query('pages', where: 'document_id = ?', whereArgs: [id], orderBy: 'position');
     final root = (await _rootDir()).path;
-    return _docFrom(docs.first, [for (final r in pages) _pageFrom(r, root)]);
+    return _docFrom(docs.first, [for (final r in pages) _pageFrom(r, root)], root);
   }
 
   /// Copies page files into [relDir] (relative to the app folder) and returns the DB rows for them.
@@ -320,6 +325,61 @@ class DocumentLocalDataSource {
     return (await get(id))!;
   }
 
+  /// Keeps a copy of [sourcePath] as a library entry with no pages (a Word, Excel, PowerPoint, PDF, text or image file).
+  Future<ScannedDocument> insertFile(String title, String sourcePath, String? folderId) async {
+    final db = await _database();
+    final root = await _rootDir();
+    final docId = _uuid.v4();
+    final dir = Directory(p.join(root.path, 'scans', docId));
+    final now = DateTime.now();
+    try {
+      final rel = await _storeFile(docId, sourcePath);
+      await db.insert('documents', {
+        'id': docId,
+        'title': title,
+        'created_at': now.millisecondsSinceEpoch,
+        'updated_at': now.millisecondsSinceEpoch,
+        'folder_id': folderId,
+        'file_path': rel,
+      });
+    } catch (_) {
+      if (await dir.exists()) await dir.delete(recursive: true);
+      rethrow;
+    }
+    return (await get(docId))!;
+  }
+
+  /// Puts a new version of the file in place. The old copy goes only after the database is updated.
+  Future<ScannedDocument> replaceFile(String id, String sourcePath, {String? title}) async {
+    final db = await _database();
+    final root = await _rootDir();
+    final old = (await db.query('documents', columns: ['file_path'], where: 'id = ?', whereArgs: [id])).firstOrNull?['file_path'] as String?;
+    final rel = await _storeFile(id, sourcePath);
+    await db.update('documents', {
+      'file_path': rel,
+      'updated_at': DateTime.now().millisecondsSinceEpoch,
+      if (title != null) 'title': title,
+    }, where: 'id = ?', whereArgs: [id]);
+    if (old != null && old != rel) {
+      try {
+        await Directory(p.dirname(p.join(root.path, old))).delete(recursive: true);
+      } catch (_) {
+        // A leftover old version is removed with the document.
+      }
+    }
+    return (await get(id))!;
+  }
+
+  /// Copies [sourcePath] into its own versioned folder and returns the path relative to the app folder.
+  Future<String> _storeFile(String docId, String sourcePath) async {
+    final root = await _rootDir();
+    final rel = p.join('scans', docId, 'f${DateTime.now().microsecondsSinceEpoch}', p.basename(sourcePath));
+    final target = File(p.join(root.path, rel));
+    await target.parent.create(recursive: true);
+    await File(sourcePath).copy(target.path);
+    return rel;
+  }
+
   Future<void> rename(String id, String title) async {
     final db = await _database();
     await db.update('documents', {'title': title, 'updated_at': DateTime.now().millisecondsSinceEpoch}, where: 'id = ?', whereArgs: [id]);
@@ -431,7 +491,7 @@ class DocumentLocalDataSource {
     color: r['color'] as int?,
   );
 
-  ScannedDocument _docFrom(Map<String, Object?> row, List<DocumentPage> pages) => ScannedDocument(
+  ScannedDocument _docFrom(Map<String, Object?> row, List<DocumentPage> pages, String root) => ScannedDocument(
     id: row['id'] as String,
     title: row['title'] as String,
     createdAt: DateTime.fromMillisecondsSinceEpoch(row['created_at'] as int),
@@ -443,6 +503,7 @@ class DocumentLocalDataSource {
     locked: (row['locked'] as int? ?? 0) == 1,
     tags: _decodeTags(row['tags'] as String?),
     expiresAt: (row['expires_at'] as int?) == null ? null : DateTime.fromMillisecondsSinceEpoch(row['expires_at'] as int),
+    filePath: (row['file_path'] as String?) == null ? null : p.join(root, row['file_path'] as String),
   );
 
   static List<String> _decodeTags(String? json) => json == null || json.isEmpty ? const [] : [for (final t in jsonDecode(json) as List) t as String];

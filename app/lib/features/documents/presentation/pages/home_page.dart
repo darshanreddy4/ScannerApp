@@ -16,6 +16,7 @@ import '../../domain/entities/scanned_document.dart';
 import '../bloc/documents_cubit.dart';
 import '../widgets/folder_editor.dart';
 import '../widgets/folder_style.dart';
+import '../widgets/home_top_bar.dart';
 import '../widgets/document_actions.dart' show confirmOwner;
 import '../widgets/document_widgets.dart';
 import '../widgets/expiring_banner.dart';
@@ -81,11 +82,8 @@ class _HomePageState extends State<HomePage> {
         },
         child: Scaffold(
           appBar: _tab == 0
-              ? const DocumentsAppBar(title: 'Documents')
-              : AppBar(
-                  title: Text(_tab == 1 ? 'Tools' : 'Settings'),
-                  bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider()),
-                ),
+              ? const DocumentsAppBar(title: 'Documents', home: true)
+              : HomeTopBar(title: _tab == 1 ? 'Tools' : 'Settings'),
           body: wide
               ? Row(
                   children: [
@@ -375,10 +373,16 @@ class _SectionHeader extends StatelessWidget {
       height: 44,
       child: Row(
         children: [
+          Container(
+            width: 4,
+            height: 16,
+            decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.inkMuted, letterSpacing: 0.2),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink, letterSpacing: 0.2),
             ),
           ),
           ?trailing,

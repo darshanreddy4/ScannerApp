@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../../core/error/failures.dart';
+import '../data/deck_builder.dart';
 import '../data/deck_editor.dart';
 import '../data/pptx_package.dart';
 import '../data/pptx_template.dart';
@@ -14,6 +15,7 @@ import '../data/pptx_writer.dart';
 import '../data/slide_export.dart';
 import '../data/slide_painter.dart';
 import '../domain/slide_model.dart';
+import '../domain/slide_presets.dart';
 
 enum SlideExportFormat {
   pptx('PowerPoint presentation (.pptx)', 'pptx', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'),
@@ -107,6 +109,15 @@ class SlidesCubit extends Cubit<SlidesState> {
     hasDeck = true;
     name = 'New presentation';
     emit(state.copyWith(loading: false));
+  }
+
+  /// Starts from a ready-made presentation: its colours and one slide for each suggested heading.
+  void startPreset(DeckPreset preset) {
+    deck = buildPresetDeck(preset);
+    editor = DeckEditor(deck)..modified = true;
+    hasDeck = true;
+    name = preset.title;
+    emit(state.copyWith(loading: false, modified: true));
   }
 
   Future<void> open(String path) async {
@@ -329,11 +340,29 @@ class SlidesCubit extends Cubit<SlidesState> {
 
   void setBackground(int? color) => _run(() => editor.setBackground(slide, color));
 
+  /// Crops the selected picture; [crop] is left, top, right, bottom as fractions of the image.
+  void cropSelected(List<double> crop, {String? geometry}) {
+    final id = state.selectedId;
+    if (id == null) return;
+    _run(() => editor.setPictureCrop(slide, id, crop, geometry: geometry));
+  }
+
+  /// The speaker notes of [s], one line per paragraph.
+  String notesOf(SlidePart s) => editor.notesOf(s);
+
+  void setNotes(String text) => _run(() => editor.setNotes(slide, text));
+
+  /// How [s] appears in a slide show: none, fade, push, wipe, cover or other.
+  String transitionOf(SlidePart s) => editor.transitionOf(s);
+
+  /// Sets how the current slide, or every slide when [all] is true, appears in a slide show.
+  void setTransition(String kind, {bool all = false}) => _run(() => editor.setTransition(slide, kind, all: all));
+
   // ------------------------------------------------------------------- slides
 
-  void addSlide({bool blank = false}) {
+  void addSlide({bool blank = false, String? layout}) {
     _run(() {
-      final s = editor.addSlide(blank: blank, after: state.slideIndex);
+      final s = editor.addSlide(blank: blank, layout: layout, after: state.slideIndex);
       emit(state.copyWith(slideIndex: deck.slides.indexOf(s), selectedId: null));
     }, keepSelection: false);
   }

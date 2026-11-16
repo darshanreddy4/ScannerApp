@@ -5,10 +5,14 @@ optionally add store/screenshots-raw/captions.txt with one caption per line, the
 
     python3 store/make_screenshots.py            # branded, with a caption on top
     python3 store/make_screenshots.py --plain    # screenshot only, centred on the brand gradient
+    python3 store/make_screenshots.py --lang es  # captions from store/captions.json, written to store/screenshots/es/
 
-The results are written to store/screenshots/.
+The results are written to store/screenshots/. Pillow here has no complex-script shaping, so only
+languages without it (Latin, Cyrillic, Chinese, Japanese) can be made; Hindi, Marathi, Kannada, Tamil, Telugu, Malayalam,
+Arabic and Urdu would come out wrong.
 """
 import glob
+import json
 import os
 import sys
 
@@ -26,12 +30,19 @@ DEFAULT_CAPTIONS = [
     'Passport photos, ID copies, watermarks',
     'Invoices for India, the US and Saudi Arabia',
     'Private by design. No account needed',
-    'Available in 15 languages',
+    'Available in 17 languages',
 ]
 
+FONTS = {
+    'ru': ('/System/Library/Fonts/Supplemental/Arial Bold.ttf', 0),
+    'zh': ('/System/Library/Fonts/Hiragino Sans GB.ttc', 1),
+    'ja': ('/System/Library/Fonts/Supplemental/Arial Unicode.ttf', 0),
+}
 
-def font(size):
-    return ImageFont.truetype('/System/Library/Fonts/HelveticaNeue.ttc', size, index=1)
+
+def font(size, lang=None):
+    path, index = FONTS.get(lang, ('/System/Library/Fonts/HelveticaNeue.ttc', 1))
+    return ImageFont.truetype(path, size, index=index)
 
 
 def gradient():
@@ -45,6 +56,16 @@ def gradient():
 
 
 def wrap(draw, text, f, max_w):
+    if ' ' not in text:
+        lines, line = [], ''
+        for ch in text:
+            if draw.textlength(line + ch, font=f) <= max_w:
+                line += ch
+            else:
+                lines.append(line)
+                line = ch
+        lines.append(line)
+        return lines
     lines, line = [], ''
     for word in text.split():
         trial = (line + ' ' + word).strip()
@@ -57,13 +78,13 @@ def wrap(draw, text, f, max_w):
     return lines
 
 
-def make(src, caption, plain):
+def make(src, caption, plain, lang=None):
     shot = ImageOps.exif_transpose(Image.open(src)).convert('RGB')
     canvas = gradient().convert('RGBA')
     d = ImageDraw.Draw(canvas)
     top = 90
     if not plain and caption:
-        f = font(66)
+        f = font(66, lang)
         lines = wrap(d, caption, f, W - 160)
         y = 100
         for line in lines:
@@ -98,6 +119,7 @@ def make(src, caption, plain):
 
 def main():
     plain = '--plain' in sys.argv
+    lang = sys.argv[sys.argv.index('--lang') + 1] if '--lang' in sys.argv else None
     files = sorted(f for f in glob.glob(os.path.join(RAW, '*')) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')))
     if not files:
         sys.exit('Put your screenshots in ' + RAW)
@@ -105,13 +127,18 @@ def main():
     cap_file = os.path.join(RAW, 'captions.txt')
     if os.path.exists(cap_file):
         captions = [c.strip() for c in open(cap_file, encoding='utf8').read().splitlines()]
-    os.makedirs(OUT, exist_ok=True)
-    for old in glob.glob(os.path.join(OUT, '*.png')):
+    out_dir = OUT
+    if lang:
+        with open(os.path.join(HERE, 'captions.json'), encoding='utf8') as fh:
+            captions = json.load(fh)[lang]
+        out_dir = os.path.join(OUT, lang)
+    os.makedirs(out_dir, exist_ok=True)
+    for old in glob.glob(os.path.join(out_dir, '*.png')):
         os.remove(old)
     for i, f in enumerate(files[:8]):
         caption = captions[i] if i < len(captions) else ''
-        out = os.path.join(OUT, '%02d.png' % (i + 1))
-        make(f, caption, plain).save(out, optimize=True)
+        out = os.path.join(out_dir, '%02d.png' % (i + 1))
+        make(f, caption, plain, lang).save(out, optimize=True)
         print(out, os.path.getsize(out) // 1024, 'KB')
     if len(files) > 8:
         print('Only the first 8 are used: Google Play allows 2 to 8 phone screenshots.')

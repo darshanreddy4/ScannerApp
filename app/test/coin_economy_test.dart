@@ -70,13 +70,13 @@ void main() {
       expect(CoinFeature.editSavedDocument.hasFreeDailyUse, isFalse);
     });
 
-    test('the passes ask for 5, 12, 20 and 23 videos for 30 minutes, 2, 6 and 24 hours', () {
-      expect(passTiers.map((t) => (t.minutes, t.videos)), [(30, 5), (120, 12), (360, 20), (1440, 23)]);
+    test('the passes ask for 5, 12, 18 and 23 videos for 30 minutes, 2, 6 and 24 hours', () {
+      expect(passTiers.map((t) => (t.minutes, t.videos)), [(30, 5), (120, 12), (360, 18), (1440, 23)]);
       expect(passTiers.map((t) => t.label), ['30 minutes', '2 hours', '6 hours', '24 hours']);
     });
 
-    test('a person gets 3 free coins a day and 10 for a video', () {
-      expect((CoinRules.dailyCoins, CoinRules.rewardPerAd), (3, 10));
+    test('a person gets 20 free coins a day and 10 for a video', () {
+      expect((CoinRules.dailyCoins, CoinRules.rewardPerAd), (20, 10));
     });
 
     test('the filters that come with every scan are free', () {
@@ -221,8 +221,12 @@ void main() {
 
     test('the daily coins are added to the balance', () async {
       final c = coinsCubit(wallet: MemoryWallet(dailyClaim: 3));
+      await c.load();
+      expect(c.state.balance, 0, reason: 'nothing is given until the person claims');
+      expect(c.state.dailyClaimed, isFalse);
       expect(await c.claimDaily(), 3);
       expect(c.state.balance, 3);
+      expect(c.state.dailyClaimed, isTrue);
       expect(await c.claimDaily(), 0);
     });
   });

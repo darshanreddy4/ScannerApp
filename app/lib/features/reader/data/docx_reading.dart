@@ -8,12 +8,16 @@ import 'package:uuid/uuid.dart';
 import '../../importer/data/docx_parser.dart';
 import '../../importer/data/text_page_renderer.dart';
 import '../domain/document_search.dart';
+import 'docx_pages.dart';
 import 'pdf_text_extractor.dart';
 
 /// One page of a Word file as the reader shows it.
 class DocxReadPage {
-  const DocxReadPage({required this.imagePath, required this.isText});
+  const DocxReadPage({required this.imagePath, required this.isText, this.aspect = textAspect});
   final String imagePath;
+
+  /// Width divided by height, for pages drawn from the document (their size follows the file).
+  final double aspect;
 
   /// Pages made from the document's text (searchable) rather than a picture inside it.
   final bool isText;
@@ -30,18 +34,27 @@ class _TextBlock {
 
 /// A Word file turned into pages for reading, with the layout of its text kept for searching.
 class DocxReading {
-  DocxReading._(this.pages, this._blocks);
+  DocxReading._(this.pages, this._blocks) : _drawn = null;
+
+  /// A document drawn page by page the way it is designed.
+  DocxReading._drawn(DocxRendered drawn)
+    : pages = [for (final pg in drawn.pages) DocxReadPage(imagePath: pg.path, isText: true, aspect: pg.aspect)],
+      _blocks = const [],
+      _drawn = drawn;
 
   final List<DocxReadPage> pages;
   final List<_TextBlock> _blocks;
+  final DocxRendered? _drawn;
 
-  bool get hasText => _blocks.any((b) => b.text.trim().isNotEmpty);
+  bool get hasText => _drawn?.hasText ?? _blocks.any((b) => b.text.trim().isNotEmpty);
 
   /// All the text of the document in reading order, for reading aloud.
-  String get plainText => _blocks.map((b) => b.text).where((t) => t.trim().isNotEmpty).join('\n\n');
+  String get plainText => _drawn?.plainText ?? _blocks.map((b) => b.text).where((t) => t.trim().isNotEmpty).join('\n\n');
 
   /// Every place [query] occurs, in reading order.
   List<SearchHit> search(String query, {int limit = 2000}) {
+    final drawn = _drawn;
+    if (drawn != null) return drawn.search(query, limit: limit);
     final pattern = searchPattern(query);
     if (pattern == null) return const [];
     final hits = <SearchHit>[];
@@ -94,6 +107,7 @@ class DocxReading {
   }
 
   void dispose() {
+    _drawn?.dispose();
     for (final b in _blocks) {
       b.layout.painter.dispose();
     }
@@ -104,6 +118,8 @@ class DocxReading {
 Future<DocxReading> loadDocxReading({required String path, required Directory workDir}) async {
   await workDir.create(recursive: true);
   final prefix = const Uuid().v4();
+  final drawn = await renderDocxPages(path: path, outDir: workDir.path, prefix: prefix);
+  if (drawn != null) return DocxReading._drawn(drawn);
   final blocks = await Isolate.run(() => parseDocx(path: path, outDir: workDir.path, prefix: prefix));
   final pages = <DocxReadPage>[];
   final textBlocks = <_TextBlock>[];

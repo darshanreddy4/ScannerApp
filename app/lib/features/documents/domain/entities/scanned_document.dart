@@ -69,6 +69,7 @@ class ScannedDocument extends Equatable {
     this.locked = false,
     this.tags = const [],
     this.expiresAt,
+    this.filePath,
   });
 
   final String id;
@@ -87,11 +88,52 @@ class ScannedDocument extends Equatable {
   /// When the document stops being valid (a passport, a policy); null when it does not expire.
   final DateTime? expiresAt;
 
+  /// Absolute path of the file itself (Word, Excel, PowerPoint, PDF, text or image made or saved in the app); null for a scan.
+  final String? filePath;
+
+  bool get isFile => filePath != null;
+
+  /// Lower-case extension without the dot; empty for a scan.
+  String get fileExtension {
+    final path = filePath;
+    if (path == null) return '';
+    final dot = path.lastIndexOf('.');
+    return dot <= path.lastIndexOf('/') ? '' : path.substring(dot + 1).toLowerCase();
+  }
+
+  LibraryFileKind get fileKind => LibraryFileKind.of(fileExtension);
+
   int get pageCount => pages.length;
   DocumentPage? get cover => pages.isEmpty ? null : pages.first;
 
   @override
-  List<Object?> get props => [id, title, createdAt, updatedAt, pages, folderId, favorite, pinned, locked, tags, expiresAt];
+  List<Object?> get props => [id, title, createdAt, updatedAt, pages, folderId, favorite, pinned, locked, tags, expiresAt, filePath];
+}
+
+/// What a file in the library is, which decides its icon and the tool that opens it.
+enum LibraryFileKind {
+  pdf('PDF'),
+  word('Word'),
+  excel('Excel'),
+  powerpoint('PowerPoint'),
+  text('Text'),
+  image('Image'),
+  other('File');
+
+  const LibraryFileKind(this.label);
+  final String label;
+
+  static const imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'heic'];
+
+  static LibraryFileKind of(String extension) => switch (extension.toLowerCase()) {
+    'pdf' => pdf,
+    'docx' => word,
+    'xlsx' || 'csv' || 'tsv' => excel,
+    'pptx' => powerpoint,
+    'txt' || 'md' => text,
+    'jpg' || 'jpeg' || 'png' || 'webp' || 'heic' => image,
+    _ => other,
+  };
 }
 
 /// How a folder looks: an icon from the app's set (or [textOnly] for just its name) and an accent colour.

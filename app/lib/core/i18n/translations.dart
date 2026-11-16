@@ -1,4 +1,10 @@
 import 'lang/ar.dart';
+import 'lang/library.dart';
+import 'lang/office2.dart';
+import 'lang/office3.dart';
+import 'lang/office4.dart';
+import 'lang/office5.dart';
+import 'lang/office6.dart';
 import 'lang/cvdesigns.dart';
 import 'lang/sharepdf.dart';
 import 'lang/coinsv2.dart';
@@ -14,21 +20,29 @@ import 'lang/fr.dart';
 import 'lang/hi.dart';
 import 'lang/it.dart';
 import 'lang/ja.dart';
+import 'lang/ja_tools.dart';
 import 'lang/kn.dart';
+import 'lang/kn_tools.dart';
+import 'lang/ml.dart';
 import 'lang/mr.dart';
+import 'lang/mr_tools.dart';
 import 'lang/nl.dart';
 import 'lang/pl.dart';
 import 'lang/pt.dart';
 import 'lang/ru.dart';
 import 'lang/tr.dart';
 import 'lang/stamps.dart';
+import 'lang/ta.dart';
+import 'lang/te.dart';
 import 'lang/words.dart';
 import 'lang/upi.dart';
 import 'lang/ur.dart';
+import 'lang/ur_tools.dart';
 import 'lang/zh.dart';
+import 'lang/zh_tools.dart';
 
 /// The languages the app text is translated into (English is the text in the code).
-const translationLanguages = ['hi', 'es', 'fr', 'de', 'pt', 'ar', 'ur', 'zh', 'ja', 'kn', 'mr', 'it', 'nl', 'pl', 'tr', 'ru'];
+const translationLanguages = ['hi', 'es', 'fr', 'de', 'pt', 'ar', 'ur', 'zh', 'ja', 'kn', 'mr', 'ta', 'te', 'ml', 'it', 'nl', 'pl', 'tr', 'ru'];
 
 /// For each language, the English text and its translation. Text that is not here is shown in English. Every language has the same
 /// entries (a test checks it), and a translation keeps the {names} of the English text.
@@ -45,6 +59,12 @@ const Map<String, Map<String, String>> translations = {
     ...hiCoinsV2,
     ...hiTaxSuite,
     ...hiReminderHelp,
+    ...hiLibrary,
+    ...hiOffice2,
+    ...hiOffice3,
+    ...hiOffice4,
+    ...hiOffice5,
+    ...hiOffice6,
     ...hiUpi,
   },
   'es': {
@@ -60,6 +80,12 @@ const Map<String, Map<String, String>> translations = {
     ...esCoinsV2,
     ...esTaxSuite,
     ...esReminderHelp,
+    ...esLibrary,
+    ...esOffice2,
+    ...esOffice3,
+    ...esOffice4,
+    ...esOffice5,
+    ...esOffice6,
   },
   'fr': {
     ...frTexts,
@@ -74,6 +100,12 @@ const Map<String, Map<String, String>> translations = {
     ...frCoinsV2,
     ...frTaxSuite,
     ...frReminderHelp,
+    ...frLibrary,
+    ...frOffice2,
+    ...frOffice3,
+    ...frOffice4,
+    ...frOffice5,
+    ...frOffice6,
   },
   'de': {
     ...deTexts,
@@ -88,6 +120,12 @@ const Map<String, Map<String, String>> translations = {
     ...deCoinsV2,
     ...deTaxSuite,
     ...deReminderHelp,
+    ...deLibrary,
+    ...deOffice2,
+    ...deOffice3,
+    ...deOffice4,
+    ...deOffice5,
+    ...deOffice6,
   },
   'pt': {
     ...ptTexts,
@@ -102,6 +140,12 @@ const Map<String, Map<String, String>> translations = {
     ...ptCoinsV2,
     ...ptTaxSuite,
     ...ptReminderHelp,
+    ...ptLibrary,
+    ...ptOffice2,
+    ...ptOffice3,
+    ...ptOffice4,
+    ...ptOffice5,
+    ...ptOffice6,
   },
   'ar': {
     ...arTexts,
@@ -115,12 +159,170 @@ const Map<String, Map<String, String>> translations = {
     ...arCoinsV2,
     ...arTaxSuite,
     ...arReminderHelp,
+    ...arLibrary,
+    ...arOffice2,
+    ...arOffice3,
+    ...arOffice4,
+    ...arOffice5,
+    ...arOffice6,
   },
-  'ur': urTexts,
-  'zh': zhTexts,
-  'ja': jaTexts,
-  'kn': {...knTexts, ...knUpi},
-  'mr': {...mrTexts, ...mrUpi},
+  'ur': {
+    ...urTexts,
+    ...urLibrary,
+    ...urOffice2,
+    ...urOffice3,
+    ...urOffice4,
+    ...urOffice5,
+    ...urOffice6,
+    ...urWords,
+    ...urStamps,
+    ...urCards,
+    ...urLists,
+    ...urPacket,
+    ...urCvDesigns,
+    ...urSharePdf,
+    ...urCoinsV2,
+    ...urTaxSuite,
+    ...urReminderHelp,
+  },
+  'zh': {
+    ...zhTexts,
+    ...zhLibrary,
+    ...zhOffice2,
+    ...zhOffice3,
+    ...zhOffice4,
+    ...zhOffice5,
+    ...zhOffice6,
+    ...zhWords,
+    ...zhStamps,
+    ...zhCards,
+    ...zhLists,
+    ...zhPacket,
+    ...zhCvDesigns,
+    ...zhSharePdf,
+    ...zhCoinsV2,
+    ...zhTaxSuite,
+    ...zhReminderHelp,
+  },
+  'ja': {
+    ...jaTexts,
+    ...jaLibrary,
+    ...jaOffice2,
+    ...jaOffice3,
+    ...jaOffice4,
+    ...jaOffice5,
+    ...jaOffice6,
+    ...jaWords,
+    ...jaStamps,
+    ...jaCards,
+    ...jaLists,
+    ...jaPacket,
+    ...jaCvDesigns,
+    ...jaSharePdf,
+    ...jaCoinsV2,
+    ...jaTaxSuite,
+    ...jaReminderHelp,
+  },
+  'kn': {
+    ...knTexts,
+    ...knUpi,
+    ...knLibrary,
+    ...knOffice2,
+    ...knOffice3,
+    ...knOffice4,
+    ...knOffice5,
+    ...knOffice6,
+    ...knWords,
+    ...knStamps,
+    ...knCards,
+    ...knLists,
+    ...knPacket,
+    ...knCvDesigns,
+    ...knSharePdf,
+    ...knCoinsV2,
+    ...knTaxSuite,
+    ...knReminderHelp,
+  },
+  'mr': {
+    ...mrTexts,
+    ...mrUpi,
+    ...mrLibrary,
+    ...mrOffice2,
+    ...mrOffice3,
+    ...mrOffice4,
+    ...mrOffice5,
+    ...mrOffice6,
+    ...mrWords,
+    ...mrStamps,
+    ...mrCards,
+    ...mrLists,
+    ...mrPacket,
+    ...mrCvDesigns,
+    ...mrSharePdf,
+    ...mrCoinsV2,
+    ...mrTaxSuite,
+    ...mrReminderHelp,
+  },
+  'ta': {
+    ...taTexts,
+    ...taLibrary,
+    ...taOffice2,
+    ...taOffice3,
+    ...taOffice4,
+    ...taOffice5,
+    ...taOffice6,
+    ...taWords,
+    ...taStamps,
+    ...taCards,
+    ...taLists,
+    ...taPacket,
+    ...taCvDesigns,
+    ...taSharePdf,
+    ...taCoinsV2,
+    ...taTaxSuite,
+    ...taReminderHelp,
+    ...taUpi,
+  },
+  'te': {
+    ...teTexts,
+    ...teLibrary,
+    ...teOffice2,
+    ...teOffice3,
+    ...teOffice4,
+    ...teOffice5,
+    ...teOffice6,
+    ...teWords,
+    ...teStamps,
+    ...teCards,
+    ...teLists,
+    ...tePacket,
+    ...teCvDesigns,
+    ...teSharePdf,
+    ...teCoinsV2,
+    ...teTaxSuite,
+    ...teReminderHelp,
+    ...teUpi,
+  },
+  'ml': {
+    ...mlTexts,
+    ...mlLibrary,
+    ...mlOffice2,
+    ...mlOffice3,
+    ...mlOffice4,
+    ...mlOffice5,
+    ...mlOffice6,
+    ...mlWords,
+    ...mlStamps,
+    ...mlCards,
+    ...mlLists,
+    ...mlPacket,
+    ...mlCvDesigns,
+    ...mlSharePdf,
+    ...mlCoinsV2,
+    ...mlTaxSuite,
+    ...mlReminderHelp,
+    ...mlUpi,
+  },
   'it': {
     ...itTexts,
     ...itEurope,
@@ -134,6 +336,12 @@ const Map<String, Map<String, String>> translations = {
     ...itCoinsV2,
     ...itTaxSuite,
     ...itReminderHelp,
+    ...itLibrary,
+    ...itOffice2,
+    ...itOffice3,
+    ...itOffice4,
+    ...itOffice5,
+    ...itOffice6,
   },
   'nl': {
     ...nlTexts,
@@ -148,6 +356,12 @@ const Map<String, Map<String, String>> translations = {
     ...nlCoinsV2,
     ...nlTaxSuite,
     ...nlReminderHelp,
+    ...nlLibrary,
+    ...nlOffice2,
+    ...nlOffice3,
+    ...nlOffice4,
+    ...nlOffice5,
+    ...nlOffice6,
   },
   'pl': {
     ...plTexts,
@@ -162,6 +376,12 @@ const Map<String, Map<String, String>> translations = {
     ...plCoinsV2,
     ...plTaxSuite,
     ...plReminderHelp,
+    ...plLibrary,
+    ...plOffice2,
+    ...plOffice3,
+    ...plOffice4,
+    ...plOffice5,
+    ...plOffice6,
   },
   'tr': {
     ...trTexts,
@@ -176,6 +396,12 @@ const Map<String, Map<String, String>> translations = {
     ...trCoinsV2,
     ...trTaxSuite,
     ...trReminderHelp,
+    ...trLibrary,
+    ...trOffice2,
+    ...trOffice3,
+    ...trOffice4,
+    ...trOffice5,
+    ...trOffice6,
   },
   'ru': {
     ...ruTexts,
@@ -190,5 +416,11 @@ const Map<String, Map<String, String>> translations = {
     ...ruCoinsV2,
     ...ruTaxSuite,
     ...ruReminderHelp,
+    ...ruLibrary,
+    ...ruOffice2,
+    ...ruOffice3,
+    ...ruOffice4,
+    ...ruOffice5,
+    ...ruOffice6,
   },
 };

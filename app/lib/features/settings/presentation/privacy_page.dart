@@ -31,6 +31,11 @@ class PrivacyPage extends StatelessWidget {
           'The recognised text is saved in the app\'s private storage next to the document, is searched when you use the library search, and is deleted with the document or from the text screen.',
     ),
     (
+      'Translation and reading aloud',
+      'Translating text uses Google ML Kit models on the phone, and the text you translate is not uploaded. The first time you use a language, Google\'s library may download that language\'s model; that request carries none of your text. '
+          'Reading aloud uses your phone\'s own text-to-speech engine, so its maker\'s policy applies to that part. The app does not use the microphone.',
+    ),
+    (
       'Photo tools',
       'Passport and ID photos, photo compression and watermarks are all made on your phone; the photos are not uploaded. '
           'If you save business details for watermarks, the name, second line and logo are kept only in the app\'s private storage and are removed with "Delete all my data" or when you uninstall the app.',
@@ -52,14 +57,27 @@ class PrivacyPage extends StatelessWidget {
           'Joining a Wi-Fi network adds only the network you confirm; the app does not read your saved networks or passwords.',
     ),
     (
-      'Payments, invoices, CV, VAT receipts and certificates',
-      'The payment QR, e-invoice viewer, invoice maker, CV maker and PDF certificate tools work entirely on the phone and upload nothing. The Doculoom app does not make payments or contact your bank. '
-          'The details you save for the invoice maker (your business details and IBAN), the CV maker and the VAT refund receipts (with the pictures of receipts) are kept only in the app\'s private storage and are removed with "Delete all my data" or when you uninstall the app. '
+      'Payments, invoices, tax tools, CV, VAT receipts and certificates',
+      'The payment QR, e-invoice viewer, invoice maker, GST invoice, Saudi VAT invoice, US invoice, CV maker and PDF certificate tools work entirely on the phone and upload nothing. The Doculoom app does not make payments, contact your bank, or connect to any tax authority or government portal (such as GST, ZATCA or the IRS). '
+          'The details you save for these tools (your business name, address, GSTIN, VAT or EIN number, IBAN or bank details, logo, and invoice numbers), the CV maker and the VAT refund receipts (with the pictures of receipts) are kept only in the app\'s private storage and are removed with "Delete all my data" or when you uninstall the app. '
+          'Tax is worked out on the phone from the rates and details you enter; it is a convenience, not tax advice. '
           'The certificate file (.p12 or .pfx) you choose for signing and its password are used in memory while you sign and are never saved or sent anywhere. The PDFs these tools create are temporary copies that you choose to share or save.',
     ),
     (
-      'Reminders and quick access',
-      'Document-expiry reminders are stored only on the phone and shown as notifications; the app asks for notification permission and restores the reminders after the phone restarts. '
+      'Loyalty cards, checklists and application packets',
+      'Loyalty cards (the shop or club name, card number, expiry date, note and the barcode you scan with the camera or from a picture) are kept only in the app\'s private storage and are never uploaded. A card note is not protected, so do not write a PIN or password in it. While a card is open the screen is set to full brightness and is returned to normal when you leave. '
+          'Checklists (your steps, ticks, dates and the links to documents you choose) are kept only on the phone. A link points to a document that is already in your library; it does not copy the document. '
+          'An application packet is built on the phone from documents you choose, with a cover, contents and page numbers if you ask for them, and any picture compression happens on the phone. The packet is a temporary PDF that you choose to share or save.',
+    ),
+    (
+      'Safe ID copy',
+      'The Safe ID copy tool covers the parts of an ID that the other side does not need and adds a repeated mark that says what the copy is for. The picture is read and covered on the phone, and nothing is uploaded. Text on the picture is found with Google ML Kit models on the phone. '
+          'The picture that showed everything is deleted from the app\'s working space once the safe copy is made. The safe copy is a temporary file that you choose to share, or save to your gallery by tapping Save to gallery. Covering is done with solid black, but check the copy yourself before you hand it over.',
+    ),
+    (
+      'Reminders, Hijri calendar and quick access',
+      'Document-expiry reminders and yearly reminders for Hijri and other dates (Ramadan, the Eids, or a date you make up) are stored only on the phone and shown as notifications; the app asks for notification permission and sets them again after the phone restarts. '
+          'For a date you made up yourself, the notification does not name the date unless you turn that on in Settings. The Hijri calendar and date converter work on the phone and need no network. '
           'Home-screen shortcuts, the widget and quick-settings tiles only open Doculoom; they collect and show no data.',
     ),
     (
@@ -68,11 +86,12 @@ class PrivacyPage extends StatelessWidget {
           '"Share with QR code > Same Wi-Fi" starts a small web server on your current Wi-Fi. Anyone on the same network who scans the code can download that one file until it expires or you stop sharing; nothing is uploaded. While a share is running, Doculoom shows a notification and keeps the link working if you minimise or close the app; tap Stop sharing there or in the app to end it. A copy of the file is kept in the app\'s private storage only for that time.\n'
           '"Share with QR code > Anywhere" lets someone on any network or mobile data download the file. The file is encrypted on your phone first, then stored on our sharing service until the link expires (5 minutes by default, at most 7 days) or you tap Stop sharing, and then deleted. '
           'The decryption key is only inside the link or QR code, never sent to us, so we cannot read the file. Like any web service it may briefly record technical data such as the IP address and time of an upload or download. Anyone who has the full link can open the file until it expires, so share it only with people you trust.\n'
-          'You can add a password to either mode. The password stays on your phone and is never sent to us. For internet sharing the encryption key is made from the password, so the link contains no key; over Wi-Fi the password is checked by your phone.',
+          'You can add a password to either mode. The password stays on your phone and is never sent to us. For internet sharing the encryption key is made from the password, so the link contains no key; over Wi-Fi the password is checked by your phone.\n'
+          'When you share a PDF you can also compress it, add a password, or put it in a ZIP file. These changes apply only to the copy you share; the document saved in the app does not change. If you forget a password, nobody, including us, can recover the file.',
     ),
     (
       'Advertising',
-      'The free version shows ads served by Google AdMob, including optional rewarded videos that you choose to watch to earn coins. The coin balance is stored only on your phone. AdMob may collect your device\'s advertising ID, IP address and ad interaction data to show and measure ads. '
+      'The free version shows ads served by Google AdMob, including optional rewarded videos that you choose to watch to earn coins or a pass. Watching enough videos gives a pass that opens every tool and turns ads off for a set time. The coin balance, the daily free coins and the pass time are stored only on your phone and have no cash value. AdMob may collect your device\'s advertising ID, IP address and ad interaction data to show and measure ads. '
           'Where the law requires it (for example in the EEA and UK) the app asks for your consent first, and you can change your choice under Settings > Privacy > Ad privacy choices. '
           'Your documents are never shared with advertisers. Google\'s policy: policies.google.com/privacy.',
     ),
@@ -86,6 +105,7 @@ class PrivacyPage extends StatelessWidget {
     (
       'Deleting your data',
       'Delete a document from its menu at any time. To remove everything at once use Settings > Privacy > Delete all my data. '
+          'This removes your documents, saved tool data (signatures, business and tax details, CV, receipts, stamps, loyalty cards, checklists, Hijri reminders) and scan history. Your coin balance and pass time are kept, so you do not lose what you earned; uninstalling the app or clearing its storage in Android settings removes them too. '
           'Uninstalling the app also removes all of its stored files.',
     ),
     ('Children', 'Doculoom is a general-audience app and is not directed to children under 13 (or under 16 where a higher age applies).'),

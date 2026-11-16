@@ -1,0 +1,50 @@
+title: Doculoom: PDF Tara ve Düzenle
+short: Belge tara, PDF düzenle ve imzala, sıkıştır, paylaş. Gizli ve çevrimdışı.
+---
+Doculoom telefonunuzu bir belge tarayıcıya ve PDF, Office dosyaları ile fotoğraflar için bir araç kutusuna dönüştürür. Belgeleriniz telefonunuzda kalır: hesap oluşturmanız gerekmez; tarama, metin okuma ve PDF araçları çevrimdışı çalışır.
+
+TARAMA
+• Kamerayla sayfaları tarayın, kenarları Doculoom bulsun; ya da fotoğraf, PDF ve Word dosyalarını içe aktarın
+• Çok sayfalı tarama, yeniden kırpma, döndürme, sayfaları yeniden sıralama ve tüm sayfalara tek filtre uygulama
+• Metin, renk ve siyah beyaz için filtreler
+• Belgeler, fişler, kartvizitler ve kimlikler için tarama modları
+• Taramadaki metni cihazda okuyun (OCR), sonra arayın, kopyalayın veya kartviziti kişiye dönüştürün
+
+PDF ARAÇLARI
+• Sayfaları sıkıştırın, birleştirin, bölün, kırpın ve numaralandırın
+• PDF'yi parolayla kilitleyin veya açabildiğiniz bir PDF'nin kilidini kaldırın
+• Formları doldurun, çizim yapın, metin ekleyin ve kayıtlı imzanızla belgeleri imzalayın
+• Gizli bilgileri karartma aracıyla kapatın
+• İki PDF'yi karşılaştırın ve neyin değiştiğini görün
+• PDF ve Word dosyalarını içe aktarmadan okuyun
+
+OFFICE VE FOTOĞRAF ARAÇLARI
+• Excel, CSV ve PowerPoint dosyalarını açın, düzenleyin ve dönüştürün
+• Fotoğraftaki tabloyu Excel'e, fişleri e-tabloya aktarın
+• Yaklaşık 40 ülke için doğru boyutta pasaport ve kimlik fotoğrafları
+• Fotoğrafları hedef boyuta sıkıştırın, filigran ekleyin, fotoğraflardaki gizli verileri silin
+• Kimlik kartının iki yüzünü tek sayfaya kopyalayın
+
+QR VE PAYLAŞIM
+• QR kodları ve barkodları tarayın ve oluşturun; geçmişi siz yönetin
+• PDF'yi olduğu gibi, daha küçük, parolalı veya ZIP içinde paylaşın. Yalnızca paylaştığınız kopya değişir
+• Dosyayı aynı Wi-Fi ağında QR koduyla veya süresi dolan şifreli bir bağlantıyla paylaşın
+
+FATURA, ÖZGEÇMİŞ VE HATIRLATICILAR
+• GST (Hindistan), ABD satış vergisi ve Suudi ZATCA düzenli fatura oluşturucu
+• Ödeme QR kodları, KDV iade fişleri, özgeçmiş oluşturucu ve kontrol listesi aracı
+• Pasaport, poliçe ve diğer belgelerin son kullanma hatırlatıcıları ile Hicri tarih hatırlatıcıları
+
+GİZLİLİK VE KONTROL
+• Oturum açmak gerekmez. Belgeler yalnızca uygulamanın özel depolamasında saklanır
+• Bir belgeyi veya klasörü telefonunuzun parmak izi, yüz tanıma veya ekran kilidiyle kilitleyin
+• Seçtiğiniz parolayla şifreli yedekler oluşturun
+• Ayarlar'dan istediğiniz zaman bir belgeyi veya her şeyi silin
+• 17 dilde kullanılabilir
+
+REKLAMLAR VE JETONLAR
+Ücretsiz sürüm Google AdMob reklamları gösterir. PDF tarama, kaydetme, görüntüleme, arama ve paylaşma her zaman ücretsizdir. Bazı araçlar jeton kullanır. Her gün birkaç ücretsiz jeton alırsınız ve kısa videolar izlemeyi seçerek daha fazla jeton veya süre bileti kazanabilirsiniz. Jetonların nakit değeri yoktur.
+
+Sorularınız veya geri bildiriminiz mi var? Ayarlar > Hakkında > Yardım ve destek bölümünü açın veya darshandmg399@gmail.com adresine yazın.
+
+Gizlilik politikası: https://darshanreddy4.github.io/doculoom-privacy-policy/

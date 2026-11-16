@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
@@ -41,11 +41,7 @@ class _OfficeConvertPageState extends State<OfficeConvertPage> {
 
   Future<void> _pick() async {
     try {
-      final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: kind.extensions);
-      final paths = [
-        for (final f in picked)
-          if (f.path != null) f.path!,
-      ];
+      final paths = await pickFilePaths(context, allowedExtensions: kind.extensions, allowMultiple: kind.multiple);
       if (paths.isEmpty || !mounted) return;
       setState(() {
         if (kind.multiple) {

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../data/library_files.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/error/result.dart';
 import '../../domain/entities/scanned_document.dart';
@@ -142,6 +145,7 @@ class DocumentsCubit extends Cubit<DocumentsState> {
     required RenameFolder renameFolder,
     required UpdateFolderMeta updateFolderMeta,
     required DeleteFolder deleteFolder,
+    LibraryFiles? library,
   }) : _list = listDocuments,
        _listFolders = listFolders,
        _delete = deleteDocument,
@@ -153,7 +157,17 @@ class DocumentsCubit extends Cubit<DocumentsState> {
        _updateFolderMeta = updateFolderMeta,
        _deleteFolder = deleteFolder,
        _text = textRepository,
-       super(const DocumentsState());
+       super(const DocumentsState()) {
+    _libraryChanges = library?.changes.listen((_) => load());
+  }
+
+  StreamSubscription<void>? _libraryChanges;
+
+  @override
+  Future<void> close() {
+    _libraryChanges?.cancel();
+    return super.close();
+  }
 
   final ListDocuments _list;
   final ListFolders _listFolders;

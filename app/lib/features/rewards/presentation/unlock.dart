@@ -36,8 +36,6 @@ Future<bool> requestToolAccess(BuildContext context, CoinFeature feature) async 
 /// without coins. Returns true when the tool may be used.
 Future<bool> requestUnlock(BuildContext context, CoinFeature feature) async {
   final coins = context.read<CoinsCubit>();
-  await coins.claimDaily();
-  if (!context.mounted) return false;
   if (feature.tier == CoinTier.free) return true;
   final cover = await coins.coverWithoutCoins(feature);
   if (cover == UnlockCover.freeDaily && context.mounted) showMessage(context, 'This is your free use of it for today');

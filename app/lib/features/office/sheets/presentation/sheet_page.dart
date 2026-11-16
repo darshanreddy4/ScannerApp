@@ -5,12 +5,20 @@ import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../../app/di.dart';
+import '../../../../core/error/failures.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/widgets/feedback.dart';
 import '../../../export/domain/repositories/export_repository.dart';
+import '../../../documents/presentation/library_actions.dart';
+import 'chart_dialogs.dart';
+import 'cond_format_dialog.dart';
+import 'validation_dialog.dart';
+import '../../../text_edit/docx/doc_template_store.dart';
+import '../data/sheet_templates.dart';
 import '../domain/sheet_model.dart';
 import 'sheet_cubit.dart';
+import 'function_picker.dart';
 import 'sheet_dialogs.dart';
 import 'sheet_grid.dart';
 import '../../../../core/widgets/text.dart';
@@ -18,8 +26,14 @@ import '../../../../core/i18n/tr.dart';
 
 /// Which file the spreadsheet screen opens; a null [path] starts an empty workbook.
 class SheetArgs {
-  const SheetArgs({this.path});
+  const SheetArgs({this.path, this.template, this.libraryId});
   final String? path;
+
+  /// Set when the file is one kept in the library; saving then puts the new version in its place.
+  final String? libraryId;
+
+  /// A starter to build the new workbook from; used when there is no [path].
+  final SheetTemplate? template;
 }
 
 class SheetPage extends StatelessWidget {
@@ -31,25 +45,29 @@ class SheetPage extends StatelessWidget {
   Widget build(BuildContext context) => BlocProvider(
     create: (_) {
       final cubit = SheetCubit(workDir: getTemporaryDirectory);
-      if (args.path == null) {
-        cubit.startBlank();
-      } else {
+      if (args.path != null) {
         cubit.open(args.path!);
+      } else if (args.template != null) {
+        cubit.startTemplate(args.template!);
+      } else {
+        cubit.startBlank();
       }
       return cubit;
     },
-    child: const _SheetView(),
+    child: _SheetView(libraryId: args.libraryId),
   );
 }
 
 class _SheetView extends StatefulWidget {
-  const _SheetView();
+  const _SheetView({this.libraryId});
+  final String? libraryId;
 
   @override
   State<_SheetView> createState() => _SheetViewState();
 }
 
 class _SheetViewState extends State<_SheetView> {
+  late String? _libraryId = widget.libraryId;
   final _input = TextEditingController();
   final _focus = FocusNode();
   final _findController = TextEditingController();
@@ -109,11 +127,83 @@ class _SheetViewState extends State<_SheetView> {
     _focus.unfocus();
   }
 
+  /// Puts a function from the list into the cell being edited, starting a formula when there is none.
+  /// Offers the choices of the active cell's list rule and puts the picked one in the cell.
+  Future<void> _pickChoice() async {
+    final choices = cubit.choicesForActiveCell;
+    if (choices.isEmpty) return;
+    _focus.unfocus();
+    final pick = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.6),
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              for (var i = 0; i < choices.length; i++)
+                ListTile(key: ValueKey('choice_$i'), dense: true, title: Text(choices[i]), onTap: () => Navigator.pop(context, choices[i])),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (pick != null && mounted) cubit.commitInput(pick, moveDown: false);
+  }
+
+  Future<void> _insertFunction() async {
+    final name = await pickFunction(context);
+    if (name == null || !mounted) return;
+    final text = _input.text;
+    final sel = _input.selection;
+    final String next;
+    final int caret;
+    if (text.startsWith('=')) {
+      final from = sel.isValid ? sel.start : text.length, to = sel.isValid ? sel.end : text.length;
+      next = text.replaceRange(from, to, '$name(');
+      caret = from + name.length + 1;
+    } else {
+      next = '=$name(';
+      caret = next.length;
+    }
+    _input.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: caret),
+    );
+    _focus.requestFocus();
+  }
+
   Future<void> _export(SaveChoice choice) async {
     if (_pending) cubit.commitInput(_input.text, moveDown: false);
     final path = await cubit.export(choice.format);
     if (path == null || !mounted) return;
+    if (choice.action == SaveAction.template) {
+      try {
+        await const DocTemplateStore.sheets().save(path, cubit.name);
+        if (mounted) showMessage(context, 'Saved. Find it under My templates when you start a new spreadsheet.');
+      } catch (_) {
+        if (mounted) showFailure(context, const ExportFailure('The template could not be saved.'));
+      }
+      return;
+    }
     final name = cubit.exportName(choice.format);
+    // A new version replaces the library file only when it is the same kind of file.
+    final sameKind = choice.format == SheetExportFormat.xlsx;
+    final id = await saveToLibrary(
+      context,
+      path: path,
+      title: cubit.name,
+      existingId: sameKind ? _libraryId : null,
+      announce: choice.action == SaveAction.library,
+    );
+    if (sameKind) _libraryId = id ?? _libraryId;
+    if (!mounted) return;
+    if (choice.action == SaveAction.library) {
+      if (id != null && sameKind) cubit.markSaved();
+      return;
+    }
     if (choice.action == SaveAction.share) {
       final failure = (await sl<ShareService>().shareFiles(paths: [path], mimeType: choice.format.mimeType)).failureOrNull;
       if (!mounted) return;
@@ -135,8 +225,8 @@ class _SheetViewState extends State<_SheetView> {
     }
   }
 
-  Future<void> _saveSheet() async {
-    final choice = await askSave(context);
+  Future<void> _saveSheet({bool xlsxOnly = false}) async {
+    final choice = await askSave(context, xlsxOnly: xlsxOnly);
     if (choice != null && mounted) await _export(choice);
   }
 
@@ -150,7 +240,7 @@ class _SheetViewState extends State<_SheetView> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Leave without saving?'),
-        content: const Text('Your changes to this spreadsheet have not been saved or shared. If you leave now they are lost.'),
+        content: const Text('Your changes have not been saved or shared as an Excel (.xlsx) file. If you leave now they are lost.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, 'keep'), child: const Text('Keep editing')),
           TextButton(
@@ -165,7 +255,7 @@ class _SheetViewState extends State<_SheetView> {
     if (choice == 'leave') {
       context.pop();
     } else if (choice == 'save') {
-      await _saveSheet();
+      await _saveSheet(xlsxOnly: true);
     }
   }
 
@@ -217,6 +307,20 @@ class _SheetViewState extends State<_SheetView> {
                                 cubit.selectCol(c);
                               },
                               onTapCorner: cubit.selectAll,
+                              onMoveChart: (chart, {col, row, cols, rows}) => cubit.moveChart(chart, col: col, row: row, cols: cols, rows: rows),
+                              onEditChart: (chart) async {
+                                final at = cubit.sheet.charts.indexOf(chart);
+                                final choice = await askChart(context, existing: chart, cubit: cubit);
+                                if (choice != null && at >= 0 && at < cubit.sheet.charts.length)
+                                  cubit.updateChart(
+                                    cubit.sheet.charts[at],
+                                    kind: choice.kind,
+                                    title: choice.title,
+                                    stacked: choice.stacked,
+                                    percent: choice.percent,
+                                  );
+                              },
+                              onDeleteChart: cubit.removeChart,
                             ),
                           ),
                           _toolbar(state),
@@ -289,6 +393,13 @@ class _SheetViewState extends State<_SheetView> {
               const PopupMenuItem(value: 'fill_down', child: Text('Fill down')),
               const PopupMenuItem(value: 'fill_right', child: Text('Fill right')),
               const PopupMenuItem(value: 'clear_format', child: Text('Clear formatting')),
+              const PopupMenuItem(value: 'cond_add', child: Text('Highlight cells by value')),
+              if (cubit.hasCondRules) const PopupMenuItem(value: 'cond_clear', child: Text('Remove highlighting from selection')),
+              if (cubit.hasCondRules) const PopupMenuItem(value: 'cond_clear_all', child: Text('Remove all highlighting from this sheet')),
+              const PopupMenuItem(value: 'valid_add', child: Text('Allow only certain values')),
+              if (cubit.hasValidations) const PopupMenuItem(value: 'valid_clear', child: Text('Remove value rules from selection')),
+              const PopupMenuItem(value: 'chart_add', child: Text('Add chart from selection')),
+              if (cubit.hasCharts) const PopupMenuItem(value: 'chart_list', child: Text('Charts on this sheet')),
               const PopupMenuItem(value: 'share_text', child: Text('Copy selection as text')),
             ],
           ),
@@ -326,6 +437,23 @@ class _SheetViewState extends State<_SheetView> {
         c.fillRight();
       case 'clear_format':
         c.clearFormatting();
+      case 'cond_add':
+        final rule = await askHighlight(context);
+        if (rule != null) c.addCondRule(rule);
+      case 'cond_clear':
+        c.clearCondRules();
+      case 'cond_clear_all':
+        c.clearCondRules(all: true);
+      case 'valid_add':
+        final rule = await askValidation(context);
+        if (rule != null) c.addValidation(rule);
+      case 'valid_clear':
+        c.clearValidations();
+      case 'chart_add':
+        final choice = await askChart(context);
+        if (choice != null) c.addChart(choice.kind, title: choice.title, stacked: choice.stacked, percent: choice.percent);
+      case 'chart_list':
+        await showCharts(context, c);
       case 'share_text':
         c.copySelection();
         final text = c.clipText;
@@ -397,7 +525,17 @@ class _SheetViewState extends State<_SheetView> {
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primary),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
+          IconButton(
+            key: const ValueKey('formula_fx'),
+            visualDensity: VisualDensity.compact,
+            tooltip: tr('Insert function'),
+            onPressed: _insertFunction,
+            icon: const Text(
+              'fx',
+              style: TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.primary),
+            ),
+          ),
           Expanded(
             child: TextField(
               key: const ValueKey('formula_field'),
@@ -411,6 +549,14 @@ class _SheetViewState extends State<_SheetView> {
               onSubmitted: (_) => _commit(),
             ),
           ),
+          if (cubit.choicesForActiveCell.isNotEmpty)
+            IconButton(
+              key: const ValueKey('cell_dropdown'),
+              visualDensity: VisualDensity.compact,
+              tooltip: tr('Choose from the list'),
+              icon: const Icon(Icons.arrow_drop_down_circle_outlined, size: 22, color: AppColors.primary),
+              onPressed: _pickChoice,
+            ),
           ListenableBuilder(
             listenable: _input,
             builder: (context, _) => _pending

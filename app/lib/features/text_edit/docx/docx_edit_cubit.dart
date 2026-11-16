@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/error/failures.dart';
+import 'docx_builder.dart';
 import 'docx_document.dart';
 
 class DocxEditState extends Equatable {
@@ -79,6 +80,9 @@ class DocxEditState extends Equatable {
 
 const maxDocxBytes = 40 * 1024 * 1024;
 
+/// Folder (inside the temporary one) that holds documents started from a template; they are saved under their own name.
+const newDocsFolder = 'new_docs';
+
 /// Holds an open Word file and the changes made to it.
 class DocxEditCubit extends Cubit<DocxEditState> {
   DocxEditCubit({required Future<Directory> Function() workDir}) : _workDir = workDir, super(const DocxEditState());
@@ -86,8 +90,12 @@ class DocxEditCubit extends Cubit<DocxEditState> {
   final Future<Directory> Function() _workDir;
   DocxDocument? _doc;
   String _name = 'Document';
+  var _isNew = false;
 
   String get name => _name;
+
+  /// The name the saved file gets: a new document keeps its name, an opened one is saved as a copy.
+  String get fileName => '$_name${_isNew ? '' : '_edited'}.docx';
   DocxDocument get document => _doc!;
 
   Future<void> open(String path) async {
@@ -98,6 +106,7 @@ class DocxEditCubit extends Cubit<DocxEditState> {
         return;
       }
       _name = p.basenameWithoutExtension(path);
+      _isNew = p.basename(p.dirname(path)) == newDocsFolder;
       _doc = DocxDocument.open(await file.readAsBytes());
       _publish(modified: false);
       emit(state.copyWith(loading: false));
@@ -151,6 +160,10 @@ class DocxEditCubit extends Cubit<DocxEditState> {
 
   void format(int index, int start, int end, FormatChange change) => _run(() => _doc!.formatRange(index, start, end, change));
   void setAlign(int index, String align) => _run(() => _doc!.setAlign(index, align));
+  void setStyle(int index, DocStyle style) => _run(() => _doc!.setStyle(index, style));
+  void setList(int index, DocList kind) => _run(() => _doc!.setList(index, kind));
+  DocStyle? styleOf(int index) => _doc!.styleOf(index);
+  DocList listOf(int index) => _doc!.listKindOf(index);
 
   FormatState formatOf(int index, int start, int end) => _doc!.formatOf(index, start, end);
 
@@ -162,6 +175,18 @@ class DocxEditCubit extends Cubit<DocxEditState> {
   }
 
   void delete(int index) => _run(() => _doc!.deleteParagraph(index));
+
+  /// Adds a picture in its own paragraph after [index]; returns where it is.
+  int addPicture(int index, Uint8List bytes, {required String extension, required int pixelWidth, required int pixelHeight}) {
+    var created = index + 1;
+    _run(() => created = _doc!.insertPictureAfter(index, bytes, extension: extension, pixelWidth: pixelWidth, pixelHeight: pixelHeight));
+    return created;
+  }
+
+  ({String header, String footer, bool pageNumbers}) get headerFooter => _doc!.headerFooter();
+
+  void setHeaderFooter({required String header, required String footer, required bool pageNumbers, String pageWord = 'Page', String ofWord = 'of'}) =>
+      _run(() => _doc!.setHeaderFooter(header: header, footer: footer, pageNumbers: pageNumbers, pageWord: pageWord, ofWord: ofWord));
 
   void undo() {
     _doc!.undo();
@@ -217,7 +242,8 @@ class DocxEditCubit extends Cubit<DocxEditState> {
     emit(state.copyWith(busy: true, failure: null));
     try {
       final dir = await Directory(p.join((await _workDir()).path, 'text_edit')).create(recursive: true);
-      final out = p.join(dir.path, '${_name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')}_edited.docx');
+      final safe = _name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+      final out = p.join(dir.path, '$safe${_isNew ? '' : '_edited'}.docx');
       final Uint8List bytes = _doc!.save();
       await File(out).writeAsBytes(bytes, flush: true);
       emit(state.copyWith(busy: false, modified: false));

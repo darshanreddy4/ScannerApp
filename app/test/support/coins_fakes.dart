@@ -23,6 +23,7 @@ class MemoryWallet implements CoinWallet {
     passUntil: passUntil != null && passUntil!.isAfter(now()) ? passUntil : null,
     passMinutes: passMinutes,
     passProgress: passProgress,
+    dailyClaimed: claimed,
   );
 
   @override

@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -27,8 +27,8 @@ enum SafeIdSource { camera, gallery, files }
 Future<String?> _pickPicture(SafeIdSource source) async {
   try {
     if (source == SafeIdSource.files) {
-      final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['jpg', 'jpeg', 'png']);
-      return picked.isEmpty ? null : picked.first.path;
+      final picked = await pickFilePaths(null, allowedExtensions: const ['jpg', 'jpeg', 'png']);
+      return picked.isEmpty ? null : picked.first;
     }
     final file = await ImagePicker().pickImage(source: source == SafeIdSource.camera ? ImageSource.camera : ImageSource.gallery);
     return file?.path;

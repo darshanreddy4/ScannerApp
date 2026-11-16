@@ -40,6 +40,7 @@ class CoinWalletImpl implements CoinWallet {
       passUntil: _until(p),
       passMinutes: today ? p.getInt(_passMinutes) : null,
       passProgress: today ? (p.getInt(_passCount) ?? 0) : 0,
+      dailyClaimed: p.getString(_claimDay) == _today,
     );
   }
 

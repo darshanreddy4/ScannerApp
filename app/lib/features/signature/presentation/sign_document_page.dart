@@ -1,9 +1,8 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_picker/image_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../app/di.dart';
@@ -41,8 +40,8 @@ class _SignViewState extends State<_SignView> {
 
   Future<void> _pickFile(BuildContext context) async {
     try {
-      final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png']);
-      final path = picked.isEmpty ? null : picked.first.path;
+      final picked = await pickFilePaths(context, allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png']);
+      final path = picked.isEmpty ? null : picked.first;
       if (path == null || !context.mounted) return;
       await context.read<SignDocumentCubit>().open(path);
     } catch (_) {
@@ -52,9 +51,9 @@ class _SignViewState extends State<_SignView> {
 
   Future<void> _pickPhoto(BuildContext context) async {
     try {
-      final file = await ImagePicker().pickImage(source: ImageSource.gallery);
-      if (file == null || !context.mounted) return;
-      await context.read<SignDocumentCubit>().open(file.path);
+      final paths = await pickPhotoPaths(context, multiple: false);
+      if (paths.isEmpty || !context.mounted) return;
+      await context.read<SignDocumentCubit>().open(paths.first);
     } catch (_) {
       if (context.mounted) showFailure(context, const PermissionFailure('Photo library access is unavailable.'));
     }

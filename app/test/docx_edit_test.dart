@@ -1,7 +1,15 @@
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:doculoom/features/text_edit/docx/docx_document.dart';
+
+Uint8List png(int w, int h) => Uint8List.fromList(img.encodePng(img.Image(width: w, height: h)));
+
+String part(Uint8List docx, String name) => String.fromCharCodes(ZipDecoder().decodeBytes(docx).findFile(name)!.readBytes()!);
+bool hasPart(Uint8List docx, String name) => ZipDecoder().decodeBytes(docx).findFile(name) != null;
 
 DocxDocument openSample() => DocxDocument.open(File('test/fixtures/text_edit/sample.docx').readAsBytesSync());
 
@@ -119,6 +127,21 @@ void main() {
     expect(para(d, 'The quick').spans.firstWhere((s) => s.text == 'lazy').bold, isFalse);
   });
 
+  test('the font of a selection can be read and changed, and survives saving', () {
+    final d = openSample();
+    final i = para(d, 'The quick').index;
+    final text = para(d, 'The quick').text;
+    final start = text.indexOf('lazy');
+    d.formatRange(i, start, start + 4, const FormatChange(font: 'Georgia'));
+    expect(para(d, 'The quick').spans.firstWhere((s) => s.text == 'lazy').font, 'Georgia');
+    expect(d.formatOf(i, start, start + 4).font, 'Georgia');
+    expect(d.formatOf(i, 0, text.length).font, isNull, reason: 'a mixed selection has no single font');
+    d.formatRange(i, 0, 0, const FormatChange(font: 'Courier New'));
+    final again = DocxDocument.open(d.save());
+    expect(para(again, 'The quick').spans.every((s) => s.font == 'Courier New'), isTrue);
+    expect(para(again, 'The quick').text, text);
+  });
+
   test('a whole paragraph is formatted when nothing is selected, and alignment changes', () {
     final d = openSample();
     final i = para(d, 'Last paragraph').index;
@@ -206,6 +229,104 @@ void main() {
       again.imageBytes(paragraphs(again).firstWhere((p) => p.images.isNotEmpty).images.single),
       original.imageBytes(paragraphs(original).firstWhere((p) => p.images.isNotEmpty).images.single),
     );
+  });
+
+  test('a picture goes in its own paragraph, is shown, survives saving and can be undone', () {
+    final d = openSample();
+    final before = paragraphs(d).length;
+    final at = para(d, 'Last paragraph').index;
+    final created = d.insertPictureAfter(at, png(40, 20), extension: '.PNG', pixelWidth: 40, pixelHeight: 20);
+    expect(created, at + 1);
+    expect(paragraphs(d).length, before + 1);
+    final shown = paragraphs(d)[created];
+    expect(shown.text, isEmpty);
+    expect(shown.align, 'center');
+    expect(d.imageBytes(shown.images.single), isNotNull, reason: 'shown at once, before saving');
+
+    final bytes = d.save();
+    expect(hasPart(bytes, 'word/media/dlpic1.png'), isTrue);
+    expect(part(bytes, '[Content_Types].xml'), contains('Extension="png"'));
+    expect(part(bytes, 'word/_rels/document.xml.rels'), contains('Target="media/dlpic1.png"'));
+    final doc = part(bytes, 'word/document.xml');
+    expect(doc, contains('r:embed="rIdDlPic1"'));
+    expect(doc, contains('cx="381000" cy="190500"'), reason: '40 x 20 pixels is 30 x 15 points');
+
+    final again = DocxDocument.open(bytes);
+    final picture = paragraphs(again).where((p) => p.images.any((i) => i.endsWith('dlpic1.png')));
+    expect(picture, hasLength(1));
+    expect(again.imageBytes(picture.single.images.single), png(40, 20));
+    expect(paragraphs(again).where((p) => p.images.isNotEmpty), hasLength(2), reason: 'the original picture is still there');
+
+    d.undo();
+    expect(paragraphs(d).length, before);
+  });
+
+  test('a wide picture is made to fit the page and keeps its shape; only PNG and JPEG are taken', () {
+    final d = openSample();
+    final created = d.insertPictureAfter(0, png(2000, 1000), extension: 'jpeg', pixelWidth: 2000, pixelHeight: 1000);
+    expect(created, 1);
+    final xml = part(d.save(), 'word/document.xml');
+    expect(xml, contains('cx="5080000" cy="2540000"'), reason: '400 x 200 points');
+    expect(() => d.insertPictureAfter(0, png(2, 2), extension: 'gif', pixelWidth: 2, pixelHeight: 2), throwsArgumentError);
+    expect(() => d.insertPictureAfter(0, png(2, 2), extension: 'png', pixelWidth: 0, pixelHeight: 2), throwsArgumentError);
+  });
+
+  test('two pictures get their own parts, and the other pictures are untouched', () {
+    final d = openSample();
+    d.insertPictureAfter(0, png(10, 10), extension: 'png', pixelWidth: 10, pixelHeight: 10);
+    d.insertPictureAfter(0, png(20, 20), extension: 'png', pixelWidth: 20, pixelHeight: 20);
+    final bytes = d.save();
+    expect(hasPart(bytes, 'word/media/dlpic1.png') && hasPart(bytes, 'word/media/dlpic2.png'), isTrue);
+    final ids = RegExp(r'<wp:docPr id="(\d+)"').allMatches(part(bytes, 'word/document.xml')).map((m) => m.group(1)).toList();
+    expect(ids.toSet().length, ids.length, reason: 'every picture has its own id');
+  });
+
+  test('the header and footer are read, set, saved and changed again without adding parts twice', () {
+    final d = openSample();
+    final start = d.headerFooter();
+    expect((start.header, start.footer, start.pageNumbers), ('', '', false));
+
+    d.setHeaderFooter(header: 'ACME Ltd', footer: 'Confidential\nDo not copy', pageNumbers: true);
+    var now = d.headerFooter();
+    expect((now.header, now.footer, now.pageNumbers), ('ACME Ltd', 'Confidential\nDo not copy', true));
+
+    final bytes = d.save();
+    expect(part(bytes, 'word/header1.xml'), contains('ACME Ltd'));
+    final footer = part(bytes, 'word/footer1.xml');
+    expect(footer, contains('Confidential'));
+    expect(footer, contains('PAGE'));
+    expect(footer, contains('NUMPAGES'));
+    expect(part(bytes, '[Content_Types].xml'), allOf(contains('/word/header1.xml'), contains('/word/footer1.xml')));
+    expect(part(bytes, 'word/_rels/document.xml.rels'), allOf(contains('Target="header1.xml"'), contains('Target="footer1.xml"')));
+    final body = part(bytes, 'word/document.xml');
+    expect(body, contains('w:headerReference'));
+    expect(body, contains('w:footerReference'));
+
+    final again = DocxDocument.open(bytes);
+    now = again.headerFooter();
+    expect((now.header, now.footer, now.pageNumbers), ('ACME Ltd', 'Confidential\nDo not copy', true));
+
+    again.setHeaderFooter(header: 'New name', footer: '', pageNumbers: false);
+    final changed = again.save();
+    expect(part(changed, 'word/header1.xml'), contains('New name'));
+    expect(part(changed, 'word/header1.xml'), isNot(contains('ACME')));
+    expect(hasPart(changed, 'word/header2.xml'), isFalse, reason: 'the same part is changed, not a second one added');
+    expect(RegExp('headerReference').allMatches(part(changed, 'word/document.xml')), hasLength(1));
+    now = DocxDocument.open(changed).headerFooter();
+    expect((now.header, now.footer, now.pageNumbers), ('New name', '', false));
+  });
+
+  test('text with markup characters stays text in the header', () {
+    final d = openSample();
+    d.setHeaderFooter(header: 'Q&A <draft> "v2"', footer: '', pageNumbers: false);
+    expect(DocxDocument.open(d.save()).headerFooter().header, 'Q&A <draft> "v2"');
+  });
+
+  test('an empty header and footer on a document that has none add nothing', () {
+    final d = openSample();
+    d.setHeaderFooter(header: '', footer: '', pageNumbers: false);
+    final bytes = d.save();
+    expect(hasPart(bytes, 'word/header1.xml') || hasPart(bytes, 'word/footer1.xml'), isFalse);
   });
 
   test('files that are not Word documents are refused', () {

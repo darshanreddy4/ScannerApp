@@ -1,9 +1,12 @@
 import 'dart:math' as math;
 
+import 'chart.dart';
+import 'cond_format.dart';
 import 'formula.dart';
 import 'formula_refs.dart';
 import 'number_format.dart';
 import 'sheet_model.dart';
+import 'validation.dart';
 
 /// Cells copied from a sheet, ready to be pasted elsewhere.
 class ClipBlock {
@@ -190,6 +193,51 @@ class SheetEditor {
         sheet.setCell(r, c, (cell ?? const SheetCell()).copyWith(style: style));
       }
     }
+    sheet.dirty = true;
+  }
+
+  /// Adds a rule that highlights cells by their value.
+  void addCondRule(Sheet sheet, CondRule rule) {
+    _checkpoint([sheet]);
+    sheet.condRules.add(rule);
+    sheet.condDirty = true;
+    sheet.dirty = true;
+  }
+
+  /// Removes the highlighting rules that touch [region], or every rule of the sheet when [region] is null. Returns how many went.
+  int clearCondRules(Sheet sheet, MergeRange? region) {
+    final hit = [
+      for (final r in sheet.condRules)
+        if (region == null || r.range.overlaps(region)) r,
+    ];
+    if (hit.isEmpty) return 0;
+    _checkpoint([sheet]);
+    sheet.condRules.removeWhere(hit.contains);
+    sheet.condDirty = true;
+    sheet.dirty = true;
+    return hit.length;
+  }
+
+  /// Takes the rules about what may be typed off [region]'s cells. Returns how many rules went.
+  int clearValidations(Sheet sheet, MergeRange region) {
+    final hit = [
+      for (final r in sheet.validations)
+        if (r.range.overlaps(region)) r,
+    ];
+    if (hit.isEmpty) return 0;
+    _checkpoint([sheet]);
+    sheet.validations.removeWhere(hit.contains);
+    sheet.validDirty = true;
+    sheet.dirty = true;
+    return hit.length;
+  }
+
+  /// Limits what may be typed into [region]. An older rule on the same cells is replaced.
+  void addValidation(Sheet sheet, ValidationRule rule) {
+    _checkpoint([sheet]);
+    sheet.validations.removeWhere((r) => r.range == rule.range);
+    sheet.validations.add(rule);
+    sheet.validDirty = true;
     sheet.dirty = true;
   }
 
@@ -446,6 +494,39 @@ class SheetEditor {
     sheet.mergesDirty = true;
     sheet.dirty = true;
 
+    if (sheet.condRules.isNotEmpty) {
+      final kept = <CondRule>[];
+      for (final r in sheet.condRules) {
+        final (na, nb) = _mapSpan(rows ? r.range.firstRow : r.range.firstCol, rows ? r.range.lastRow : r.range.lastCol, at, delta);
+        if (na == null) continue;
+        kept.add(r.withRange(rows ? MergeRange(na, r.range.firstCol, nb!, r.range.lastCol) : MergeRange(r.range.firstRow, na, r.range.lastRow, nb!)));
+      }
+      sheet.condRules
+        ..clear()
+        ..addAll(kept);
+      sheet.condDirty = true;
+    }
+
+    if (sheet.validations.isNotEmpty) {
+      final kept = <ValidationRule>[];
+      for (final r in sheet.validations) {
+        final (na, nb) = _mapSpan(rows ? r.range.firstRow : r.range.firstCol, rows ? r.range.lastRow : r.range.lastCol, at, delta);
+        if (na == null) continue;
+        kept.add(r.withRange(rows ? MergeRange(na, r.range.firstCol, nb!, r.range.lastCol) : MergeRange(r.range.firstRow, na, r.range.lastRow, nb!)));
+      }
+      sheet.validations
+        ..clear()
+        ..addAll(kept);
+      sheet.validDirty = true;
+    }
+
+    _followInCharts(sheet.name, (ref) {
+      final r = ref.range;
+      final (na, nb) = _mapSpan(rows ? r.firstRow : r.firstCol, rows ? r.lastRow : r.lastCol, at, delta);
+      if (na == null) return null;
+      return ref.withRange(rows ? MergeRange(na, r.firstCol, nb!, r.lastCol) : MergeRange(r.firstRow, na, r.lastRow, nb!));
+    });
+
     // Every formula that points into this sheet follows the move.
     for (final s in workbook.sheets) {
       for (final e in s.cells.entries.toList()) {
@@ -504,6 +585,123 @@ class SheetEditor {
     });
   }
 
+  /// Moves the cells that charts of every sheet read from [sheetName] by [map]; a chart that loses all its data is removed.
+  void _followInCharts(String sheetName, ChartRef? Function(ChartRef) map) {
+    for (final s in workbook.sheets) {
+      if (s.charts.isEmpty) continue;
+      final kept = <SheetChart>[];
+      var changed = false;
+      for (final c in s.charts) {
+        if (!c.editable) {
+          kept.add(c);
+          continue;
+        }
+        final next = c.remapped((ref) => ref.sheet.toLowerCase() == sheetName.toLowerCase() ? map(ref) : ref);
+        if (next == null) {
+          if (c.relId != null) s.removedCharts.add(c);
+          changed = true;
+          continue;
+        }
+        if (!identical(next, c)) changed = true;
+        kept.add(next);
+      }
+      if (!changed) continue;
+      s.charts
+        ..clear()
+        ..addAll(kept);
+      s.chartsDirty = true;
+      s.dirty = true;
+    }
+  }
+
+  // ------------------------------------------------------------------ charts
+
+  /// Puts a chart of the cells in [region] on the sheet. Throws a [ChartSelectionException] when the cells hold no numbers.
+  SheetChart addChart(Sheet sheet, MergeRange region, ChartKind kind, {String title = ''}) {
+    final chart = chartFromSelection(sheet, region, kind, title: title);
+    _checkpoint([sheet]);
+    sheet.charts.add(chart);
+    sheet.chartsDirty = true;
+    sheet.dirty = true;
+    return chart;
+  }
+
+  /// Changes the kind, title or stacking of [chart].
+  void updateChart(Sheet sheet, SheetChart chart, {ChartKind? kind, String? title, bool? stacked, bool? percent}) {
+    if (!chart.editable || !sheet.charts.contains(chart)) return;
+    _checkpoint([sheet]);
+    final index = sheet.charts.indexOf(chart);
+    final next = chart.copy();
+    if (kind != null) {
+      next.kind = kind;
+      // A pie shows one series; the others come back if it is turned into another kind and the cells are chosen again.
+      if (kind.isPie && next.series.length > 1) next.series = [next.series.first];
+      if (kind.isPie || kind == ChartKind.line || kind == ChartKind.scatter) {
+        next.stacked = false;
+        next.percent = false;
+      }
+      // Mixing kinds and the second scale only make sense for upright columns, lines and areas.
+      final mix = kind == ChartKind.column || kind == ChartKind.line || kind == ChartKind.area;
+      next.series = [
+        for (final s in next.series) s.copyWith(kind: mix && s.kind != kind ? s.kind : null, secondary: mix && s.secondary, trend: kind.isPie ? TrendKind.none : s.trend),
+      ];
+    }
+    if (title != null) next.title = title.trim();
+    final canStack = next.kind == ChartKind.column || next.kind == ChartKind.bar || next.kind == ChartKind.area;
+    if (stacked != null) next.stacked = stacked && canStack;
+    if (percent != null) next.percent = percent && next.stacked && canStack;
+    if (!next.stacked) next.percent = false;
+    next.dirty = true;
+    sheet.charts[index] = next;
+    sheet.chartsDirty = true;
+    sheet.dirty = true;
+  }
+
+  /// Changes one series of [chart] (its colour, how it is drawn, its scale or its trend line) by [change].
+  void updateSeries(Sheet sheet, SheetChart chart, int index, ChartSeries Function(ChartSeries) change) {
+    if (!chart.editable || !sheet.charts.contains(chart) || index < 0 || index >= chart.series.length) return;
+    final next = chart.copy();
+    var changed = change(next.series[index]);
+    if (!next.mixable) changed = changed.copyWith(kind: null, secondary: false);
+    if (next.kind.isPie) changed = changed.copyWith(trend: TrendKind.none, showEquation: false, showR2: false);
+    if (changed.trend == TrendKind.none || changed.trend == TrendKind.movingAverage) changed = changed.copyWith(showEquation: false, showR2: false);
+    if (changed.kind == next.kind) changed = changed.copyWith(kind: null);
+    final old = next.series[index];
+    if (changed.sameLook(old)) return;
+    _checkpoint([sheet]);
+    next.series = List.of(next.series)..[index] = changed;
+    next.dirty = true;
+    sheet.charts[sheet.charts.indexOf(chart)] = next;
+    sheet.chartsDirty = true;
+    sheet.dirty = true;
+  }
+
+  /// Puts [chart] at another place or size, in cells. Any chart can be moved, including ones the app cannot draw.
+  void moveChart(Sheet sheet, SheetChart chart, {int? col, int? row, int? cols, int? rows}) {
+    final index = sheet.charts.indexOf(chart);
+    if (index < 0) return;
+    final next = chart.copy();
+    next.col = (col ?? chart.col).clamp(0, CellRef.maxCols - 2);
+    next.row = (row ?? chart.row).clamp(0, CellRef.maxRows - 2);
+    next.cols = (cols ?? chart.cols).clamp(2, 60);
+    next.rows = (rows ?? chart.rows).clamp(3, 200);
+    if (next.col == chart.col && next.row == chart.row && next.cols == chart.cols && next.rows == chart.rows) return;
+    _checkpoint([sheet]);
+    next.moved = true;
+    sheet.charts[index] = next;
+    sheet.chartsDirty = true;
+    sheet.dirty = true;
+  }
+
+  void removeChart(Sheet sheet, SheetChart chart) {
+    if (!sheet.charts.contains(chart)) return;
+    _checkpoint([sheet]);
+    sheet.charts.remove(chart);
+    if (chart.relId != null) sheet.removedCharts.add(chart);
+    sheet.chartsDirty = true;
+    sheet.dirty = true;
+  }
+
   // ------------------------------------------------------------------ sheets
 
   String uniqueName(String wanted) {
@@ -539,6 +737,14 @@ class SheetEditor {
       ..dirty = true
       ..colsDirty = true
       ..mergesDirty = true;
+    // The copy's charts show the copy's cells, and are new charts as far as the file goes.
+    final fresh = [for (final c in copy.charts) c.asNew()];
+    copy.charts.clear();
+    copy.removedCharts.clear();
+    for (final c in fresh) {
+      copy.charts.add(c.remapped((r) => r.sheet == sheet.name ? r.onSheet(copy.name) : r) ?? c);
+    }
+    copy.chartsDirty = copy.charts.isNotEmpty;
     workbook.sheets.insert(workbook.sheets.indexOf(sheet) + 1, copy);
     workbook.structureChanged = true;
     return copy;
@@ -554,6 +760,7 @@ class SheetEditor {
     _checkpoint(workbook.sheets);
     final old = sheet.name;
     sheet.name = clean;
+    _followInCharts(old, (ref) => ref.onSheet(clean));
     final quoted = RegExp(r'^[A-Za-z_][A-Za-z0-9_.]*$').hasMatch(clean) && CellRef.parse(clean) == null ? clean : "'${clean.replaceAll("'", "''")}'";
     final re = RegExp(r"(?<![A-Za-z0-9_.$'])(?:'((?:[^']|'')+)'|([A-Za-z_][A-Za-z0-9_.]*))!");
     for (final s in workbook.sheets) {
@@ -582,6 +789,7 @@ class SheetEditor {
     _checkpoint(workbook.sheets);
     final re = RegExp(r"(?<![A-Za-z0-9_.$'])(?:'(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_.]*)!\$?[A-Za-z]{1,3}\$?\d{1,7}(?::\$?[A-Za-z]{1,3}\$?\d{1,7})?");
     workbook.sheets.remove(sheet);
+    _followInCharts(sheet.name, (ref) => null);
     for (final s in workbook.sheets) {
       for (final e in s.cells.entries.toList()) {
         final f = e.value.formula;

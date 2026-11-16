@@ -39,6 +39,14 @@ abstract interface class DocumentRepository {
   Future<Result<void>> deleteDocument(String id);
 }
 
+/// Files (Word, Excel, PowerPoint, PDF, text, images) kept in the library next to scans.
+abstract interface class LibraryFileRepository {
+  Future<Result<ScannedDocument>> saveFile({required String title, required String sourcePath, String? folderId});
+
+  /// Puts a new version of a library file in place; the document keeps its folder, tags and flags.
+  Future<Result<ScannedDocument>> replaceFile({required String id, required String sourcePath, String? title});
+}
+
 abstract interface class FolderRepository {
   Future<Result<List<Folder>>> listFolders();
   Future<Result<Folder>> createFolder(String name, {FolderStyle style = const FolderStyle()});

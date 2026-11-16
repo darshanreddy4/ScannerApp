@@ -168,12 +168,13 @@ void main() {
 
   test('unknown functions keep the value stored in the file', () {
     final wb = book({'A1': 7});
-    wb.sheets.first.setCell(1, 0, const SheetCell(value: NumberValue(99), formula: 'XLOOKUP(1,A1:A1,A1:A1)'));
+    wb.sheets.first.setCell(1, 0, const SheetCell(value: NumberValue(99), formula: 'UNIQUE(A1:A1)'));
     wb.sheets.first.setCell(2, 0, const SheetCell(formula: 'A2+1'));
     FormulaEngine(wb).recalculateAll();
     expect((wb.sheets.first.cellAt(1, 0).value as NumberValue).number, 99);
     expect((wb.sheets.first.cellAt(2, 0).value as NumberValue).number, 100);
-    expect(FormulaEngine.isSupported('XLOOKUP(1,A1,A2)'), isFalse);
+    expect(FormulaEngine.isSupported('UNIQUE(A1,A2)'), isFalse);
+    expect(FormulaEngine.isSupported('XLOOKUP(1,A1,A2)'), isTrue);
     expect(FormulaEngine.isSupported('SUM(A1:A3)'), isTrue);
   });
 

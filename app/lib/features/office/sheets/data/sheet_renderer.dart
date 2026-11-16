@@ -9,7 +9,10 @@ import 'package:path/path.dart' as p;
 import '../../../export/data/document_builders.dart';
 import '../../../export/domain/entities/export_options.dart';
 import '../domain/cell_display.dart';
+import '../domain/chart.dart';
+import '../domain/cond_format.dart';
 import '../domain/sheet_model.dart';
+import '../presentation/chart_painter.dart';
 
 class SheetTooLargeException implements Exception {
   const SheetTooLargeException(this.pages);
@@ -51,6 +54,14 @@ class SheetRenderer {
           onProgress?.call(++done, total);
         }
       }
+      for (var page = 0; page < plan.chartPages; page++) {
+        final slice = plan.charts.skip(page * plan.chartsPerPage).take(plan.chartsPerPage).toList();
+        final bytes = await _drawChartPage(plan, slice, '${sheets[i].name}  -  charts ${page + 1} of ${plan.chartPages}');
+        final path = p.join(dir.path, 'sheet_${stamp}_${out.length}.png');
+        await File(path).writeAsBytes(bytes.data, flush: true);
+        out.add(PageSource(path: path, width: bytes.width, height: bytes.height));
+        onProgress?.call(++done, total);
+      }
     }
     return out;
   }
@@ -90,7 +101,18 @@ class SheetRenderer {
       return groups;
     }
 
+    // Charts the app can draw follow the cells, as many to a page as fit.
+    final charts = [
+      for (final c in s.charts)
+        if (c.editable) c,
+    ];
+    final chartH = areaW * _chartAspect;
+    final perPage = math.max(1, ((areaH + _chartGap) / (chartH + _chartGap)).floor());
+
     return _Plan(
+      charts: charts,
+      chartsPerPage: perPage,
+      areaW: areaW,
       lastRow: lastRow,
       lastCol: lastCol,
       pageW: pageW,
@@ -99,6 +121,53 @@ class SheetRenderer {
       rowGroups: group(lastRow + 1, (r) => _rowPx(s, r), areaH),
       colGroups: group(lastCol + 1, (c) => math.min(_colPx(s, c), areaW), areaW),
     );
+  }
+
+  static const _chartAspect = 0.625;
+  static const _chartGap = 40.0;
+
+  /// A page with up to a few charts, each as wide as the page's writing area.
+  Future<({List<int> data, int width, int height})> _drawChartPage(_Plan plan, List<SheetChart> charts, String footer) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder, ui.Rect.fromLTWH(0, 0, plan.pageW, plan.pageH));
+    canvas.drawRect(ui.Rect.fromLTWH(0, 0, plan.pageW, plan.pageH), ui.Paint()..color = const ui.Color(0xFFFFFFFF));
+    const logicalW = 400.0;
+    final chartH = plan.areaW * _chartAspect;
+    var y = plan.margin;
+    for (final chart in charts) {
+      final data = resolveChart(workbook, chart);
+      canvas.save();
+      canvas.translate(plan.margin, y);
+      canvas.clipRect(ui.Rect.fromLTWH(0, 0, plan.areaW, chartH));
+      canvas.scale(plan.areaW / logicalW);
+      ChartPainter(chart, data).paint(canvas, const ui.Size(logicalW, logicalW * _chartAspect));
+      canvas.restore();
+      canvas.drawRect(
+        ui.Rect.fromLTWH(plan.margin, y, plan.areaW, chartH),
+        ui.Paint()
+          ..color = const ui.Color(0xFFB8C2D1)
+          ..style = ui.PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+      y += chartH + _chartGap;
+    }
+    final foot = TextPainter(
+      text: TextSpan(
+        text: footer,
+        style: const TextStyle(color: ui.Color(0xFF888888), fontSize: 22),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    foot.paint(canvas, ui.Offset(plan.margin, plan.pageH - plan.margin + 4));
+    foot.dispose();
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(plan.pageW.round(), plan.pageH.round());
+    picture.dispose();
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    final w = image.width, h = image.height;
+    image.dispose();
+    if (data == null) throw StateError('The page could not be drawn');
+    return (data: data.buffer.asUint8List(), width: w, height: h);
   }
 
   Future<({List<int> data, int width, int height})> _drawPage(Sheet s, _Plan plan, (int, int) rows, (int, int) cols, String footer) async {
@@ -124,6 +193,7 @@ class SheetRenderer {
     final grid = ui.Paint()
       ..color = const ui.Color(0xFFD0D0D0)
       ..strokeWidth = 1;
+    final cond = CondContext(s);
     final merged = <int>{};
     final drawn = <(int, int, int, int)>[];
 
@@ -142,7 +212,7 @@ class SheetRenderer {
     void paintCell(int r, int c, double left, double top, double w, double h) {
       if (w <= 0 || h <= 0) return;
       final cell = s.cells[CellRef.key(r, c)] ?? SheetCell(style: s.rowStyles[r] ?? s.colStyles[c] ?? 0);
-      final style = workbook.styles.at(cell.style);
+      final style = cond.apply(workbook.styles.at(cell.style), r, c);
       final rect = ui.Rect.fromLTWH(left, top, w, h);
       if (style.fill != null) canvas.drawRect(rect, ui.Paint()..color = ui.Color(style.fill!));
       final desc = describeCell(cell, style, date1904: workbook.date1904);
@@ -247,6 +317,9 @@ class SheetRenderer {
 
 class _Plan {
   _Plan({
+    required this.charts,
+    required this.chartsPerPage,
+    required this.areaW,
     required this.lastRow,
     required this.lastCol,
     required this.pageW,
@@ -256,7 +329,10 @@ class _Plan {
     required this.colGroups,
   });
   final int lastRow, lastCol;
-  final double pageW, pageH, margin;
+  final double pageW, pageH, margin, areaW;
   final List<(int, int)> rowGroups, colGroups;
-  int get pages => rowGroups.length * colGroups.length;
+  final List<SheetChart> charts;
+  final int chartsPerPage;
+  int get chartPages => (charts.length / chartsPerPage).ceil();
+  int get pages => rowGroups.length * colGroups.length + chartPages;
 }

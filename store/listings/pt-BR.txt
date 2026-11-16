@@ -1,0 +1,50 @@
+title: Doculoom: Scanner de PDF
+short: Digitalize, edite e assine PDFs, comprima e compartilhe. Privado e offline.
+---
+O Doculoom transforma seu celular em um scanner de documentos e uma caixa de ferramentas para PDFs, arquivos do Office e fotos. Seus documentos ficam no seu celular: não é preciso criar conta, e a digitalização, a leitura de texto e as ferramentas de PDF funcionam offline.
+
+DIGITALIZAR
+• Digitalize páginas com a câmera e deixe o Doculoom detectar as bordas, ou importe fotos, PDFs e arquivos do Word
+• Digitalização de várias páginas, novo corte, rotação, reordenação e um filtro para todas as páginas
+• Filtros para texto, cor e preto e branco
+• Modos de digitalização para documentos, recibos, cartões de visita e documentos de identidade
+• Leia o texto de uma digitalização (OCR) no próprio aparelho, pesquise depois, copie ou transforme um cartão de visita em contato
+
+FERRAMENTAS DE PDF
+• Comprima, una, divida, corte e numere páginas
+• Proteja um PDF com senha ou desbloqueie um que você consiga abrir
+• Preencha formulários, desenhe, adicione texto e assine documentos com sua assinatura salva
+• Cubra dados privados com a ferramenta de ocultação
+• Compare dois PDFs e veja o que mudou
+• Leia arquivos PDF e Word sem importá-los
+
+FERRAMENTAS DE OFFICE E FOTOS
+• Abra, edite e converta arquivos do Excel, CSV e PowerPoint
+• Tabela de uma foto para Excel e recibos para planilha
+• Fotos de passaporte e documento no tamanho certo para cerca de 40 países
+• Comprima fotos para um tamanho desejado, adicione marca d'água e remova dados ocultos das fotos
+• Copie os dois lados de um documento de identidade em uma única página
+
+QR E COMPARTILHAMENTO
+• Leia e crie códigos QR e códigos de barras, com um histórico que você controla
+• Compartilhe um PDF como está, menor, com senha ou em um ZIP. Só a cópia compartilhada muda
+• Compartilhe um arquivo por código QR na mesma rede Wi-Fi ou com um link criptografado que expira
+
+NOTAS, CURRÍCULO E LEMBRETES
+• Criador de notas e faturas com layouts GST (Índia), imposto sobre vendas dos EUA e ZATCA (Arábia Saudita)
+• Códigos QR de pagamento, recibos de reembolso de IVA, criador de currículo e lista de tarefas
+• Lembretes de validade de passaportes, apólices e outros documentos, e lembretes de datas Hijri
+
+PRIVACIDADE E CONTROLE
+• Sem login. Os documentos ficam apenas no armazenamento privado do app
+• Bloqueie um documento ou pasta com a digital, o rosto ou o bloqueio de tela do celular
+• Crie backups criptografados com uma senha de sua escolha
+• Exclua um documento, ou tudo, nas Configurações a qualquer momento
+• Disponível em 17 idiomas
+
+ANÚNCIOS E MOEDAS
+A versão gratuita mostra anúncios do Google AdMob. Digitalizar, salvar, ver, pesquisar e compartilhar um PDF são sempre gratuitos. Algumas ferramentas usam moedas. Você recebe algumas moedas grátis por dia e pode ganhar mais, ou um passe de tempo, ao escolher assistir a vídeos curtos. As moedas não têm valor em dinheiro.
+
+Dúvidas ou sugestões? Abra Configurações > Sobre > Ajuda e suporte, ou escreva para darshandmg399@gmail.com.
+
+Política de privacidade: https://darshanreddy4.github.io/doculoom-privacy-policy/

@@ -5,6 +5,11 @@ import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
 
 import '../domain/sheet_model.dart';
+import '../domain/chart.dart';
+import '../domain/cond_format.dart';
+import 'chart_xml.dart';
+import 'cond_xml.dart';
+import 'validation_xml.dart';
 import 'styles_xml.dart';
 import 'xlsx_reader.dart';
 
@@ -75,12 +80,27 @@ Uint8List writeXlsx(Workbook wb) {
   XmlDocument parse(String name) => XmlDocument.parse(utf8.decode(files[name]!, allowMalformed: true));
   void put(String name, XmlDocument d) => files[name] = Uint8List.fromList(utf8.encode(d.toXmlString()));
 
-  final anyDirty = wb.structureChanged || wb.sheets.any((s) => s.dirty || s.partPath == null) || wb.styles.hasNew;
+  final anyDirty = wb.structureChanged || wb.sheets.any((s) => s.dirty || s.partPath == null || s.chartsDirty) || wb.styles.hasNew;
 
   // Styles added in the app.
+  final theme = parseThemeColors(files.containsKey('xl/theme/theme1.xml') ? parse('xl/theme/theme1.xml') : null);
   if (wb.styles.hasNew && files.containsKey('xl/styles.xml')) {
     final doc = parse('xl/styles.xml');
-    StylesXml(doc, parseThemeColors(files.containsKey('xl/theme/theme1.xml') ? parse('xl/theme/theme1.xml') : null)).addStyles(wb.styles);
+    StylesXml(doc, theme).addStyles(wb.styles);
+    put('xl/styles.xml', doc);
+  }
+
+  // Looks of highlighting rules.
+  var dxfIds = <DxfStyle, int>{};
+  final wantedLooks = {
+    for (final s in wb.sheets)
+      if (s.condDirty)
+        for (final r in s.condRules)
+          if (r.kind != CondKind.scale) r.look,
+  };
+  if (wantedLooks.isNotEmpty && files.containsKey('xl/styles.xml')) {
+    final doc = parse('xl/styles.xml');
+    dxfIds = StylesXml(doc, theme).addDxfs(wantedLooks);
     put('xl/styles.xml', doc);
   }
 
@@ -109,11 +129,12 @@ Uint8List writeXlsx(Workbook wb) {
     final doc = newParts.containsKey(sheet)
         ? XmlDocument.parse('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="$_mainNs"><sheetData/></worksheet>')
         : parse(path);
-    _writeSheet(doc, sheet);
+    _writeSheet(doc, sheet, dxfIds, theme);
     put(path, doc);
   }
 
   if (wb.structureChanged || newParts.isNotEmpty) _writeStructure(wb, files, newParts, parse, put);
+  _writeCharts(wb, files, parse, put);
 
   if (anyDirty) {
     // Excel rebuilds this list itself; a stale one makes it report a damaged file.
@@ -168,6 +189,160 @@ void _setFullCalc(XmlElement root) {
   calc.setAttribute('fullCalcOnLoad', '1');
 }
 
+const _pkgRelNs = 'http://schemas.openxmlformats.org/package/2006/relationships';
+
+/// Puts the charts of the sheets into the file: new ones get a chart part and a place in the sheet's drawing, changed ones get their part
+/// written again, and removed ones are taken out. Charts that were not touched stay exactly as they were.
+void _writeCharts(Workbook wb, Map<String, Uint8List> files, XmlDocument Function(String) parse, void Function(String, XmlDocument) put) {
+  XmlDocument? ct;
+  XmlDocument contentTypes() => ct ??= parse('[Content_Types].xml');
+  void addOverride(String part, String type) {
+    final root = contentTypes().rootElement;
+    if (root.childElements.any((e) => e.name.local == 'Override' && e.getAttribute('PartName') == '/$part')) return;
+    root.children.add(XmlElement(XmlName('Override'), [XmlAttribute(XmlName('PartName'), '/$part'), XmlAttribute(XmlName('ContentType'), type)]));
+  }
+
+  void dropOverride(String part) => contentTypes().rootElement.children.removeWhere((c) => c is XmlElement && c.name.local == 'Override' && c.getAttribute('PartName') == '/$part');
+
+  String free(String dir, String stem, String ext) {
+    var i = 1;
+    while (files.containsKey('$dir/$stem$i.$ext')) {
+      i++;
+    }
+    return '$dir/$stem$i.$ext';
+  }
+
+  String nextRid(XmlElement rels) {
+    var m = 0;
+    for (final r in rels.childElements) {
+      m = [m, int.tryParse((r.getAttribute('Id') ?? '').replaceAll(RegExp(r'\D'), '')) ?? 0].reduce((a, b) => a > b ? a : b);
+    }
+    return 'rId${m + 1}';
+  }
+
+  XmlDocument relsOf(String part) {
+    final path = relsPathOf(part);
+    return files.containsKey(path) ? parse(path) : XmlDocument.parse('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="$_pkgRelNs"/>');
+  }
+
+  void putRels(String part, XmlDocument rels) {
+    final path = relsPathOf(part);
+    if (rels.rootElement.childElements.isEmpty) {
+      files.remove(path);
+    } else {
+      put(path, rels);
+    }
+  }
+
+  for (final sheet in wb.sheets) {
+    final sheetPath = sheet.partPath;
+    if (!sheet.chartsDirty || sheetPath == null || !files.containsKey(sheetPath)) continue;
+    final sheetRels = relsOf(sheetPath);
+    final drawingRel = sheetRels.rootElement.childElements.where((r) => (r.getAttribute('Type') ?? '').endsWith('/drawing')).firstOrNull;
+    var drawingPath = drawingRel == null ? null : resolveTarget(sheetPath, drawingRel.getAttribute('Target') ?? '');
+    if (drawingPath != null && !files.containsKey(drawingPath)) drawingPath = null;
+    final needsDrawing = sheet.charts.any((c) => c.editable ? (c.dirty && (c.partPath == null || !files.containsKey(c.partPath!))) : false);
+
+    // Charts taken off the sheet.
+    if (drawingPath != null) {
+      final drawing = parse(drawingPath);
+      final drawingRels = relsOf(drawingPath);
+      for (final gone in sheet.removedCharts) {
+        final rid = gone.relId;
+        if (rid == null) continue;
+        findChartAnchor(drawing, rid)?.remove();
+        final rel = drawingRels.rootElement.childElements.where((r) => r.getAttribute('Id') == rid).firstOrNull;
+        if (rel != null) {
+          final target = resolveTarget(drawingPath, rel.getAttribute('Target') ?? '');
+          rel.remove();
+          // The chart's own parts (style, colours) go with it.
+          if (files.containsKey(relsPathOf(target))) {
+            for (final r in parse(relsPathOf(target)).rootElement.childElements) {
+              final extra = resolveTarget(target, r.getAttribute('Target') ?? '');
+              if (extra.startsWith('xl/charts/') && files.remove(extra) != null) dropOverride(extra);
+            }
+            files.remove(relsPathOf(target));
+          }
+          if (files.remove(target) != null) dropOverride(target);
+        }
+      }
+      // Charts moved or resized in the app get their new place.
+      for (final c in sheet.charts) {
+        final rid = c.relId;
+        if (!c.moved || rid == null) continue;
+        final old = findChartAnchor(drawing, rid);
+        if (old == null) continue;
+        final cNvPr = old.descendants.whereType<XmlElement>().where((e) => e.name.local == 'cNvPr').firstOrNull;
+        final id = int.tryParse(cNvPr?.getAttribute('id') ?? '') ?? 1;
+        final fresh = chartAnchor(c, rid, id);
+        final name = cNvPr?.getAttribute('name');
+        if (name != null) fresh.descendants.whereType<XmlElement>().where((e) => e.name.local == 'cNvPr').first.setAttribute('name', name);
+        old.replace(fresh);
+      }
+      put(drawingPath, drawing);
+      putRels(drawingPath, drawingRels);
+    }
+
+    if (!needsDrawing && !sheet.charts.any((c) => c.dirty && c.partPath != null && files.containsKey(c.partPath!))) continue;
+
+    // A sheet with no drawing gets one.
+    if (drawingPath == null) {
+      drawingPath = free('xl/drawings', 'drawing', 'xml');
+      files[drawingPath] = Uint8List.fromList(utf8.encode(emptyDrawingXml()));
+      addOverride(drawingPath, drawingContentType);
+      final rid = nextRid(sheetRels.rootElement);
+      sheetRels.rootElement.children.add(
+        XmlElement(XmlName('Relationship'), [
+          XmlAttribute(XmlName('Id'), rid),
+          XmlAttribute(XmlName('Type'), drawingRelType),
+          XmlAttribute(XmlName('Target'), '../drawings/${drawingPath.split('/').last}'),
+        ]),
+      );
+      putRels(sheetPath, sheetRels);
+      final sheetDoc = parse(sheetPath);
+      final root = sheetDoc.rootElement;
+      if (root.getAttribute('xmlns:r') == null) root.setAttribute('xmlns:r', _relNs);
+      _setChild(root, 'drawing', XmlElement(XmlName('drawing'), [XmlAttribute(XmlName('r:id'), rid)]));
+      put(sheetPath, sheetDoc);
+    }
+
+    final drawing = parse(drawingPath);
+    final drawingRels = relsOf(drawingPath);
+    var shapeId = 1;
+    for (final e in drawing.rootElement.descendants.whereType<XmlElement>().where((e) => e.name.local == 'cNvPr')) {
+      shapeId = [shapeId, (int.tryParse(e.getAttribute('id') ?? '') ?? 0) + 1].reduce((a, b) => a > b ? a : b);
+    }
+    for (final chart in sheet.charts) {
+      if (!chart.editable || !chart.dirty) continue;
+      final data = resolveChart(wb, chart);
+      final xml = Uint8List.fromList(utf8.encode(chartXml(chart, data)));
+      final existing = chart.partPath;
+      if (existing != null && files.containsKey(existing)) {
+        files[existing] = xml;
+        continue;
+      }
+      final part = free('xl/charts', 'chart', 'xml');
+      files[part] = xml;
+      addOverride(part, chartContentType);
+      final rid = nextRid(drawingRels.rootElement);
+      drawingRels.rootElement.children.add(
+        XmlElement(XmlName('Relationship'), [
+          XmlAttribute(XmlName('Id'), rid),
+          XmlAttribute(XmlName('Type'), chartRelType),
+          XmlAttribute(XmlName('Target'), '../charts/${part.split('/').last}'),
+        ]),
+      );
+      drawing.rootElement.children.add(chartAnchor(chart, rid, shapeId++));
+      chart
+        ..partPath = part
+        ..relId = rid;
+    }
+    put(drawingPath, drawing);
+    putRels(drawingPath, drawingRels);
+  }
+  if (ct != null) put('[Content_Types].xml', ct!);
+}
+
 void _setChild(XmlElement root, String name, XmlElement? replacement) {
   final existing = root.childElements.where((e) => e.name.local == name).firstOrNull;
   if (existing != null) {
@@ -188,8 +363,43 @@ void _setChild(XmlElement root, String name, XmlElement? replacement) {
   }
 }
 
-void _writeSheet(XmlDocument doc, Sheet sheet) {
+void _writeSheet(XmlDocument doc, Sheet sheet, Map<DxfStyle, int> dxfIds, List<int> theme) {
   final root = doc.rootElement;
+
+  if (sheet.validDirty) {
+    // Rules the app does not understand stay as they are; the others are written again from the sheet.
+    var holder = root.childElements.where((e) => e.name.local == 'dataValidations').firstOrNull;
+    holder?.children.removeWhere((c) => c is XmlElement && c.name.local == 'dataValidation' && isSupportedValidation(c));
+    final fresh = validationElements(sheet.validations);
+    if (holder == null && fresh.isNotEmpty) {
+      holder = XmlElement(XmlName('dataValidations'));
+      _setChild(root, 'dataValidations', holder);
+    }
+    if (holder != null) {
+      holder.children.addAll(fresh);
+      final count = holder.childElements.length;
+      if (count == 0) {
+        holder.remove();
+      } else {
+        holder.setAttribute('count', '$count');
+      }
+    }
+  }
+
+  if (sheet.condDirty) {
+    // Rules the app does not understand stay as they are; the others are written again from the sheet.
+    root.children.removeWhere((c) => c is XmlElement && c.name.local == 'conditionalFormatting' && isSupportedCf(c, theme));
+    final fresh = condElements(sheet.condRules, (look) => dxfIds[look] ?? 0);
+    if (fresh.isNotEmpty) {
+      final rank = _childOrder.indexOf('conditionalFormatting');
+      final at = root.children.indexWhere((c) => c is XmlElement && c.name.local != 'conditionalFormatting' && _childOrder.indexOf(c.name.local) > rank);
+      if (at < 0) {
+        root.children.addAll(fresh);
+      } else {
+        root.children.insertAll(at, fresh);
+      }
+    }
+  }
 
   final rowSet = <int>{...sheet.rowHeights.keys, ...sheet.hiddenRows, ...sheet.rowStyles.keys};
   final byRow = <int, List<int>>{};

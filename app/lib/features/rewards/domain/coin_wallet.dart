@@ -1,6 +1,9 @@
 class CoinSnapshot {
-  const CoinSnapshot({this.balance = 0, this.adsToday = 0, this.passUntil, this.passMinutes, this.passProgress = 0});
+  const CoinSnapshot({this.balance = 0, this.adsToday = 0, this.passUntil, this.passMinutes, this.passProgress = 0, this.dailyClaimed = false});
   final int balance;
+
+  /// Whether today's free coins were already claimed.
+  final bool dailyClaimed;
 
   /// Rewarded videos already watched for coins today.
   final int adsToday;

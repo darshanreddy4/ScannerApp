@@ -65,6 +65,10 @@ class SlidePart {
   /// Created in the app, so it has no part in the file yet.
   bool isNew = false;
 
+  /// The speaker notes: null until they are read from the notes page or set; changed ones are written again.
+  String? notesText;
+  bool notesDirty = false;
+
   XmlDocument get doc => _doc ??= deck.parse(path);
   set doc(XmlDocument d) => _doc = d;
   bool get loaded => _doc != null;
@@ -189,6 +193,30 @@ class PptxDeck {
   }
 
   void setRels(String part, List<Rel> rels) => _relCache[part] = rels;
+
+  /// The text of the speaker notes of [slide], one line per paragraph, or an empty string when it has none.
+  String readNotes(SlidePart slide) {
+    final rel = slide.relOfType('notesSlide');
+    if (rel == null || !files.containsKey(rel.target)) return '';
+    try {
+      final doc = parse(rel.target);
+      for (final sp in doc.descendants.whereType<XmlElement>().where((e) => e.name.local == 'sp')) {
+        final ph = sp.descendants.whereType<XmlElement>().where((e) => e.name.local == 'ph').firstOrNull;
+        if (ph == null || ph.getAttribute('type') != 'body') continue;
+        final lines = <String>[];
+        for (final p in sp.descendants.whereType<XmlElement>().where((e) => e.name.local == 'p')) {
+          lines.add(p.descendants.whereType<XmlElement>().where((e) => e.name.local == 't').map((e) => e.innerText).join());
+        }
+        while (lines.isNotEmpty && lines.last.trim().isEmpty) {
+          lines.removeLast();
+        }
+        return lines.join('\n');
+      }
+    } catch (_) {
+      // Notes that cannot be read are shown as empty.
+    }
+    return '';
+  }
 
   String get layoutFallback {
     for (final k in files.keys) {

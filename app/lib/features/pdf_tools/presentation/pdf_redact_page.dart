@@ -1,4 +1,4 @@
-import 'package:file_picker/file_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:path_provider/path_provider.dart';
@@ -33,8 +33,8 @@ class _RedactView extends StatelessWidget {
 
   Future<void> _pick(BuildContext context) async {
     try {
-      final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['pdf']);
-      final path = picked.isEmpty ? null : picked.first.path;
+      final picked = await pickFilePaths(context, allowedExtensions: const ['pdf']);
+      final path = picked.isEmpty ? null : picked.first;
       if (path == null || !context.mounted) return;
       await context.read<PdfRedactCubit>().pick(path);
     } catch (_) {

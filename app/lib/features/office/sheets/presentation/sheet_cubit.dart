@@ -9,11 +9,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../../core/error/failures.dart';
+import '../../../../core/i18n/tr.dart';
 import '../data/csv.dart';
 import '../data/sheet_renderer.dart';
+import '../data/sheet_templates.dart';
 import '../data/xlsx_reader.dart';
 import '../data/xlsx_writer.dart';
+import '../domain/chart.dart';
+import '../domain/cond_format.dart';
 import '../domain/formula.dart';
+import '../domain/validation.dart';
 import '../domain/sheet_edit.dart';
 import '../domain/sheet_model.dart';
 
@@ -155,6 +160,9 @@ class SheetState extends Equatable {
   ];
 }
 
+/// Top level so the closure cannot capture the cubit, whose listeners hold widgets that cannot be sent to another isolate.
+Future<Uint8List> _writeXlsxInBackground(Workbook wb) => Isolate.run(() => writeXlsx(wb));
+
 /// The work behind the spreadsheet screen: opening, selecting, editing and saving a workbook.
 class SheetCubit extends Cubit<SheetState> {
   SheetCubit({required Future<Directory> Function() workDir}) : _workDir = workDir, super(const SheetState());
@@ -178,6 +186,15 @@ class SheetCubit extends Cubit<SheetState> {
     editor = SheetEditor(workbook);
     name = 'New spreadsheet';
     emit(state.copyWith(loading: false));
+  }
+
+  /// Starts from a ready-made spreadsheet with sample rows and the formulas already in place.
+  void startTemplate(SheetTemplate template) {
+    workbook = template.build();
+    hasWorkbook = true;
+    editor = SheetEditor(workbook)..modified = template.id != 'blank';
+    name = template.id == 'blank' ? 'New spreadsheet' : template.title;
+    emit(state.copyWith(loading: false, modified: editor.modified));
   }
 
   /// Opens an .xlsx or .csv file.
@@ -323,15 +340,45 @@ class SheetCubit extends Cubit<SheetState> {
 
   // ----------------------------------------------------------------- editing
 
-  /// Puts [text] in the active cell and moves down, as spreadsheets do.
+  /// Puts [text] in the active cell and moves down, as spreadsheets do. Text that the cell's validation rule does not allow is refused.
   void commitInput(String text, {bool moveDown = true}) {
     if (text == inputTextOf(state.row, state.col)) {
       if (moveDown) moveSelection(1, 0);
       return;
     }
     final r = state.row, c = state.col;
-    _run(() => editor.setInput(sheet, r, c, text), row: moveDown ? r + 1 : r, col: c, resetSelection: true);
+    final rule = sheet.validationAt(r, c);
+    if (rule != null && !rule.allows(text)) {
+      emit(state.copyWith(notice: validationMessage(rule)));
+      return;
+    }
+    final value = rule == null ? text : rule.canonical(text);
+    _run(() => editor.setInput(sheet, r, c, value), row: moveDown ? r + 1 : r, col: c, resetSelection: true);
   }
+
+  /// What to tell the person when a value is refused.
+  static String validationMessage(ValidationRule rule) => switch (rule.kind) {
+    ValidationKind.list => trf('Not allowed here. Choose one of: {items}', {'items': rule.items.join(', ')}),
+    ValidationKind.whole => trf('Not allowed here. Enter a whole number from {min} to {max}', {'min': rule.min, 'max': rule.max}),
+    ValidationKind.decimal => trf('Not allowed here. Enter a number from {min} to {max}', {'min': rule.min, 'max': rule.max}),
+  };
+
+  /// The choices to offer for the active cell, or an empty list when it has no list rule.
+  List<String> get choicesForActiveCell {
+    final rule = sheet.validationAt(state.row, state.col);
+    return rule != null && rule.kind == ValidationKind.list ? rule.items : const [];
+  }
+
+  /// Allows only [rule]'s values in the selected cells.
+  void addValidation(ValidationRule rule) => _run(() => editor.addValidation(sheet, rule.withRange(state.selection)), notice: 'Rule added');
+
+  void clearValidations() {
+    var removed = 0;
+    _run(() => removed = editor.clearValidations(sheet, state.selection));
+    if (removed == 0) emit(state.copyWith(notice: 'No rule here'));
+  }
+
+  bool get hasValidations => sheet.validations.isNotEmpty;
 
   void _style(CellStyle Function(CellStyle) change) {
     final sel = state.selection;
@@ -442,6 +489,51 @@ class SheetCubit extends Cubit<SheetState> {
   }
 
   bool get hasHidden => sheet.hiddenRows.isNotEmpty || sheet.hiddenCols.isNotEmpty;
+
+  bool get hasCondRules => sheet.condRules.isNotEmpty;
+
+  /// Highlights the selected cells by [rule]'s test.
+  void addCondRule(CondRule rule) => _run(() => editor.addCondRule(sheet, rule.withRange(state.selection)), notice: 'Highlighting added');
+
+  /// Takes highlighting off the selected cells, or off the whole sheet when [all] is true.
+  void clearCondRules({bool all = false}) {
+    var removed = 0;
+    _run(() => removed = editor.clearCondRules(sheet, all ? null : state.selection));
+    if (removed == 0) emit(state.copyWith(notice: 'No highlighting here'));
+  }
+
+  bool get hasCharts => sheet.charts.isNotEmpty;
+
+  /// What [chart] shows now, read from the cells.
+  ChartData chartData(SheetChart chart) => resolveChart(workbook, chart);
+
+  /// Puts a chart of the selected cells on the sheet.
+  void addChart(ChartKind kind, {String title = '', bool stacked = false, bool percent = false}) {
+    try {
+      final chart = editor.addChart(sheet, state.selection, kind, title: title);
+      final canStack = kind == ChartKind.column || kind == ChartKind.bar || kind == ChartKind.area;
+      if (stacked && canStack) chart.stacked = true;
+      if (percent && stacked && canStack) chart.percent = true;
+    } on ChartSelectionException catch (e) {
+      emit(state.copyWith(failure: ExportFailure(e.message)));
+      return;
+    } catch (e) {
+      emit(state.copyWith(failure: UnexpectedFailure('That change could not be made.', cause: e)));
+      return;
+    }
+    _changed(notice: 'Chart added');
+  }
+
+  void updateChart(SheetChart chart, {ChartKind? kind, String? title, bool? stacked, bool? percent}) =>
+      _run(() => editor.updateChart(sheet, chart, kind: kind, title: title, stacked: stacked, percent: percent));
+
+  /// Changes one series of a chart: its colour, how it is drawn, whether it uses the second scale, or its trend line.
+  void updateSeries(SheetChart chart, int index, ChartSeries Function(ChartSeries) change) => _run(() => editor.updateSeries(sheet, chart, index, change));
+
+  /// Puts a chart at another place or size on the sheet, in cells.
+  void moveChart(SheetChart chart, {int? col, int? row, int? cols, int? rows}) => _run(() => editor.moveChart(sheet, chart, col: col, row: row, cols: cols, rows: rows));
+
+  void removeChart(SheetChart chart) => _run(() => editor.removeChart(sheet, chart), notice: 'Chart removed');
 
   void toggleFreeze() {
     final frozen = sheet.frozenRows > 0 || sheet.frozenCols > 0;
@@ -626,8 +718,7 @@ class SheetCubit extends Cubit<SheetState> {
       final out = p.join(dir.path, exportName(format));
       switch (format) {
         case SheetExportFormat.xlsx:
-          final wb = workbook;
-          final bytes = await Isolate.run(() => writeXlsx(wb));
+          final bytes = await _writeXlsxInBackground(workbook);
           await File(out).writeAsBytes(bytes, flush: true);
         case SheetExportFormat.csv:
           final text = sheetToCsv(sheet, workbook.styles, date1904: workbook.date1904);

@@ -1,0 +1,50 @@
+title: Doculoom: Escáner PDF y más
+short: Escanea, edita y firma PDF, comprime y comparte. Privado y sin conexión.
+---
+Doculoom convierte tu teléfono en un escáner de documentos y una caja de herramientas para PDF, archivos de Office y fotos. Tus documentos se quedan en tu teléfono: no hay que crear una cuenta, y el escaneo, la lectura de texto y las herramientas PDF funcionan sin conexión.
+
+ESCANEAR
+• Escanea páginas con la cámara y deja que Doculoom detecte los bordes, o importa fotos, PDF y archivos de Word
+• Escaneo de varias páginas, recorte, giro, reordenación y un filtro para todas las páginas
+• Filtros para texto, color y blanco y negro
+• Modos de escaneo para documentos, recibos, tarjetas de visita y documentos de identidad
+• Lee el texto de un escaneo (OCR) en el dispositivo, búscalo después, cópialo o convierte una tarjeta de visita en un contacto
+
+HERRAMIENTAS PDF
+• Comprime, une, divide, recorta y numera páginas
+• Protege un PDF con contraseña o desbloquea uno que puedas abrir
+• Rellena formularios, dibuja, añade texto y firma documentos con tu firma guardada
+• Oculta datos privados con la herramienta de tachado
+• Compara dos PDF y mira qué ha cambiado
+• Lee archivos PDF y Word sin importarlos
+
+OFFICE Y FOTOS
+• Abre, edita y convierte archivos de Excel, CSV y PowerPoint
+• De una tabla en una foto a Excel, y de recibos a una hoja de cálculo
+• Fotos de pasaporte y carné en el tamaño correcto para unos 40 países
+• Comprime fotos a un tamaño objetivo, añade marcas de agua y elimina los datos ocultos de las fotos
+• Copia las dos caras de un documento de identidad en una sola página
+
+QR Y COMPARTIR
+• Escanea y crea códigos QR y de barras, con un historial que controlas tú
+• Comparte un PDF tal cual, más pequeño, con contraseña o en un ZIP. Solo cambia la copia que compartes
+• Comparte un archivo con un código QR en la misma red Wi-Fi, o con un enlace cifrado que caduca
+
+FACTURAS, CV Y RECORDATORIOS
+• Creador de facturas con formatos GST (India), impuesto sobre ventas de EE. UU. y ZATCA (Arabia Saudí)
+• Códigos QR de pago, recibos de devolución del IVA, creador de CV y lista de tareas
+• Recordatorios de caducidad de pasaportes, pólizas y otros documentos, y recordatorios de fechas Hijri
+
+PRIVACIDAD Y CONTROL
+• Sin inicio de sesión. Los documentos se guardan solo en el almacenamiento privado de la app
+• Bloquea un documento o una carpeta con la huella, el rostro o el bloqueo de pantalla del teléfono
+• Crea copias de seguridad cifradas con una contraseña que elijas
+• Elimina un documento, o todo, desde Ajustes cuando quieras
+• Disponible en 17 idiomas
+
+ANUNCIOS Y MONEDAS
+La versión gratuita muestra anuncios de Google AdMob. Escanear, guardar, ver, buscar y compartir un PDF son siempre gratis. Algunas herramientas usan monedas. Recibes unas monedas gratis cada día y puedes ganar más, o un pase de tiempo, si eliges ver vídeos cortos. Las monedas no tienen valor en efectivo.
+
+¿Preguntas o comentarios? Abre Ajustes > Acerca de > Ayuda y asistencia, o escribe a darshandmg399@gmail.com.
+
+Política de privacidad: https://darshanreddy4.github.io/doculoom-privacy-policy/

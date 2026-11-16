@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -58,11 +59,7 @@ class _CompressView extends StatelessWidget {
 
   Future<void> _pickFiles(BuildContext context) async {
     try {
-      final picked = await FilePicker.pickFiles(type: FileType.image);
-      final paths = [
-        for (final f in picked)
-          if (f.path != null) f.path!,
-      ];
+      final paths = await pickFilePaths(context, type: FileType.image, allowMultiple: true);
       if (paths.isEmpty || !context.mounted) return;
       await context.read<CompressCubit>().add(paths);
     } catch (_) {

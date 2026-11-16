@@ -138,7 +138,7 @@ class SupportPage extends StatelessWidget {
     ),
     (
       'How do I change the language, the paper size or the way dates are written?',
-      'Open Settings > Region and language. Choose the language of the app (English, Hindi, Spanish, French, German, Portuguese, Arabic, Urdu, Chinese, Japanese, Kannada, Marathi, Italian, Dutch, Polish, Turkish or Russian, or the language of the phone), the paper size (A4 or US Letter, or automatic by the region of the phone) and the date format (day first, month first or year first). Paper size is used for printing, for ID card copies, and for the pages of PDF and Word files the app makes. Pages you scan keep the shape of the photo. Menus and messages are translated; some long explanations and rarely used screens are still in English, and the text of the Europe tools is translated into the European languages only.',
+      'Open Settings > Region and language. Choose the language of the app (English, Hindi, Spanish, French, German, Portuguese, Arabic, Urdu, Chinese, Japanese, Kannada, Marathi, Tamil, Telugu, Malayalam, Italian, Dutch, Polish, Turkish or Russian, or the language of the phone), the paper size (A4 or US Letter, or automatic by the region of the phone) and the date format (day first, month first or year first). Paper size is used for printing, for ID card copies, and for the pages of PDF and Word files the app makes. Pages you scan keep the shape of the photo. Menus and messages are translated; some long explanations and rarely used screens are still in English, and the text of the Europe tools is translated into the European languages only.',
     ),
     (
       'How do I search for a word inside a PDF or Word file?',

@@ -93,13 +93,13 @@ void main() {
   tearDown(resetRegion);
 
   group('the translation table', () {
-    const wordsLanguages = ['hi', 'ar', 'es', 'fr', 'de', 'pt', 'it', 'nl', 'pl', 'tr', 'ru'];
+    const wordsLanguages = ['hi', 'ar', 'es', 'fr', 'de', 'pt', 'it', 'nl', 'pl', 'tr', 'ru', 'ta', 'te', 'ml', 'kn', 'mr', 'ur', 'zh', 'ja'];
     const europeLanguages = ['es', 'fr', 'de', 'pt', 'it', 'nl', 'pl', 'tr', 'ru'];
     // The text of each tool that is translated as a group: the phrases, and the languages that have all of them.
     final groups = <(String, Set<String>, List<String>)>[
       ('the Europe tools', esEurope.keys.toSet(), europeLanguages),
       ('the amount-in-words tool', esWords.keys.toSet(), wordsLanguages),
-      ('the UPI tools', hiUpi.keys.toSet(), const ['hi', 'mr', 'kn']),
+      ('the UPI tools', hiUpi.keys.toSet(), const ['hi', 'mr', 'kn', 'ta', 'te', 'ml']),
       ('the stamp library', esStamps.keys.toSet(), wordsLanguages),
       ('the loyalty cards', esCards.keys.toSet(), wordsLanguages),
       ('the checklists', esLists.keys.toSet(), wordsLanguages),
@@ -194,6 +194,9 @@ void main() {
         'hi': RegExp(r'[\u0900-\u097F]'),
         'mr': RegExp(r'[\u0900-\u097F]'),
         'kn': RegExp(r'[\u0C80-\u0CFF]'),
+        'ta': RegExp(r'[\u0B80-\u0BFF]'),
+        'te': RegExp(r'[\u0C00-\u0C7F]'),
+        'ml': RegExp(r'[\u0D00-\u0D7F]'),
         'ar': RegExp(r'[\u0600-\u06FF]'),
         'ur': RegExp(r'[\u0600-\u06FF]'),
         'zh': RegExp(r'[\u4E00-\u9FFF]'),
@@ -227,6 +230,9 @@ void main() {
         ('ja', 'キャンセル'),
         ('kn', 'ರದ್ದುಮಾಡಿ'),
         ('mr', 'रद्द करा'),
+        ('ta', 'ரத்து செய்'),
+        ('te', 'రద్దు చేయి'),
+        ('ml', 'റദ്ദാക്കുക'),
         ('it', 'Annulla'),
         ('nl', 'Annuleren'),
         ('pl', 'Anuluj'),
@@ -369,6 +375,9 @@ void main() {
         'ja': '2026年3月5日',
         'kn': '5 ಮಾರ್ಚ್ 2026',
         'mr': '5 मार्च 2026',
+        'ta': '5 மார் 2026',
+        'te': '5 మార్చి 2026',
+        'ml': '5 മാർ 2026',
         'it': '5 mar 2026',
         'nl': '5 mrt 2026',
         'pl': '5 mar 2026',
@@ -607,12 +616,52 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(find.text('لغة التطبيق'), 300);
+      await tester.scrollUntilVisible(find.text('لغة التطبيق'), 300, scrollable: find.byType(Scrollable).first);
       expect(find.text('لغة التطبيق'), findsOneWidget);
       final label = tester.getTopRight(find.text('لغة التطبيق')).dx;
       expect(label, greaterThan(200), reason: 'the title starts at the right edge');
       expect(tester.takeException(), isNull);
     });
+
+    for (final (lang, language, title) in [
+      ('ta', AppLanguage.ta, 'செயலியின் மொழி'),
+      ('te', AppLanguage.te, 'యాప్ భాష'),
+      ('ml', AppLanguage.ml, 'ആപ്പിന്റെ ഭാഷ'),
+      ('kn', AppLanguage.kn, 'ಆ್ಯಪ್‌ನ ಭಾಷೆ'),
+      ('mr', AppLanguage.mr, 'अ‍ॅपची भाषा'),
+      ('ur', AppLanguage.ur, 'ایپ کی زبان'),
+      ('zh', AppLanguage.zh, '应用语言'),
+      ('ja', AppLanguage.ja, 'アプリの言語'),
+    ]) {
+      testWidgets('the Settings screen in $lang is written in its language and fits', (tester) async {
+        tester.view.physicalSize = const Size(360 * 3, 2400 * 3);
+        tester.view.devicePixelRatio = 3;
+        addTearDown(tester.view.reset);
+        Strings.code = lang;
+        final cubit = SettingsCubit(_Prefs(AppSettings(language: language)));
+        await tester.runAsync(cubit.load);
+        await tester.pumpWidget(
+          MultiBlocProvider(
+            providers: [
+              BlocProvider(create: (_) => PlanCubit(_Plans())),
+              BlocProvider.value(value: cubit),
+              BlocProvider(create: (_) => coinsCubit()),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              locale: Locale(lang),
+              supportedLocales: [for (final c in AppLanguage.supportedCodes) Locale(c)],
+              localizationsDelegates: GlobalMaterialLocalizations.delegates,
+              home: const Scaffold(body: SettingsView()),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(find.text(title), 300, scrollable: find.byType(Scrollable).first);
+        expect(find.text(title), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
   });
 
   group('the settings', () {
@@ -637,7 +686,7 @@ void main() {
     });
 
     testWidgets('the screen offers the three choices, saves them, and its words change at once', (tester) async {
-      tester.view.physicalSize = const Size(400 * 3, 2400 * 3);
+      tester.view.physicalSize = const Size(400 * 3, 2700 * 3);
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.reset);
       final prefs = _Prefs(const AppSettings());
@@ -669,8 +718,8 @@ void main() {
       expect(find.text('Region and language'), findsOneWidget);
 
       await tester.ensureVisible(find.byKey(const ValueKey('setting-paper')));
-      await tester.pump();
-      await tester.tap(find.descendant(of: find.byKey(const ValueKey('setting-paper')), matching: find.byType(DropdownButtonFormField<PaperChoice>)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.descendant(of: find.byKey(const ValueKey('setting-paper')), matching: find.byType(TextField)));
       await tester.pumpAndSettle();
       await tester.tap(find.text('US Letter').last);
       await tester.pumpAndSettle();
@@ -678,16 +727,16 @@ void main() {
       expect(Region.letter, isTrue);
 
       await tester.ensureVisible(find.byKey(const ValueKey('setting-date-style')));
-      await tester.pump();
-      await tester.tap(find.descendant(of: find.byKey(const ValueKey('setting-date-style')), matching: find.byType(DropdownButtonFormField<DateStyle>)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.descendant(of: find.byKey(const ValueKey('setting-date-style')), matching: find.byType(TextField)));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Year first: 2026-03-05').last);
       await tester.pumpAndSettle();
       expect(prefs.saved!.dateStyle, DateStyle.yearFirst);
 
       await tester.ensureVisible(find.byKey(const ValueKey('setting-language')));
-      await tester.pump();
-      await tester.tap(find.descendant(of: find.byKey(const ValueKey('setting-language')), matching: find.byType(DropdownButtonFormField<AppLanguage>)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.descendant(of: find.byKey(const ValueKey('setting-language')), matching: find.byType(TextField)));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Español').last);
       await tester.pumpAndSettle();

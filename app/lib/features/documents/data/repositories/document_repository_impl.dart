@@ -14,7 +14,7 @@ import '../document_compressor.dart';
 
 NewPage _toNewPage(DocumentPage p) => NewPage(imagePath: p.imagePath, rawPath: p.rawPath, width: p.width, height: p.height, edit: p.edit);
 
-class DocumentRepositoryImpl implements DocumentRepository, FolderRepository {
+class DocumentRepositoryImpl implements DocumentRepository, FolderRepository, LibraryFileRepository {
   DocumentRepositoryImpl(this._local);
 
   final DocumentLocalDataSource _local;
@@ -35,6 +35,19 @@ class DocumentRepositoryImpl implements DocumentRepository, FolderRepository {
   Future<Result<ScannedDocument>> saveDocument({required String title, required List<NewPage> pages, String? folderId}) => guard(() async {
     if (pages.isEmpty) throw const StorageFailure('Add at least one page before saving.');
     return _local.insert(title.trim().isEmpty ? 'Untitled scan' : title.trim(), pages, folderId);
+  }, onError: _db);
+
+  @override
+  Future<Result<ScannedDocument>> saveFile({required String title, required String sourcePath, String? folderId}) => guard(() async {
+    if (!await File(sourcePath).exists()) throw const StorageFailure('The file could not be found.');
+    return _local.insertFile(title.trim().isEmpty ? p.basenameWithoutExtension(sourcePath) : title.trim(), sourcePath, folderId);
+  }, onError: _db);
+
+  @override
+  Future<Result<ScannedDocument>> replaceFile({required String id, required String sourcePath, String? title}) => guard(() async {
+    if (!await File(sourcePath).exists()) throw const StorageFailure('The file could not be found.');
+    if (await _local.get(id) == null) throw const DatabaseFailure('This document no longer exists.');
+    return _local.replaceFile(id, sourcePath, title: title);
   }, onError: _db);
 
   @override
@@ -64,6 +77,7 @@ class DocumentRepositoryImpl implements DocumentRepository, FolderRepository {
         for (final id in ids) {
           final doc = await _local.get(id);
           if (doc == null) throw const DatabaseFailure('One of the selected documents no longer exists.');
+          if (doc.isFile) throw const StorageFailure('Only scanned documents can be merged.');
           anyLocked = anyLocked || doc.locked;
           pages.addAll(doc.pages.map(_toNewPage));
         }
@@ -106,6 +120,11 @@ class DocumentRepositoryImpl implements DocumentRepository, FolderRepository {
   Future<Result<ScannedDocument>> duplicateDocument(String id) => guard(() async {
     final doc = await _local.get(id);
     if (doc == null) throw const DatabaseFailure('This document no longer exists.');
+    if (doc.isFile) {
+      final copyOfFile = await _local.insertFile('${doc.title} (copy)', doc.filePath!, doc.folderId);
+      await _local.updateMeta(copyOfFile.id, locked: doc.locked, tags: doc.tags);
+      return (await _local.get(copyOfFile.id))!;
+    }
     final copy = await _local.insert('${doc.title} (copy)', doc.pages.map(_toNewPage).toList(), doc.folderId);
     await _local.updateMeta(copy.id, locked: doc.locked, tags: doc.tags);
     return (await _local.get(copy.id))!;
@@ -148,6 +167,7 @@ class DocumentRepositoryImpl implements DocumentRepository, FolderRepository {
     if (doc == null) return 0;
     final paths = <String>{
       for (final pg in doc.pages) ...[pg.imagePath, pg.rawPath, if (pg.edit != null) pg.edit!.croppedPath],
+      ?doc.filePath,
     };
     var total = 0;
     for (final path in paths) {

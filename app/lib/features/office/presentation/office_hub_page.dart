@@ -1,14 +1,19 @@
-import 'package:file_picker/file_picker.dart';
+import '../../documents/presentation/library_picker.dart';
+import '../../documents/data/library_files.dart';
+import '../../documents/domain/library_target.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:go_router/go_router.dart';
 
+import '../../../app/di.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/responsive.dart';
 import '../convert/office_converter.dart';
+import '../sheets/presentation/new_spreadsheet_sheet.dart';
 import '../sheets/presentation/sheet_page.dart';
+import '../slides/presentation/new_presentation_sheet.dart';
 import '../../../core/widgets/text.dart';
 
 enum OfficeHub { sheets, slides }
@@ -22,13 +27,14 @@ class OfficeHubPage extends StatelessWidget {
   Future<void> _open(BuildContext context) async {
     final sheets = hub == OfficeHub.sheets;
     try {
-      final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: sheets ? const ['xlsx', 'csv', 'tsv'] : const ['pptx']);
-      final path = picked.isEmpty ? null : picked.first.path;
+      final picked = await pickFilePaths(context, allowedExtensions: sheets ? const ['xlsx', 'csv', 'tsv'] : const ['pptx']);
+      final path = picked.isEmpty ? null : picked.first;
       if (path == null || !context.mounted) return;
+      final libraryId = sl<LibraryFiles>().stagedFrom(path);
       if (sheets) {
-        await context.push('/sheet', extra: SheetArgs(path: path));
+        await context.push('/sheet', extra: SheetArgs(path: path, libraryId: libraryId));
       } else {
-        await context.push('/slides', extra: path);
+        await context.push('/slides', extra: libraryId == null ? path : LibraryTarget(path: path, id: libraryId));
       }
     } catch (_) {
       if (context.mounted) showFailure(context, const PermissionFailure('The file picker is unavailable.'));
@@ -61,8 +67,8 @@ class OfficeHubPage extends StatelessWidget {
               key: const ValueKey('hub_new'),
               icon: AppIcons.add,
               title: sheets ? 'New spreadsheet' : 'New presentation',
-              subtitle: sheets ? 'Start with an empty workbook.' : 'Start with a blank slide.',
-              onTap: () => sheets ? context.push('/sheet', extra: const SheetArgs()) : context.push('/slides', extra: null),
+              subtitle: sheets ? 'Start blank, or from a ready-made sheet with the formulas done.' : 'Start blank, or from a ready-made set of slides and colours.',
+              onTap: () => sheets ? startNewSpreadsheet(context) : startNewPresentation(context),
             ),
             const Padding(
               padding: EdgeInsetsDirectional.fromSTEB(4, AppSpacing.md, 4, AppSpacing.sm),

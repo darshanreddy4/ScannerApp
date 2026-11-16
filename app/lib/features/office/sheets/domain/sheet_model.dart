@@ -1,5 +1,9 @@
 import 'dart:typed_data';
 
+import 'chart.dart';
+import 'cond_format.dart';
+import 'validation.dart';
+
 /// What a cell holds.
 sealed class CellValue {
   const CellValue();
@@ -216,6 +220,9 @@ class Sheet {
     Set<int>? hiddenCols,
     Map<int, int>? rowStyles,
     Map<int, int>? colStyles,
+    List<CondRule>? condRules,
+    List<ValidationRule>? validations,
+    List<SheetChart>? charts,
     this.partPath,
     this.hidden = false,
     this.frozenRows = 0,
@@ -227,7 +234,10 @@ class Sheet {
        hiddenRows = hiddenRows ?? {},
        hiddenCols = hiddenCols ?? {},
        rowStyles = rowStyles ?? {},
-       colStyles = colStyles ?? {};
+       colStyles = colStyles ?? {},
+       condRules = condRules ?? [],
+       validations = validations ?? [],
+       charts = charts ?? [];
 
   String name;
   final Map<int, SheetCell> cells;
@@ -244,6 +254,18 @@ class Sheet {
   /// Style of a whole row or column, shown on cells that have no style of their own.
   final Map<int, int> rowStyles;
   final Map<int, int> colStyles;
+
+  /// Rules that highlight cells by their value.
+  final List<CondRule> condRules;
+
+  /// Rules about what may be typed into cells.
+  final List<ValidationRule> validations;
+
+  /// Charts placed on the sheet.
+  final List<SheetChart> charts;
+
+  /// Charts of the opened file that were taken off the sheet, so their parts can be taken out of the file.
+  final List<SheetChart> removedCharts = [];
   bool hidden;
   int frozenRows;
   int frozenCols;
@@ -257,6 +279,23 @@ class Sheet {
   /// Column settings or merged cells changed; otherwise the file's own ones are kept as they are.
   bool colsDirty = false;
   bool mergesDirty = false;
+
+  /// The highlighting rules changed; otherwise the file's own ones are kept as they are.
+  bool condDirty = false;
+
+  /// The validation rules changed; otherwise the file's own ones are kept as they are.
+  bool validDirty = false;
+
+  /// A chart was added, changed or removed; otherwise the file's own charts are kept as they are.
+  bool chartsDirty = false;
+
+  /// The rule that says what may be typed into the cell, or null.
+  ValidationRule? validationAt(int row, int col) {
+    for (final v in validations) {
+      if (v.range.contains(row, col)) return v;
+    }
+    return null;
+  }
 
   static const defaultColWidth = 8.43;
   static const defaultRowHeight = 15.0;
@@ -326,6 +365,19 @@ class Sheet {
     colStyles
       ..clear()
       ..addAll(o.colStyles);
+    condRules
+      ..clear()
+      ..addAll(o.condRules);
+    validations
+      ..clear()
+      ..addAll(o.validations);
+    charts
+      ..clear()
+      ..addAll(o.charts.map((c) => c.copy()));
+    removedCharts
+      ..clear()
+      ..addAll(o.removedCharts);
+    chartsDirty = o.chartsDirty;
     name = o.name;
     hidden = o.hidden;
     frozenRows = o.frozenRows;
@@ -333,6 +385,8 @@ class Sheet {
     dirty = o.dirty;
     colsDirty = o.colsDirty;
     mergesDirty = o.mergesDirty;
+    condDirty = o.condDirty;
+    validDirty = o.validDirty;
   }
 
   Sheet copy({String? name}) =>
@@ -346,6 +400,9 @@ class Sheet {
           hiddenCols: Set.of(hiddenCols),
           rowStyles: Map.of(rowStyles),
           colStyles: Map.of(colStyles),
+          condRules: List.of(condRules),
+          validations: List.of(validations),
+          charts: [for (final c in charts) c.copy()],
           partPath: partPath,
           hidden: hidden,
           frozenRows: frozenRows,
@@ -353,7 +410,11 @@ class Sheet {
         )
         ..dirty = dirty
         ..colsDirty = colsDirty
-        ..mergesDirty = mergesDirty;
+        ..mergesDirty = mergesDirty
+        ..condDirty = condDirty
+        ..validDirty = validDirty
+        ..chartsDirty = chartsDirty
+        ..removedCharts.addAll(removedCharts);
 }
 
 /// All sheets of a file, with the cell styles they share.

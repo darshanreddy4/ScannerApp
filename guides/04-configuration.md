@@ -56,7 +56,7 @@ Pass it with `-P` (for example `flutter build appbundle --release -PadmobAppId=c
 |---|---|
 | App name under the icon | `android:label="Doculoom"` in `app/android/app/src/main/AndroidManifest.xml` |
 | Package name (`com.doculoom.app`) | `namespace` and `applicationId` in `app/android/app/build.gradle.kts`, and the Kotlin folder `app/android/app/src/main/kotlin/com/doculoom/app`. `AppConfig.androidPackage` must match. Changing it later makes a new app on Google Play |
-| Minimum / target Android | `minSdk = 24`, `targetSdk` follows Flutter (Google Play requires API 36 from 31 Aug 2026) |
+| Minimum / target Android | `minSdk = 24`, `targetSdk` follows Flutter. Google Play raises the required target level every year; see [06](06-raise-target-api.md) |
 | Permissions | `uses-permission` lines at the top of `AndroidManifest.xml`: camera, internet, biometric, foreground service (QR sharing), notifications (reminders, share countdown), Wi-Fi state, boot (reminders), write storage only on Android 9 and older. Fewer permissions is better for the Play review |
 | Code shrinking (R8) rules | `app/android/app/proguard-rules.pro`. A plugin that works in debug but crashes in release usually needs a keep rule here |
 | Release signing | `app/android/key.properties` (see [05](05-build-aab-and-ads.md)) |

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:xml/xml.dart';
 
+import '../domain/cond_format.dart';
 import '../domain/number_format.dart';
 import '../domain/sheet_model.dart';
 
@@ -306,6 +307,67 @@ class StylesXml {
     holder.children.add(XmlElement(XmlName('numFmt'), [XmlAttribute(XmlName('numFmtId'), '$id'), XmlAttribute(XmlName('formatCode'), code)]));
     holder.setAttribute('count', '${holder.childElements.length}');
     return id;
+  }
+
+  /// The looks that highlighting rules can point to, in the order rules number them.
+  List<DxfStyle> readDxfs() {
+    final holder = _children(root, 'dxfs').firstOrNull;
+    if (holder == null) return const [];
+    return [
+      for (final d in _children(holder, 'dxf'))
+        () {
+          final font = _children(d, 'font').firstOrNull;
+          final pattern = _children(d, 'fill').expand((f) => _children(f, 'patternFill')).firstOrNull;
+          final b = font == null ? null : _children(font, 'b').firstOrNull;
+          return DxfStyle(
+            fill: pattern == null ? null : (parseColor(_children(pattern, 'bgColor').firstOrNull, theme) ?? parseColor(_children(pattern, 'fgColor').firstOrNull, theme)),
+            fontColor: font == null ? null : parseColor(_children(font, 'color').firstOrNull, theme),
+            bold: b != null && b.getAttribute('val') != '0' && b.getAttribute('val') != 'false',
+          );
+        }(),
+    ];
+  }
+
+  /// Makes sure every look in [wanted] has an entry and returns where each one is. An entry that is already there is reused.
+  Map<DxfStyle, int> addDxfs(Iterable<DxfStyle> wanted) {
+    var holder = _children(root, 'dxfs').firstOrNull;
+    if (holder == null) {
+      holder = XmlElement(XmlName('dxfs'));
+      final after = root.children.indexWhere((c) => c is XmlElement && const {'tableStyles', 'colors', 'extLst'}.contains(c.name.local));
+      if (after < 0) {
+        root.children.add(holder);
+      } else {
+        root.children.insert(after, holder);
+      }
+    }
+    final existing = readDxfs();
+    final ids = <DxfStyle, int>{};
+    var count = existing.length;
+    for (final look in wanted) {
+      if (ids.containsKey(look)) continue;
+      final at = existing.indexOf(look);
+      if (at >= 0) {
+        ids[look] = at;
+        continue;
+      }
+      String argb(int c) => c.toRadixString(16).padLeft(8, '0').toUpperCase();
+      holder.children.add(
+        XmlElement(XmlName('dxf'), const [], [
+          if (look.fontColor != null || look.bold)
+            XmlElement(XmlName('font'), const [], [
+              if (look.bold) XmlElement(XmlName('b')),
+              if (look.fontColor != null) XmlElement(XmlName('color'), [XmlAttribute(XmlName('rgb'), argb(look.fontColor!))]),
+            ]),
+          if (look.fill != null)
+            XmlElement(XmlName('fill'), const [], [
+              XmlElement(XmlName('patternFill'), const [], [XmlElement(XmlName('bgColor'), [XmlAttribute(XmlName('rgb'), argb(look.fill!))])]),
+            ]),
+        ]),
+      );
+      ids[look] = count++;
+    }
+    holder.setAttribute('count', '$count');
+    return ids;
   }
 
   static String _num(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toString();

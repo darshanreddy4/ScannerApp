@@ -21,6 +21,7 @@ import '../../monetization/domain/repositories/monetization_contracts.dart';
 import '../../rewards/presentation/coins_card.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/widgets/responsive.dart';
+import '../../../core/widgets/style_kit.dart';
 import '../../export/domain/entities/export_options.dart';
 import '../../ocr/domain/ocr_models.dart';
 import '../../monetization/domain/entities/plan_status.dart';
@@ -60,15 +61,7 @@ class SettingsView extends StatelessWidget {
       children: [
         if (AppConfig.rewardsEnabled && !premium) ...[const CoinsCard(), const SizedBox(height: AppSpacing.md)],
         if (AppConfig.billingEnabled || kDebugMode) ...[
-          Card(
-            child: ListTile(
-              leading: _IconBadge(icon: AppIcons.premium, color: premium ? AppColors.success : AppColors.primary),
-              title: Text(premium ? 'Premium plan' : 'Free plan', style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text(premium ? 'Ads are turned off' : 'Supported by ads. Upgrade to remove them.'),
-              trailing: premium ? null : const Icon(AppIcons.next),
-              onTap: premium ? null : () => context.push('/paywall'),
-            ),
-          ),
+          _PlanCard(premium: premium, onTap: premium ? null : () => context.push('/paywall')),
           const SizedBox(height: AppSpacing.md),
         ],
         const _SectionLabel('Scanning'),
@@ -361,6 +354,60 @@ class SettingsView extends StatelessWidget {
   }
 }
 
+/// Which plan the person has, as a coloured card; a free plan opens the upgrade page.
+class _PlanCard extends StatelessWidget {
+  const _PlanCard({required this.premium, required this.onTap});
+  final bool premium;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = premium ? const [Color(0xFF34D399), Color(0xFF047857)] : const [Color(0xFF3B82F6), Color(0xFF6D28D9)];
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: LinearGradient(begin: AlignmentDirectional.topStart, end: AlignmentDirectional.bottomEnd, colors: colors),
+          boxShadow: [BoxShadow(color: colors.last.withValues(alpha: 0.30), blurRadius: 12, offset: const Offset(0, 5))],
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(14)),
+                  child: const Icon(AppIcons.premium, color: Colors.white),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(premium ? 'Premium plan' : 'Free plan', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Colors.white)),
+                      const SizedBox(height: 2),
+                      Text(
+                        premium ? 'Ads are turned off' : 'Supported by ads. Upgrade to remove them.',
+                        style: const TextStyle(fontSize: 13, height: 1.3, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!premium) const Icon(AppIcons.next, color: Colors.white),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 Future<void> _deleteAll(BuildContext context) async {
   final docs = context.read<DocumentsCubit>();
   final ok = await confirmDestructive(
@@ -478,19 +525,49 @@ class _SelectTile<T> extends StatelessWidget {
                   child: Text(subtitle!, style: const TextStyle(fontSize: 13, color: AppColors.inkMuted)),
                 ),
               const SizedBox(height: AppSpacing.sm),
-              DropdownButtonFormField<T>(
-                initialValue: value,
-                isExpanded: true,
-                isDense: true,
-                decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
-                onChanged: (v) {
+              // The label is part of the key so the field text follows a change of app language.
+              DropdownMenu<T>(
+                key: ValueKey('${value.hashCode}|${labelOf(value)}'),
+                expandedInsets: EdgeInsets.zero,
+                initialSelection: value,
+                requestFocusOnTap: false,
+                enableFilter: false,
+                menuHeight: 300,
+                alignmentOffset: const Offset(0, 4),
+                textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                inputDecorationTheme: InputDecorationTheme(
+                  isDense: true,
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+                ),
+                menuStyle: MenuStyle(
+                  backgroundColor: const WidgetStatePropertyAll(AppColors.surface),
+                  surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+                  elevation: const WidgetStatePropertyAll(6),
+                  padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 6)),
+                  shape: WidgetStatePropertyAll(
+                    RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
+                  ),
+                ),
+                onSelected: (v) {
                   if (v != null) onChanged(v);
                 },
-                items: [
+                dropdownMenuEntries: [
                   for (final o in options)
-                    DropdownMenuItem<T>(
+                    DropdownMenuEntry<T>(
                       value: o,
-                      child: Text(labelOf(o), overflow: TextOverflow.ellipsis),
+                      label: tr(labelOf(o)),
+                      trailingIcon: o == value ? const Icon(Icons.check, size: 18, color: AppColors.primary) : null,
+                      style: ButtonStyle(
+                        padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 14)),
+                        backgroundColor: WidgetStatePropertyAll(o == value ? AppColors.primarySoft : Colors.transparent),
+                        foregroundColor: WidgetStatePropertyAll(o == value ? AppColors.primary : AppColors.ink),
+                        textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 15, fontWeight: o == value ? FontWeight.w700 : FontWeight.w500)),
+                      ),
                     ),
                 ],
               ),
@@ -600,25 +677,41 @@ class _SectionLabel extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsetsDirectional.only(start: 4, bottom: AppSpacing.sm),
-    child: Text(
-      text,
-      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.inkMuted, letterSpacing: 0.3),
-    ),
-  );
+  Widget build(BuildContext context) => AccentLabel(text, padding: const EdgeInsetsDirectional.fromSTEB(AppSpacing.xs, 0, 0, AppSpacing.sm + 2));
 }
 
+/// The colours given to the icons of the settings; each kind of setting keeps its own.
+final Map<IconData, Color> _tints = {
+  AppIcons.fontSize: const Color(0xFF7C3AED),
+  AppIcons.crop: const Color(0xFFDB2777),
+  AppIcons.autoCapture: const Color(0xFFF97316),
+  AppIcons.camera: const Color(0xFF2563EB),
+  AppIcons.filterMagic: const Color(0xFF9333EA),
+  AppIcons.ocr: const Color(0xFF0D9488),
+  AppIcons.edit: const Color(0xFFE5322D),
+  AppIcons.emptyDocs: const Color(0xFFD97706),
+  AppIcons.quality: const Color(0xFF16A34A),
+  AppIcons.language: const Color(0xFF4F46E5),
+  AppIcons.pdf: const Color(0xFFE5322D),
+  AppIcons.calendar: const Color(0xFF047857),
+  AppIcons.tools: const Color(0xFF0284C7),
+  AppIcons.timer: const Color(0xFFD97706),
+  AppIcons.eye: const Color(0xFF0891B2),
+  AppIcons.info: const Color(0xFF64748B),
+  AppIcons.shield: const Color(0xFF0F766E),
+  AppIcons.lock: const Color(0xFF4F46E5),
+  AppIcons.backup: const Color(0xFF2563EB),
+  AppIcons.share: const Color(0xFF0EA5E9),
+  AppIcons.chat: const Color(0xFF16A34A),
+  AppIcons.docx: const Color(0xFF1C7ED6),
+  AppIcons.scan: AppColors.primary,
+};
+
 class _IconBadge extends StatelessWidget {
-  const _IconBadge({required this.icon, this.color = AppColors.primary});
+  const _IconBadge({required this.icon, this.color});
   final IconData icon;
-  final Color color;
+  final Color? color;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 40,
-    height: 40,
-    decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
-    child: Icon(icon, color: color),
-  );
+  Widget build(BuildContext context) => GradientIconTile(icon: icon, color: color ?? _tints[icon] ?? AppColors.primary);
 }

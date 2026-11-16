@@ -15,6 +15,9 @@ enum AppLanguage {
   ja('日本語', 'ja'),
   kn('ಕನ್ನಡ', 'kn'),
   mr('मराठी', 'mr'),
+  ta('தமிழ்', 'ta'),
+  te('తెలుగు', 'te'),
+  ml('മലയാളം', 'ml'),
   it('Italiano', 'it'),
   nl('Nederlands', 'nl'),
   pl('Polski', 'pl'),
@@ -30,7 +33,7 @@ enum AppLanguage {
   /// The locale to give the app, or null to follow the phone.
   Locale? get locale => code == null ? null : Locale(code!);
 
-  static const supportedCodes = ['en', 'hi', 'es', 'fr', 'de', 'pt', 'ar', 'ur', 'zh', 'ja', 'kn', 'mr', 'it', 'nl', 'pl', 'tr', 'ru'];
+  static const supportedCodes = ['en', 'hi', 'es', 'fr', 'de', 'pt', 'ar', 'ur', 'zh', 'ja', 'kn', 'mr', 'ta', 'te', 'ml', 'it', 'nl', 'pl', 'tr', 'ru'];
 
   /// Languages written from right to left; the screens then mirror by themselves.
   static const rightToLeftCodes = ['ar', 'ur'];

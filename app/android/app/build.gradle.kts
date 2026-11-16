@@ -70,6 +70,32 @@ flutter {
     source = "../.."
 }
 
+// Size: lucide_icons_flutter bundles six variable-weight icon fonts (~3 MB) that the app never
+// uses (it only uses the static `Lucide` family). Drop them and their FontManifest entries from
+// the release assets.
+val unusedFontFamily = Regex("""packages/lucide_icons_flutter/Lucide[1-6]00""")
+tasks.configureEach {
+    if (name == "copyFlutterAssetsRelease") {
+        doLast {
+            outputs.files.files.filter { it.isDirectory }.forEach { out ->
+                val manifest = File(out, "flutter_assets/FontManifest.json")
+                    .takeIf { it.exists() } ?: File(out, "FontManifest.json").takeIf { it.exists() }
+                    ?: return@forEach
+                val fonts = groovy.json.JsonSlurper().parse(manifest) as List<*>
+                val kept = fonts.filter { f ->
+                    !unusedFontFamily.matches((f as Map<*, *>)["family"] as String)
+                }
+                (fonts - kept.toSet()).forEach { f ->
+                    ((f as Map<*, *>)["fonts"] as List<*>).forEach { e ->
+                        File(manifest.parentFile, (e as Map<*, *>)["asset"] as String).delete()
+                    }
+                }
+                manifest.writeText(groovy.json.JsonOutput.toJson(kept))
+            }
+        }
+    }
+}
+
 dependencies {
     // Hindi and other Devanagari scripts for on-device text recognition (Latin ships with the plugin).
     implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")

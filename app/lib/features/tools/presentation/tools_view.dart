@@ -1,7 +1,10 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:go_router/go_router.dart';
 
+import '../../../app/di.dart';
+import '../../documents/data/library_files.dart';
+import '../../documents/domain/library_target.dart';
+import '../../documents/presentation/library_picker.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
@@ -16,6 +19,7 @@ import '../../rewards/presentation/unlock.dart';
 import '../../reader/presentation/reader_page.dart';
 import '../../scanner/domain/entities/scan_mode.dart';
 import '../../scanner/presentation/add_content.dart';
+import '../../text_edit/docx/new_document_sheet.dart';
 import '../../../core/widgets/text.dart';
 
 /// Hub for everything that works on files, beyond scanning.
@@ -24,13 +28,13 @@ class ToolsView extends StatelessWidget {
 
   Future<void> _openReader(BuildContext context) async {
     try {
-      final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['pdf', 'docx']);
-      final path = picked.isEmpty ? null : picked.first.path;
+      final picked = await pickFilePaths(context, allowedExtensions: const ['pdf', 'docx']);
+      final path = picked.isEmpty ? null : picked.first;
       if (path == null || !context.mounted) return;
       final kind = path.toLowerCase().endsWith('.pdf') ? ImportKind.pdf : ImportKind.docx;
       context.push(
         '/reader',
-        extra: ReaderArgs(path: path, kind: kind),
+        extra: ReaderArgs(path: path, kind: kind, libraryId: sl<LibraryFiles>().stagedFrom(path)),
       );
     } catch (_) {
       if (context.mounted) showFailure(context, const PermissionFailure('The file picker is unavailable.'));
@@ -39,10 +43,11 @@ class ToolsView extends StatelessWidget {
 
   Future<void> _editText(BuildContext context, {required String extension, required String route}) async {
     try {
-      final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: [extension]);
-      final path = picked.isEmpty ? null : picked.first.path;
+      final picked = await pickFilePaths(context, allowedExtensions: [extension]);
+      final path = picked.isEmpty ? null : picked.first;
       if (path == null || !context.mounted) return;
-      context.push(route, extra: path);
+      final libraryId = sl<LibraryFiles>().stagedFrom(path);
+      context.push(route, extra: libraryId == null ? path : LibraryTarget(path: path, id: libraryId));
     } catch (_) {
       if (context.mounted) showFailure(context, const PermissionFailure('The file picker is unavailable.'));
     }
@@ -211,6 +216,14 @@ class ToolsView extends StatelessWidget {
             title: 'Edit text in a Word file',
             hint: 'Change words, keep the layout',
             onTap: () => _editText(context, extension: 'docx', route: '/docx-edit'),
+          ),
+          _Tool(
+            icon: AppIcons.newDocument,
+            color: 0xFF2B579A,
+            title: 'New Word document',
+            tier: CoinTier.light,
+            hint: 'Blank, assignment, report, resume, letter',
+            onTap: () => startNewDocument(context),
           ),
           _Tool(icon: AppIcons.combine, color: 0xFFF97316, title: 'Combine files', hint: 'Merge PDF and Word files', onTap: () => startCombineFiles(context)),
           _Tool(

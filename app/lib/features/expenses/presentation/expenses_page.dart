@@ -1,6 +1,6 @@
 import 'dart:ui' show PlatformDispatcher;
 
-import 'package:file_picker/file_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -47,13 +47,7 @@ Future<List<String>> _takePhoto() async {
   return photo == null ? const [] : [photo.path];
 }
 
-Future<List<String>> _pickFiles() async {
-  final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: [...ExpensesCubit.imageExtensions, 'pdf']);
-  return [
-    for (final f in picked)
-      if (f.path != null) f.path!,
-  ];
-}
+Future<List<String>> _pickFiles() => pickFilePaths(null, allowedExtensions: [...ExpensesCubit.imageExtensions, 'pdf'], allowMultiple: true);
 
 /// Saved scans, with those in the Receipts folder ticked, to read as bills.
 Future<List<BillSource>> _pickScans(BuildContext context) async {

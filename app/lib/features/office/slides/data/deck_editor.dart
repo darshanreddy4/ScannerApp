@@ -20,10 +20,11 @@ String _hex(int argb) => (argb & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toU
 Iterable<XmlElement> _kids(XmlElement? e, String name) => e == null ? const [] : e.childElements.where((c) => c.name.local == name);
 
 class _Snapshot {
-  _Snapshot(this.order, this.xml, this.rels);
+  _Snapshot(this.order, this.xml, this.rels, this.notes);
   final List<SlidePart> order;
   final Map<SlidePart, String> xml;
   final Map<SlidePart, List<Rel>> rels;
+  final Map<SlidePart, String?> notes;
 }
 
 /// Changes a [PptxDeck] and remembers each change so it can be undone.
@@ -44,8 +45,12 @@ class DeckEditor {
 
   // ------------------------------------------------------------------- history
 
-  _Snapshot _capture(Iterable<SlidePart> touched) =>
-      _Snapshot(List.of(deck.slides), {for (final s in touched) s: s.snapshot()}, {for (final s in touched) s: List.of(s.rels)});
+  _Snapshot _capture(Iterable<SlidePart> touched) => _Snapshot(
+    List.of(deck.slides),
+    {for (final s in touched) s: s.snapshot()},
+    {for (final s in touched) s: List.of(s.rels)},
+    {for (final s in touched) s: s.notesText},
+  );
 
   void _restore(_Snapshot st) {
     deck.slides
@@ -56,6 +61,10 @@ class DeckEditor {
       slide.dirty = true;
     });
     st.rels.forEach((slide, rels) => slide.rels = rels);
+    st.notes.forEach((slide, text) {
+      if (slide.notesText != text) slide.notesDirty = true;
+      slide.notesText = text;
+    });
   }
 
   void _checkpoint(Iterable<SlidePart> touched) {
@@ -447,6 +456,112 @@ class DeckEditor {
     return '$id';
   }
 
+  /// Crops a picture to the fractions [crop] (left, top, right, bottom) of its image. The picture keeps its scale, so the frame
+  /// shrinks to the part that stays, with the cut edges moving in. [geometry] also sets the outline shape (rect, roundRect, ellipse).
+  void setPictureCrop(SlidePart slide, String id, List<double> crop, {String? geometry}) {
+    final el = _find(slide, id);
+    final shape = shapeOf(slide, id);
+    if (el == null || shape == null || el.name.local != 'pic') return;
+    double clamp(double v) => v.isNaN ? 0 : v.clamp(0.0, 0.9);
+    var l = clamp(crop[0]), t = clamp(crop[1]), r = clamp(crop[2]), b = clamp(crop[3]);
+    if (l + r > 0.95) r = math.max(0, 0.95 - l);
+    if (t + b > 0.95) b = math.max(0, 0.95 - t);
+    final old = shape.crop ?? const [0.0, 0.0, 0.0, 0.0];
+    final ol = math.max(0.0, old[0]), ot = math.max(0.0, old[1]), or = math.max(0.0, old[2]), ob = math.max(0.0, old[3]);
+    final blipFill = _kids(el, 'blipFill').firstOrNull;
+    if (blipFill == null) return;
+    _checkpoint([slide]);
+    for (final s in _kids(blipFill, 'srcRect').toList()) {
+      s.remove();
+    }
+    if (l > 0 || t > 0 || r > 0 || b > 0) {
+      String u(double v) => (v * 100000).round().toString();
+      final rect = _fragment('<a:srcRect${l > 0 ? ' l="${u(l)}"' : ''}${t > 0 ? ' t="${u(t)}"' : ''}${r > 0 ? ' r="${u(r)}"' : ''}${b > 0 ? ' b="${u(b)}"' : ''}/>');
+      final blip = _kids(blipFill, 'blip').firstOrNull;
+      blip == null ? blipFill.children.insert(0, rect) : blipFill.children.insert(blipFill.children.indexOf(blip) + 1, rect);
+    }
+    // Scale of the whole image in EMU, so the part that stays keeps its size on the slide.
+    final f = shape.frame;
+    final sx = f.w / math.max(0.05, 1 - ol - or), sy = f.h / math.max(0.05, 1 - ot - ob);
+    final dx = (f.flipH ? (r - or) : (l - ol)) * sx;
+    final dy = (f.flipV ? (b - ob) : (t - ot)) * sy;
+    setFrame(slide, id, f.copyWith(x: f.x + dx, y: f.y + dy, w: sx * (1 - l - r), h: sy * (1 - t - b)), checkpoint: false);
+    if (geometry != null) {
+      final prst = _kids(_kids(el, 'spPr').firstOrNull, 'prstGeom').firstOrNull;
+      if (prst != null && const {'rect', 'roundRect', 'ellipse'}.contains(geometry)) prst.setAttribute('prst', geometry);
+    }
+    _touch(slide);
+  }
+
+  // ---------------------------------------------------------------- transitions
+
+  /// The speaker notes of [slide], one line per paragraph.
+  String notesOf(SlidePart slide) => slide.notesText ??= deck.readNotes(slide);
+
+  /// Sets the speaker notes of [slide]. Notes made in the app are written to a notes page when the file is saved.
+  void setNotes(SlidePart slide, String text) {
+    final clean = text.replaceAll('\r\n', '\n').trimRight();
+    if (clean == notesOf(slide)) return;
+    _checkpoint([slide]);
+    slide.notesText = clean;
+    slide.notesDirty = true;
+  }
+
+  /// The ways a slide can appear in a slide show that the app can set; any other kind in a file is reported as "other".
+  static const transitionKinds = ['none', 'fade', 'push', 'wipe', 'cover'];
+
+  XmlElement? _transitionOf(SlidePart slide) {
+    for (final e in slide.doc.rootElement.childElements) {
+      if (e.name.local == 'transition') return e;
+      if (e.name.local == 'AlternateContent') {
+        final inner = e.descendantElements.where((d) => d.name.local == 'transition').firstOrNull;
+        if (inner != null) return inner;
+      }
+    }
+    return null;
+  }
+
+  /// How [slide] appears in a slide show: none, fade, push, wipe, cover or other.
+  String transitionOf(SlidePart slide) {
+    final t = _transitionOf(slide);
+    if (t == null) return 'none';
+    final kind = t.childElements.firstOrNull?.name.local;
+    return kind == null ? 'none' : (transitionKinds.contains(kind) ? kind : 'other');
+  }
+
+  void _writeTransition(SlidePart slide, String kind) {
+    final root = slide.doc.rootElement;
+    root.children.removeWhere(
+      (c) => c is XmlElement && (c.name.local == 'transition' || (c.name.local == 'AlternateContent' && c.descendantElements.any((d) => d.name.local == 'transition'))),
+    );
+    if (kind != 'none') {
+      final inner = switch (kind) {
+        'fade' => '<p:fade/>',
+        'push' => '<p:push dir="l"/>',
+        'wipe' => '<p:wipe dir="l"/>',
+        _ => '<p:cover dir="l"/>',
+      };
+      final at = root.children.indexWhere((c) => c is XmlElement && (c.name.local == 'timing' || c.name.local == 'extLst'));
+      final el = _fragment('<p:transition spd="med">$inner</p:transition>');
+      if (at < 0) {
+        root.children.add(el);
+      } else {
+        root.children.insert(at, el);
+      }
+    }
+    _touch(slide);
+  }
+
+  /// Sets how [slide], or every slide when [all] is true, appears in a slide show. [kind] is one of [transitionKinds].
+  void setTransition(SlidePart slide, String kind, {bool all = false}) {
+    if (!transitionKinds.contains(kind)) return;
+    final targets = all ? List.of(deck.slides) : [slide];
+    _checkpoint(targets);
+    for (final s in targets) {
+      _writeTransition(s, kind);
+    }
+  }
+
   void setBackground(SlidePart slide, int? color) {
     _checkpoint([slide]);
     final cSld = slide.doc.rootElement.childElements.firstWhere((e) => e.name.local == 'cSld');
@@ -485,20 +600,65 @@ class DeckEditor {
     return best ?? like?.layoutPath ?? deck.layoutFallback;
   }
 
-  SlidePart addSlide({bool blank = false, int? after}) {
+  /// Adds a slide after [after], or at the end. [layout] is a layout type: obj (title and content), title, secHead, twoObj, titleOnly or blank.
+  SlidePart addSlide({bool blank = false, int? after, String? layout}) {
     _checkpoint(const []);
-    final layoutKind = blank ? 'blank' : 'obj';
-    final layout = _layoutFor(layoutKind, null);
+    final kind = layout ?? (blank ? 'blank' : 'obj');
+    final layoutPath = _layoutFor(kind, null);
     final part = SlidePart(path: _freshSlidePath(), deck: deck)
-      ..doc = XmlDocument.parse(newSlideXml(withPlaceholders: !blank))
-      ..rels = [Rel('rId1', 'slideLayout', layout)]
+      ..doc = XmlDocument.parse(newSlideXml(withPlaceholders: false))
+      ..rels = [Rel('rId1', 'slideLayout', layoutPath)]
       ..dirty = true
       ..relsDirty = true
       ..isNew = true;
+    if (kind != 'blank') {
+      for (final shape in _placeholdersOf(layoutPath)) {
+        part.spTree.children.add(_fragment(shape.replaceFirst('{id}', '${_nextId(part)}')));
+      }
+    }
     final at = (after ?? deck.slides.length - 1) + 1;
     deck.slides.insert(at.clamp(0, deck.slides.length), part);
     deck.structureChanged = true;
     return part;
+  }
+
+  /// Empty text boxes for every placeholder of a layout, in the layout's order.
+  List<String> _placeholdersOf(String layoutPath) {
+    final layout = deck.parseOrNull(layoutPath);
+    final out = <String>[];
+    if (layout == null) return out;
+    for (final sp in layout.rootElement.descendants.whereType<XmlElement>().where((e) => e.name.local == 'sp')) {
+      final ph = sp.descendants.whereType<XmlElement>().where((e) => e.name.local == 'ph').firstOrNull;
+      if (ph == null) continue;
+      final type = ph.getAttribute('type');
+      if (const {'dt', 'ftr', 'sldNum'}.contains(type)) continue;
+      final idx = ph.getAttribute('idx');
+      final name = _cNvPr(sp)?.getAttribute('name') ?? 'Placeholder';
+      out.add(
+        '<p:sp><p:nvSpPr><p:cNvPr id="{id}" name="${_esc(name)}"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph${type == null ? '' : ' type="$type"'}${idx == null ? '' : ' idx="$idx"'}/></p:nvPr></p:nvSpPr><p:spPr/>'
+        '<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang="en-US"/></a:p></p:txBody></p:sp>',
+      );
+    }
+    return out;
+  }
+
+  /// Types text into the placeholders of a slide in order; extra texts are ignored and missing ones leave the box empty.
+  void fillPlaceholders(SlidePart slide, List<String> texts) {
+    var i = 0;
+    for (final el in slide.spTree.childElements.toList()) {
+      if (!el.descendants.whereType<XmlElement>().any((e) => e.name.local == 'ph')) continue;
+      if (i >= texts.length) break;
+      final id = _cNvPr(el)?.getAttribute('id');
+      if (id != null && texts[i].isNotEmpty) setText(slide, id, texts[i]);
+      i++;
+    }
+  }
+
+  /// Forgets what can be undone; used after a starter deck is built so the person starts from it.
+  void clearHistory() {
+    _undo.clear();
+    _redo.clear();
+    modified = false;
   }
 
   SlidePart duplicateSlide(int index) {
@@ -512,7 +672,9 @@ class DeckEditor {
       ]
       ..dirty = true
       ..relsDirty = true
-      ..isNew = true;
+      ..isNew = true
+      ..notesText = notesOf(src)
+      ..notesDirty = notesOf(src).isNotEmpty;
     deck.slides.insert(index + 1, part);
     deck.structureChanged = true;
     return part;

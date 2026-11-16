@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/error/failures.dart';
 import '../../../core/error/result.dart';
+import '../../reader/data/docx_pages.dart';
 import '../domain/importer.dart';
 import 'docx_parser.dart';
 import 'pdf_importer.dart';
@@ -44,6 +45,14 @@ class DocumentImporterImpl implements DocumentImporter {
   );
 
   Future<List<String>> _docx(String path, String dir, String prefix, ImportProgress? onProgress) async {
+    // Pages drawn the way the document is designed; a file with no text, or one this cannot draw, goes the plain way below.
+    final drawn = await renderDocxPages(path: path, outDir: dir, prefix: prefix);
+    if (drawn != null) {
+      final files = [for (final page in drawn.pages) page.path];
+      drawn.dispose();
+      onProgress?.call(files.length, files.length);
+      return files;
+    }
     final blocks = await Isolate.run(() => parseDocx(path: path, outDir: dir, prefix: prefix));
     if (blocks.isEmpty) throw const ImportFailure('This Word document is empty.');
 

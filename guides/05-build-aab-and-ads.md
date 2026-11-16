@@ -98,14 +98,14 @@ cd app
 # raise the number after + in pubspec.yaml first (see below)
 flutter pub get
 flutter analyze
-flutter build appbundle --release
+flutter build appbundle --release --obfuscate --split-debug-info=build/symbols
 ```
 
 ### D2. Production build (real ads)
 
 ```bash
 cd app
-flutter build appbundle --release \
+flutter build appbundle --release --obfuscate --split-debug-info=build/symbols \
   --dart-define-from-file=release.defines.json \
   -PadmobAppId=ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY
 ```
@@ -114,7 +114,9 @@ Output: `app/build/app/outputs/bundle/release/app-release.aab`.
 
 **Version number:** in `app/pubspec.yaml` change `version: 0.1.0+3` so the number after `+` is higher than every build you uploaded before (Play rejects a repeated number). Production builds also need a higher number than the closed-test build.
 
-**Obfuscation mapping:** `app/build/app/outputs/mapping/release/mapping.txt` translates crash reports. In Play Console, open the release and upload it as the deobfuscation file, so crashes in Android vitals are readable.
+**Obfuscation mapping:** `app/build/app/outputs/mapping/release/mapping.txt` translates crash reports. In Play Console, open the release and upload it as the deobfuscation file, so crashes in Android vitals are readable. `--obfuscate` also renames Dart symbols; keep `app/build/symbols/` (it is not in git) for each release and use `flutter symbolize -i <stack-trace-file> -d app/build/symbols/app.android-arm64.symbols` to read Dart stack traces.
+
+**Download size:** on a 64-bit phone this build downloads about 34.5 MB (measured with `bundletool get-size total`, down from 37.3 MB). Savings come from `--obfuscate` (about 1.4 MB), dropping the six unused Lucide variable-weight fonts in `app/android/app/build.gradle.kts` (about 1.4 MB), plus R8 and resource shrinking. The rest is the on-device ML Kit OCR, translation and barcode engines that keep the app offline.
 
 ## Part E. Check the bundle before uploading
 

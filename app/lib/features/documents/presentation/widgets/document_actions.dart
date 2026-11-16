@@ -8,6 +8,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../../app/app_config.dart';
 import '../../../../app/di.dart';
+import '../../data/library_files.dart';
+import '../library_actions.dart';
 import '../../../../core/error/result.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
@@ -39,8 +41,10 @@ import '../../domain/usecases/document_usecases.dart';
 import 'document_widgets.dart' show confirmDestructive, pickFolder, DocThumb;
 import 'share_options_sheet.dart';
 import '../../../../core/widgets/text.dart';
+import '../../../../core/i18n/tr.dart';
 
 enum DocAction {
+  shareFile,
   sharePdf,
   shareImages,
   shareDocx,
@@ -185,6 +189,9 @@ Future<void> _run(
   VoidCallback? onDeleted,
 ) async {
   switch (action) {
+    case DocAction.shareFile:
+      await shareLibraryFile(context, doc);
+
     case DocAction.sharePdf:
       await shareDocumentPdf(context, doc);
 
@@ -201,6 +208,15 @@ Future<void> _run(
       );
 
     case DocAction.shareQr:
+      if (doc.isFile) {
+        final staged = await sl<LibraryFiles>().stage(doc);
+        if (!context.mounted) return;
+        await context.push(
+          '/qr-share',
+          extra: QrShareArgs(filePath: staged, fileName: p.basename(staged), mimeType: libraryMimeType(doc.fileExtension)),
+        );
+        return;
+      }
       final path = await _build(context, doc, ExportFormat.pdf);
       if (path == null || !context.mounted) return;
       await context.push(
@@ -237,6 +253,15 @@ Future<void> _run(
       if (text != null && context.mounted) await context.push('/contact', extra: text);
 
     case DocAction.saveFiles:
+      if (doc.isFile) {
+        final staged = await sl<LibraryFiles>().stage(doc);
+        final saved = await _do(
+          context,
+          sl<SaveService>().saveToFiles(sourcePath: staged, fileName: p.basename(staged), mimeType: libraryMimeType(doc.fileExtension)),
+        );
+        if (saved.valueOrNull == true && context.mounted) showMessage(context, 'Saved');
+        return;
+      }
       final path = await _build(context, doc, ExportFormat.pdf);
       if (path == null || !context.mounted) return;
       final saved = await _do(
@@ -458,9 +483,38 @@ class _ActionsSheetState extends State<_ActionsSheet> {
 
   void _pick(DocAction a) => Navigator.pop(context, a);
 
+  /// Actions for a Word, Excel, PowerPoint, PDF or text file kept in the library.
+  Widget _fileSheet(ScannedDocument doc) => SingleChildScrollView(
+    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _Header(document: doc, size: _size, onRename: () => _pick(DocAction.rename)),
+        const Divider(height: 24),
+        _Row(icon: AppIcons.share, label: 'Share', onTap: () => _pick(DocAction.shareFile)),
+        _Row(icon: AppIcons.storage, label: 'Save to Files or Drive', onTap: () => _pick(DocAction.saveFiles)),
+        _Row(icon: AppIcons.qr, label: 'Share with QR code', onTap: () => _pick(DocAction.shareQr)),
+        _Row(icon: AppIcons.emptyDocs, label: 'Move to folder', onTap: () => _pick(DocAction.move)),
+        _Row(icon: AppIcons.edit, label: 'Rename', onTap: () => _pick(DocAction.rename)),
+        _Row(
+          icon: doc.favorite ? AppIcons.starFilled : AppIcons.star,
+          label: doc.favorite ? 'Remove from favourites' : 'Add to favourites',
+          onTap: () => _pick(DocAction.favorite),
+        ),
+        _Row(icon: AppIcons.pin, label: doc.pinned ? 'Unpin from top' : 'Pin to top', onTap: () => _pick(DocAction.pin)),
+        _Row(icon: AppIcons.tag, label: 'Tags', onTap: () => _pick(DocAction.tags)),
+        _Row(icon: AppIcons.copy, label: 'Duplicate', onTap: () => _pick(DocAction.duplicate)),
+        _Row(icon: doc.locked ? AppIcons.unlock : AppIcons.lock, label: doc.locked ? 'Unlock' : 'Lock', onTap: () => _pick(DocAction.lock)),
+        _Row(icon: AppIcons.delete, label: 'Delete', onTap: () => _pick(DocAction.delete)),
+      ],
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final doc = widget.document;
+    if (doc.isFile) return _fileSheet(doc);
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Column(
@@ -601,7 +655,7 @@ class _Header extends StatelessWidget {
                 future: size,
                 builder: (_, snap) {
                   final bytes = snap.data?.valueOrNull;
-                  final parts = [pagesLabel(document.pageCount), if (bytes != null) formatBytes(bytes), formatDate(document.updatedAt)];
+                  final parts = [document.isFile ? tr(document.fileKind.label) : pagesLabel(document.pageCount), if (bytes != null) formatBytes(bytes), formatDate(document.updatedAt)];
                   return Text(parts.join('  |  '), style: const TextStyle(color: AppColors.inkMuted, fontSize: 13));
                 },
               ),

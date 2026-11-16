@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:ui' show PlatformDispatcher;
 
-import 'package:file_picker/file_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -37,13 +37,7 @@ Future<List<String>> _pickImages() async {
   return [for (final f in files) f.path];
 }
 
-Future<List<String>> _pickFiles() async {
-  final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: [...ocrToolImageExtensions, 'pdf']);
-  return [
-    for (final f in picked)
-      if (f.path != null) f.path!,
-  ];
-}
+Future<List<String>> _pickFiles() => pickFilePaths(null, allowedExtensions: [...ocrToolImageExtensions, 'pdf'], allowMultiple: true);
 
 /// The OCR tool: pictures and PDFs in, editable text out, with translation into another language and a voice to listen to it.
 class OcrToolPage extends StatelessWidget {
@@ -622,10 +616,13 @@ class _Note extends StatelessWidget {
 
 /// A searchable list of languages. Returns the code, '' for "Detect automatically", or null when closed.
 class _LanguageSheet extends StatefulWidget {
-  const _LanguageSheet({required this.allowAuto, required this.current, required this.downloaded});
+  const _LanguageSheet({required this.allowAuto, required this.current, required this.downloaded, this.forDownload = false});
   final bool allowAuto;
   final String? current;
   final Future<List<String>> downloaded;
+
+  /// The list is for choosing what to download: each language not yet on the phone has its own Download button.
+  final bool forDownload;
 
   @override
   State<_LanguageSheet> createState() => _LanguageSheetState();
@@ -671,9 +668,22 @@ class _LanguageSheetState extends State<_LanguageSheet> {
                       ListTile(
                         key: ValueKey('lang-${l.code}'),
                         title: Text(l.name),
-                        subtitle: have.contains(l.code) ? const Text('On this phone', style: TextStyle(fontSize: 12)) : null,
-                        trailing: widget.current == l.code ? const Icon(AppIcons.check) : null,
-                        onTap: () => Navigator.pop(context, l.code),
+                        subtitle: have.contains(l.code)
+                            ? const Text('On this phone', style: TextStyle(fontSize: 12))
+                            : (snap.hasData
+                                  ? Text(widget.forDownload ? 'About 30 MB' : 'About 30 MB to download', style: const TextStyle(fontSize: 12))
+                                  : null),
+                        trailing: widget.forDownload
+                            ? (have.contains(l.code)
+                                  ? const Icon(AppIcons.check)
+                                  : FilledButton.tonal(
+                                      key: ValueKey('lang-download-${l.code}'),
+                                      style: FilledButton.styleFrom(minimumSize: const Size(0, 36), padding: const EdgeInsets.symmetric(horizontal: 14)),
+                                      onPressed: () => Navigator.pop(context, l.code),
+                                      child: const Text('Download'),
+                                    ))
+                            : (widget.current == l.code ? const Icon(AppIcons.check) : null),
+                        onTap: widget.forDownload && have.contains(l.code) ? null : () => Navigator.pop(context, l.code),
                       ),
                     if (languages.isEmpty) const Padding(padding: EdgeInsets.all(AppSpacing.lg), child: Text('No language matches.')),
                   ],
@@ -707,7 +717,7 @@ class _DataSheetState extends State<_DataSheet> {
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      builder: (_) => _LanguageSheet(allowAuto: false, current: null, downloaded: widget.cubit.downloadedLanguages()),
+      builder: (_) => _LanguageSheet(allowAuto: false, current: null, downloaded: widget.cubit.downloadedLanguages(), forDownload: true),
     );
     if (code == null || code.isEmpty || !mounted) return;
     setState(() {
@@ -745,12 +755,28 @@ class _DataSheetState extends State<_DataSheet> {
             child: OutlinedButton.icon(
               key: const ValueKey('langdata-download'),
               onPressed: _downloading == null ? _download : null,
-              icon: _downloading == null
-                  ? const Icon(AppIcons.download, size: 18)
-                  : const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-              label: Text(_downloading == null ? 'Download a language' : 'Downloading ${languageName(_downloading!)}...'),
+              icon: const Icon(AppIcons.download, size: 18),
+              label: const Text('Download a language'),
             ),
           ),
+          if (_downloading != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: Column(
+                key: const ValueKey('langdata-progress'),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    trf('Downloading {language}, about 30 MB', {'language': languageName(_downloading!)}),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  const LinearProgressIndicator(),
+                  const SizedBox(height: AppSpacing.xs),
+                  const Text('Keep this screen open until it finishes.', style: TextStyle(fontSize: 12.5, color: AppColors.inkMuted)),
+                ],
+              ),
+            ),
           if (_message != null)
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.xs),

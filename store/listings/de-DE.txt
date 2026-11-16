@@ -1,0 +1,50 @@
+title: Doculoom: PDF-Scanner & Tools
+short: Dokumente scannen, PDFs bearbeiten und signieren, komprimieren, teilen. Offline.
+---
+Doculoom macht Ihr Handy zum Dokumentenscanner und zur Werkzeugkiste für PDFs, Office-Dateien und Fotos. Ihre Dokumente bleiben auf Ihrem Handy: Es gibt kein Konto, und Scannen, Texterkennung und die PDF-Werkzeuge funktionieren offline.
+
+SCANNEN
+• Seiten mit der Kamera scannen, Doculoom erkennt die Kanten, oder Fotos, PDFs und Word-Dateien importieren
+• Mehrseitiges Scannen, erneut zuschneiden, drehen, Seiten neu ordnen und einen Filter auf alle Seiten anwenden
+• Filter für Text, Farbe und Schwarz-Weiß
+• Scanmodi für Dokumente, Belege, Visitenkarten und Ausweise
+• Text in einem Scan direkt auf dem Gerät lesen (OCR), später durchsuchen, kopieren oder eine Visitenkarte in einen Kontakt umwandeln
+
+PDF-WERKZEUGE
+• Seiten komprimieren, zusammenführen, teilen, zuschneiden und nummerieren
+• Ein PDF mit Passwort schützen oder ein PDF entsperren, das Sie öffnen können
+• Formulare ausfüllen, zeichnen, Text hinzufügen und Dokumente mit Ihrer gespeicherten Unterschrift signieren
+• Private Angaben mit dem Schwärzen-Werkzeug abdecken
+• Zwei PDFs vergleichen und Änderungen sehen
+• PDF- und Word-Dateien lesen, ohne sie zu importieren
+
+OFFICE- UND FOTO-WERKZEUGE
+• Excel-, CSV- und PowerPoint-Dateien öffnen, bearbeiten und konvertieren
+• Tabelle aus einem Foto nach Excel und Belege in eine Tabelle
+• Passbilder und Ausweisfotos in der richtigen Größe für etwa 40 Länder
+• Fotos auf eine Zielgröße komprimieren, Wasserzeichen hinzufügen, versteckte Daten aus Fotos entfernen
+• Beide Seiten eines Ausweises auf eine Seite kopieren
+
+QR UND TEILEN
+• QR-Codes und Barcodes scannen und erstellen, mit einem Verlauf, den Sie selbst kontrollieren
+• Ein PDF unverändert, kleiner, mit Passwort oder als ZIP teilen. Nur die geteilte Kopie wird verändert
+• Eine Datei per QR-Code im selben WLAN teilen oder mit einem verschlüsselten Link, der abläuft
+
+RECHNUNGEN, LEBENSLAUF UND ERINNERUNGEN
+• Rechnungsersteller mit GST (Indien), US-Umsatzsteuer und saudischem ZATCA
+• Zahlungs-QR-Codes, Belege zur Mehrwertsteuererstattung, Lebenslauf-Ersteller und Checklisten
+• Ablauferinnerungen für Reisepässe, Policen und andere Dokumente sowie Erinnerungen an Hidschri-Daten
+
+DATENSCHUTZ UND KONTROLLE
+• Keine Anmeldung. Dokumente werden nur im privaten Speicher der App abgelegt
+• Dokumente oder Ordner mit Fingerabdruck, Gesicht oder Bildschirmsperre des Handys sperren
+• Verschlüsselte Backups mit einem selbst gewählten Passwort erstellen
+• Jederzeit in den Einstellungen ein Dokument oder alles löschen
+• In 17 Sprachen verfügbar
+
+WERBUNG UND MÜNZEN
+Die kostenlose Version zeigt Werbung von Google AdMob. Scannen, Speichern, Ansehen, Suchen und Teilen eines PDFs sind immer kostenlos. Einige Werkzeuge benötigen Münzen. Sie erhalten jeden Tag ein paar kostenlose Münzen und können mehr oder einen Zeitpass verdienen, indem Sie sich freiwillig kurze Videos ansehen. Münzen haben keinen Geldwert.
+
+Fragen oder Feedback? Öffnen Sie Einstellungen > Info > Hilfe und Support oder schreiben Sie an darshandmg399@gmail.com.
+
+Datenschutzerklärung: https://darshanreddy4.github.io/doculoom-privacy-policy/

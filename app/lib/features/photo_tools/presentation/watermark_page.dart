@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:file_picker/file_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -49,11 +49,7 @@ class _WatermarkView extends StatelessWidget {
 
   Future<void> _pickFiles(BuildContext context) async {
     try {
-      final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['jpg', 'jpeg', 'png', 'pdf']);
-      final paths = [
-        for (final f in picked)
-          if (f.path != null) f.path!,
-      ];
+      final paths = await pickFilePaths(context, allowedExtensions: const ['jpg', 'jpeg', 'png', 'pdf'], allowMultiple: true);
       if (paths.isEmpty || !context.mounted) return;
       await context.read<WatermarkCubit>().add(paths);
     } catch (_) {

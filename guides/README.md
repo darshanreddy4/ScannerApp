@@ -9,5 +9,6 @@ Step-by-step guides for working on the Doculoom app (Flutter, Android first).
 | [03 App icon](03-app-icon.md) | Change the launcher icon and the Play Store icon |
 | [04 Configuration](04-configuration.md) | Change the privacy link, support email, relay address, rewards, package name, version and permissions |
 | [05 Build the .aab and add AdMob IDs](05-build-aab-and-ads.md) | Create the signed bundle for Google Play and put the real ad IDs in the right places |
+| [06 Raise the target API level](06-raise-target-api.md) | Meet Google Play's yearly target API rule: upgrade Flutter, rebuild, test and release |
 
 All commands run from the repository root unless a step says `cd app`.

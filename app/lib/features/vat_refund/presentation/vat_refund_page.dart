@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart' hide Text;
 import 'package:image_picker/image_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -19,7 +20,8 @@ import '../../invoice/domain/invoice.dart' show formatMoney, parseCents;
 import '../data/vat_refund_store.dart';
 import '../domain/vat_refund.dart';
 
-Future<String?> _pickPhoto(bool camera) async => (await ImagePicker().pickImage(source: camera ? ImageSource.camera : ImageSource.gallery))?.path;
+Future<String?> _pickPhoto(bool camera) async =>
+    camera ? (await ImagePicker().pickImage(source: ImageSource.camera))?.path : (await pickPhotoPaths(null, multiple: false)).firstOrNull;
 
 enum _Filter { all, todo, onTheWay, done }
 

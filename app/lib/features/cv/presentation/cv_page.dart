@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart' show PdfPageFormat;
@@ -66,7 +66,7 @@ class _LanguageFields {
 
 Future<Uint8List> _loadAsset(String path) async => (await rootBundle.load(path)).buffer.asUint8List();
 
-Future<String?> _pickPhoto() async => (await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1600))?.path;
+Future<String?> _pickPhoto() async => (await pickPhotoPaths(null, multiple: false)).firstOrNull;
 
 /// Writes a CV in the style of the European format and makes it a PDF. The CV and the photo stay on this phone.
 class CvPage extends StatefulWidget {

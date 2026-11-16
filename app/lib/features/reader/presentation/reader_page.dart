@@ -16,6 +16,7 @@ import '../../../core/widgets/feedback.dart';
 import '../../export/domain/repositories/export_repository.dart';
 import '../../../core/error/failures.dart';
 import '../../importer/domain/importer.dart';
+import '../../documents/domain/library_target.dart';
 import '../../pdf_tools/data/security/pdf_security.dart';
 import '../../pdf_tools/domain/pdf_protector.dart';
 import '../../qr/presentation/qr_share_page.dart';
@@ -30,9 +31,12 @@ import '../../../core/widgets/text.dart';
 import '../../../core/i18n/tr.dart';
 
 class ReaderArgs {
-  const ReaderArgs({required this.path, required this.kind});
+  const ReaderArgs({required this.path, required this.kind, this.libraryId});
   final String path;
   final ImportKind kind;
+
+  /// Set when the file is one kept in the library, which changes what saving and editing do.
+  final String? libraryId;
 }
 
 /// Reads a PDF or Word file without importing it. From here it can be edited, saved, shared or sent by QR.
@@ -352,7 +356,8 @@ class _ReaderPageState extends State<ReaderPage> {
             extra: ReadAloudArgs(title: _name, text: text),
           );
       case _ReaderAction.editText:
-        context.push(_isPdf ? '/pdf-edit' : '/docx-edit', extra: _readPath);
+        final id = widget.args.libraryId;
+        context.push(_isPdf ? '/pdf-edit' : '/docx-edit', extra: id != null && _readPath == widget.args.path ? LibraryTarget(path: _readPath, id: id) : _readPath);
       case _ReaderAction.edit:
         session.start(defaultFilter: settings.defaultFilter);
         final ok = await runWithProgress(context, session, () => session.importDocumentFile(widget.args.kind, _readPath));
@@ -399,7 +404,7 @@ class _ReaderPageState extends State<ReaderPage> {
               const PopupMenuItem(value: _ReaderAction.readAloud, child: _Row(AppIcons.speak, 'Read aloud')),
               const PopupMenuItem(value: _ReaderAction.editText, child: _Row(AppIcons.editDocument, 'Edit text')),
               const PopupMenuItem(value: _ReaderAction.edit, child: _Row(AppIcons.edit, 'Edit pages')),
-              const PopupMenuItem(value: _ReaderAction.save, child: _Row(AppIcons.storage, 'Save to library')),
+              if (widget.args.libraryId == null) const PopupMenuItem(value: _ReaderAction.save, child: _Row(AppIcons.storage, 'Save to library')),
               const PopupMenuItem(value: _ReaderAction.share, child: _Row(AppIcons.share, 'Share file')),
               const PopupMenuItem(value: _ReaderAction.qr, child: _Row(AppIcons.qr, 'Share with QR code')),
             ],
@@ -553,7 +558,7 @@ class _ReaderPageState extends State<ReaderPage> {
             if (page.isText) {
               picture = Center(
                 child: AspectRatio(
-                  aspectRatio: DocxReadPage.textAspect,
+                  aspectRatio: page.aspect,
                   child: Stack(
                     fit: StackFit.expand,
                     children: [

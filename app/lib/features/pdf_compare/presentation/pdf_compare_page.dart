@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:file_picker/file_picker.dart';
+import '../../documents/presentation/library_picker.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:path_provider/path_provider.dart';
@@ -24,8 +24,8 @@ import '../../../core/widgets/text.dart';
 typedef PdfPicker = Future<String?> Function();
 
 Future<String?> _pickPdf() async {
-  final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['pdf']);
-  return picked.isEmpty ? null : picked.first.path;
+  final picked = await pickFilePaths(null, allowedExtensions: const ['pdf']);
+  return picked.isEmpty ? null : picked.first;
 }
 
 const _removedColor = Color(0xFFE11D48);

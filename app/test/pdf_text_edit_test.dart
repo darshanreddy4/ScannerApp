@@ -1,7 +1,12 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
+import 'package:doculoom/features/pdf_tools/data/security/pdf_model.dart';
+import 'package:doculoom/features/pdf_tools/data/security/pdf_rewriter.dart';
+import 'package:doculoom/features/reader/data/pdf_page_reader.dart';
 import 'package:doculoom/features/reader/data/pdf_text_edit.dart';
 import 'package:doculoom/features/reader/data/pdf_text_extractor.dart';
 import 'package:doculoom/features/reader/domain/document_search.dart';
@@ -162,5 +167,113 @@ void main() {
   test('files made by other tools can be edited: a PDF from the Dart pdf package', () {
     final files = File('test/fixtures/office/search_text.pdf');
     expect(files.existsSync(), isTrue);
+  });
+
+  group('drawings and pictures', () {
+    /// What was added to the page: its instructions after the original ones, and its resources.
+    ({String ops, PdfDict resources, PdfReader file}) added(Uint8List bytes, int page) {
+      final file = PdfReader(readPdfDocument(bytes));
+      final info = file.pages()[page];
+      final contents = file.res(info.dict['Contents']);
+      final parts = contents is PdfArray ? contents.items : [info.dict['Contents']!];
+      final ops = latin1.decode(file.decoded(parts.last)!);
+      return (ops: ops, resources: file.dict(file.res(info.dict['Resources']))!, file: file);
+    }
+
+    final png = Uint8List.fromList(img.encodePng(img.Image(width: 40, height: 20)..clear(img.ColorRgb8(200, 30, 30))));
+    final transparent = () {
+      final i = img.Image(width: 10, height: 10, numChannels: 4)..clear(img.ColorRgba8(0, 0, 255, 0));
+      i.setPixelRgba(2, 2, 0, 0, 255, 255);
+      return Uint8List.fromList(img.encodePng(i));
+    }();
+
+    test('a highlight is a multiplied colour over the text, and the page text is unchanged', () {
+      final edited = applyPdfEdits(
+        original,
+        const PdfEditPlan(marks: [AddedMark(page: 0, kind: 'highlight', x0: 0.1, y0: 0.1, x1: 0.5, y1: 0.2)]),
+      );
+      final a = added(edited, 0);
+      expect(a.ops, contains('/SVMul gs'));
+      expect(a.ops, contains('1 0.9216 0.2314 rg'));
+      expect(a.ops, contains(' f Q'));
+      final gs = a.file.dict(a.resources['ExtGState'])!;
+      expect(a.file.dict(gs['SVMul'])!.nameOf('BM'), 'Multiply');
+      expect(read(edited)[0].text, read(original)[0].text);
+    });
+
+    test('a cover-up, a box and a line are drawn in the colour and width asked for', () {
+      final edited = applyPdfEdits(
+        original,
+        const PdfEditPlan(
+          marks: [
+            AddedMark(page: 0, kind: 'cover', x0: 0.5, y0: 0.5, x1: 0.2, y1: 0.3, rgb: 0xFFFFFF),
+            AddedMark(page: 0, kind: 'box', x0: 0.1, y0: 0.1, x1: 0.3, y1: 0.2, rgb: 0xFF0000, widthPt: 3),
+            AddedMark(page: 0, kind: 'line', x0: 0.1, y0: 0.9, x1: 0.9, y1: 0.9, rgb: 0x0000FF),
+          ],
+        ),
+      );
+      final ops = added(edited, 0).ops;
+      expect(ops, contains('1 1 1 rg'));
+      expect(ops, contains('1 0 0 RG 3 w'));
+      expect(ops, contains('0 0 1 RG 2 w 1 J'));
+      expect(ops, contains(' S Q'));
+      expect(ops.split('\n').where((l) => l.contains(' f Q')), hasLength(1));
+    });
+
+    test('a picture is placed with its width and shape kept, as an image the page can draw', () {
+      final edited = applyPdfEdits(original, PdfEditPlan(pictures: [AddedPicture(page: 0, x: 0.1, y: 0.1, w: 0.4, bytes: png, aspect: 2)]));
+      final a = added(edited, 0);
+      final m = RegExp(r'q (\S+) (\S+) (\S+) (\S+) (\S+) (\S+) cm /SVI1 Do Q').firstMatch(a.ops)!;
+      final w = double.parse(m.group(1)!), h = double.parse(m.group(4)!);
+      expect(w, closeTo(0.4 * 612, 0.5));
+      expect(h, closeTo(w / 2, 0.5), reason: 'twice as wide as high, as the picture is');
+      expect(double.parse(m.group(2)!), 0);
+      expect(double.parse(m.group(5)!), closeTo(0.1 * 612, 0.5));
+      final xo = a.file.dict(a.resources['XObject'])!;
+      final image = a.file.res(xo['SVI1']) as PdfStream;
+      expect(image.dict.nameOf('Subtype'), 'Image');
+      expect(image.dict.nameOf('Filter'), 'DCTDecode');
+      expect(image.dict['SMask'], isNull);
+      expect(read(edited)[0].text, read(original)[0].text);
+    });
+
+    test('a picture with see-through parts keeps them as a mask', () {
+      final edited = applyPdfEdits(original, PdfEditPlan(pictures: [AddedPicture(page: 0, x: 0.1, y: 0.1, w: 0.2, bytes: transparent, aspect: 1)]));
+      final a = added(edited, 0);
+      final image = a.file.res(a.file.dict(a.resources['XObject'])!['SVI1']) as PdfStream;
+      expect(image.dict.nameOf('Filter'), 'FlateDecode');
+      final mask = a.file.res(image.dict['SMask']) as PdfStream;
+      expect(a.file.decoded(mask), hasLength(100));
+      expect(a.file.decoded(mask)!.where((b) => b == 255), hasLength(1));
+    });
+
+    test('a file that is not a picture is refused with a message', () {
+      expect(
+        () => applyPdfEdits(original, PdfEditPlan(pictures: [AddedPicture(page: 0, x: 0.1, y: 0.1, w: 0.2, bytes: Uint8List.fromList([1, 2, 3]), aspect: 1)])),
+        throwsA(isA<PdfEditException>()),
+      );
+    });
+
+    test('drawings, pictures, retyped lines and new text work together, and the result is a normal PDF again', () {
+      final edited = applyPdfEdits(
+        original,
+        PdfEditPlan(
+          edits: [LineEdit(page: 0, line: lineOf(0, 'Hello'), text: 'Hi there')],
+          additions: const [AddedText(page: 0, x: 0.2, y: 0.5, text: 'Approved', sizePt: 16)],
+          marks: const [AddedMark(page: 0, kind: 'highlight', x0: 0.1, y0: 0.3, x1: 0.6, y1: 0.35)],
+          pictures: [AddedPicture(page: 0, x: 0.5, y: 0.6, w: 0.3, bytes: png, aspect: 2)],
+        ),
+      );
+      final pages = read(edited);
+      expect(pages[0].text, contains('Hi there'));
+      expect(pages[0].text, contains('Approved'));
+      final a = added(edited, 0);
+      expect(a.ops, contains('/SVMul gs'));
+      expect(a.ops, contains('/SVI1 Do'));
+      expect(a.ops.indexOf('/SVMul gs'), lessThan(a.ops.indexOf('Approved').isNegative ? a.ops.length : a.ops.indexOf('BT')), reason: 'drawings come before the text');
+      expect(analyzePdfForEditing(edited)[0].lines.map((l) => l.text), contains('Hi there'));
+      final again = applyPdfEdits(edited, const PdfEditPlan(marks: [AddedMark(page: 0, kind: 'box', x0: 0.1, y0: 0.1, x1: 0.2, y1: 0.2)]));
+      expect(read(again)[0].text, contains('Hi there'));
+    });
   });
 }
