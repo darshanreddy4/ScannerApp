@@ -7,7 +7,7 @@ import os
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-RAW = os.path.join(HERE, 'screenshots-raw', 'all-originals')
+RAW = os.path.join(HERE, 'screenshots-raw')
 S = 2
 W, H = 1024 * S, 500 * S
 
@@ -79,9 +79,9 @@ def main():
     bg = background()
     # phones: left and right behind, centre in front; they run off the bottom edge on purpose
     phones = [
-        ('06.jpeg', 232, 7, 640, 46),
-        ('08.jpeg', 232, -7, 862, 40),
-        ('01.jpeg', 262, 0, 752, 22),
+        ('02.jpg', 232, 7, 640, 46),
+        ('04.jpg', 232, -7, 862, 40),
+        ('01.jpg', 262, 0, 752, 22),
     ]
     for name, width, angle, cx, top in phones:
         p = phone(os.path.join(RAW, name), width, angle)
@@ -105,7 +105,7 @@ def main():
     chips = Image.new('RGBA', bg.size, (0, 0, 0, 0))
     cd = ImageDraw.Draw(chips)
     f = font(17 * S, False)
-    labels = ['Scan & OCR', 'Merge PDF', 'Table to Excel', 'PowerPoint', 'Receipts to Excel', 'CV maker', 'ID card copy', 'Loyalty cards', 'Hijri calendar', 'Reminders']
+    labels = ['PDF editor', 'Excel editor', 'Word editor', 'Scan & OCR', 'Merge PDF', 'Table to Excel', 'PowerPoint', 'CV maker', 'ID card copy', '20 languages']
     x, y, max_x = 60, 254, 472
     for label in labels:
         w = d.textlength(label, font=f) / S + 24

@@ -28,19 +28,27 @@ OFFICE AND PHOTO TOOLS
 QR AND SHARING
 • Scan and create QR codes and barcodes, with a history you control
 • Share a PDF as it is, smaller, with a password, or in a ZIP. Only the copy you share changes
-• Share a file by QR code over the same Wi-Fi, or with an encrypted link that expires
+• Share a file by QR code over the same Wi-Fi, with an optional password
 
 INVOICES, CV AND REMINDERS
-• Invoice maker with GST (India), US sales tax and Saudi ZATCA layouts
-• Payment QR codes, VAT refund receipts, a CV maker and a checklist tool
-• Expiry reminders for passports, policies and other documents, and Hijri date reminders
+• Invoice maker with GST (India), US sales tax and Saudi VAT layouts, and an amount-in-words tool for cheques
+• Payment QR codes, VAT refund receipts, and a CV maker with 25 designs
+• Hijri calendar and date converter, with Ramadan, Eid and yearly reminders
+• Expiry reminders for passports, policies and other documents
+
+CARDS, CHECKLISTS AND PACKETS
+• Keep loyalty and club card barcodes on your phone and show them at the till
+• Ready-made checklists for moving, a new job, a visa or taxes, with your scans linked to each step
+• Application packet: put your papers into one PDF with a cover, contents and page numbers, within a size limit
+• Safe ID copy: cover what the other side does not need and add a mark that says what the copy is for
+• Stamp library for documents
 
 PRIVACY AND CONTROL
 • No sign-in. Documents are stored only in the app's private storage
 • Lock a document or folder with your phone's fingerprint, face or screen lock
 • Create encrypted backups with a password you choose
 • Delete one document, or everything, from Settings at any time
-• Available in 17 languages
+• Available in 20 languages, including Hindi, Tamil, Telugu, Malayalam, Kannada, Marathi, Urdu, Arabic, Chinese, Japanese and major European languages
 
 ADS AND COINS
 The free version shows ads from Google AdMob. Scanning, saving, viewing, searching and sharing a PDF are always free. Some tools use coins. You get a few free coins each day, and you can earn more or a time pass by choosing to watch short videos. Coins have no cash value.
