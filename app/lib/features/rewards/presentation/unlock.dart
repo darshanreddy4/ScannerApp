@@ -113,6 +113,7 @@ class _NotEnough extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
+    scrollable: true,
     title: const Text('Not enough coins'),
     content: Column(
       mainAxisSize: MainAxisSize.min,
