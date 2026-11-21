@@ -61,7 +61,7 @@ class _NativeAdViewState extends State<_NativeAdView> {
   NativeAd? _ad;
   bool _loaded = false;
 
-  static const _height = 120.0;
+  static const _height = 350.0;
 
   @override
   void initState() {
@@ -77,7 +77,7 @@ class _NativeAdViewState extends State<_NativeAdView> {
         },
       ),
       nativeTemplateStyle: NativeTemplateStyle(
-        templateType: TemplateType.small,
+        templateType: TemplateType.medium,
         mainBackgroundColor: AppColors.surface,
         callToActionTextStyle: NativeTemplateTextStyle(textColor: Colors.white, backgroundColor: AppColors.primary, style: NativeTemplateFontStyle.bold),
         primaryTextStyle: NativeTemplateTextStyle(textColor: AppColors.ink, style: NativeTemplateFontStyle.bold),
