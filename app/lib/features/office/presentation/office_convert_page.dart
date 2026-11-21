@@ -147,11 +147,11 @@ class _OfficeConvertPageState extends State<OfficeConvertPage> {
             const SizedBox(height: AppSpacing.md),
             FilledButton.icon(
               key: const ValueKey('convert_go'),
-              onPressed: _inputs.isEmpty || _running ? null : _run,
+              onPressed: _inputs.length < (kind == OfficeConversion.mergeXlsx ? 2 : 1) || _running ? null : _run,
               icon: _running
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Icon(AppIcons.convert, size: 18),
-              label: Text(_running ? _progress : 'Convert'),
+              label: Text(_running ? _progress : kind.actionLabel),
             ),
             if (_failure != null)
               Padding(
