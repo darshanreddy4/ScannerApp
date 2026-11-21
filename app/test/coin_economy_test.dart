@@ -153,23 +153,25 @@ void main() {
     final heavy = CoinFeature.tool('Compress PDF', CoinTier.heavy);
     final light = CoinFeature.tool('Signature', CoinTier.light);
 
-    test('a heavy tool is not covered, and stays open for ten minutes once paid for', () async {
+    test('a heavy tool is not covered, and stays open for five minutes once paid for', () async {
       var now = DateTime(2026, 10, 29, 9);
       final c = coinsCubit(clock: () => now);
       expect(await c.coverWithoutCoins(heavy), UnlockCover.none);
       c.markPaid(heavy);
       expect(await c.coverWithoutCoins(heavy), UnlockCover.grace);
       expect(await c.coverWithoutCoins(CoinFeature.tool('Flatten PDF', CoinTier.heavy)), UnlockCover.none);
-      now = now.add(const Duration(minutes: 11));
+      now = now.add(const Duration(minutes: 4));
+      expect(await c.coverWithoutCoins(heavy), UnlockCover.grace, reason: 'still inside the window; reopening does not extend it');
+      now = now.add(const Duration(minutes: 2));
       expect(await c.coverWithoutCoins(heavy), UnlockCover.none);
     });
 
-    test('a light tool is free once a day, then stays open ten minutes, then costs a coin', () async {
+    test('a light tool is free once a day, then stays open five minutes, then costs a coin', () async {
       var now = DateTime(2026, 10, 29, 9);
       final c = coinsCubit(clock: () => now);
       expect(await c.coverWithoutCoins(light), UnlockCover.freeDaily);
       expect(await c.coverWithoutCoins(light), UnlockCover.grace);
-      now = now.add(const Duration(minutes: 11));
+      now = now.add(const Duration(minutes: 6));
       expect(await c.coverWithoutCoins(light), UnlockCover.none);
     });
 
@@ -282,7 +284,7 @@ void main() {
     final heavy = CoinFeature.tool('Compress PDF', CoinTier.heavy);
     final light = CoinFeature.tool('Signature', CoinTier.light);
 
-    testWidgets('a heavy tool asks for 5 coins, takes them, and is then open again for ten minutes', (tester) async {
+    testWidgets('a heavy tool asks for 5 coins, takes them, and is then open again for five minutes', (tester) async {
       final wallet = MemoryWallet(balance: 12);
       final coins = coinsCubit(wallet: wallet);
       final results = await run(tester, coins, heavy);
@@ -296,7 +298,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Use 5 coins?'), findsNothing);
       expect(results, [true, true]);
-      expect(wallet.balance, 7, reason: 'the same tool again within ten minutes is free');
+      expect(wallet.balance, 7, reason: 'the same tool again within five minutes is free');
     });
 
     testWidgets('the first use of a light tool each day is free and says so; the next costs 1 coin', (tester) async {

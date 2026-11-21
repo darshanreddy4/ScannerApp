@@ -7,7 +7,7 @@ abstract interface class PlanRepository {
 
 /// Decides when ads may be shown. Premium users never see ads.
 class AdPolicy {
-  const AdPolicy({this.interstitialCooldown = const Duration(minutes: 2), this.everyNthAction = 2});
+  const AdPolicy({this.interstitialCooldown = const Duration(seconds: 90), this.everyNthAction = 2});
 
   final Duration interstitialCooldown;
 

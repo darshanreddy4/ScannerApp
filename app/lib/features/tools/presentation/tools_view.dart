@@ -15,6 +15,7 @@ import '../../../core/widgets/feedback.dart';
 import '../../importer/domain/importer.dart';
 import '../../rewards/domain/coin_rules.dart';
 import '../../monetization/presentation/inline_ad.dart';
+import '../../rewards/presentation/earn_coins_bar.dart';
 import '../../rewards/presentation/unlock.dart';
 import '../../reader/presentation/reader_page.dart';
 import '../../scanner/domain/entities/scan_mode.dart';
@@ -47,7 +48,10 @@ class ToolsView extends StatelessWidget {
       final path = picked.isEmpty ? null : picked.first;
       if (path == null || !context.mounted) return;
       final libraryId = sl<LibraryFiles>().stagedFrom(path);
-      context.push(route, extra: libraryId == null ? path : LibraryTarget(path: path, id: libraryId));
+      context.push(
+        route,
+        extra: libraryId == null ? path : LibraryTarget(path: path, id: libraryId),
+      );
     } catch (_) {
       if (context.mounted) showFailure(context, const PermissionFailure('The file picker is unavailable.'));
     }
@@ -174,6 +178,7 @@ class ToolsView extends StatelessWidget {
     return ListView(
       padding: contentPadding(context),
       children: [
+        const EarnCoinsBar(),
         const _FeaturedTool(),
         if (own.isNotEmpty) ...[
           _SectionLabel(trf('For {region}', {'region': tr(mine.label)})),

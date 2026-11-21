@@ -10,7 +10,7 @@ abstract final class CoinRules {
   static const int? dailyAdCap = null;
 
   /// After paying for a tool, the same tool stays open for this long, so stepping out and back in is not charged twice.
-  static const reopenGrace = Duration(minutes: 10);
+  static const reopenGrace = Duration(minutes: 5);
 }
 
 /// What a tool costs. Scanning, saving, viewing, searching and sharing a PDF are never priced.

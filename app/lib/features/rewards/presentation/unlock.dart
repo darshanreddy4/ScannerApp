@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_config.dart';
 import '../../../core/i18n/tr.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../monetization/domain/entities/plan_status.dart';
 import '../../monetization/domain/repositories/monetization_contracts.dart';
@@ -113,18 +114,42 @@ class _NotEnough extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: const Text('Not enough coins'),
-    content: Text(
-      trf('{feature} costs {cost} and you have {balance}.', {'feature': tr(feature.label), 'cost': _coins(feature.cost), 'balance': balance}) +
-          ' ' +
-          (canWatch
-              ? trf('Watch a short video to earn {n} coins, or watch several videos for a pass that opens every tool.', {'n': CoinRules.rewardPerAd})
-              : tr('You have used today\'s videos; more are available tomorrow.')),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          trf('{feature} costs {cost} and you have {balance}.', {'feature': tr(feature.label), 'cost': _coins(feature.cost), 'balance': balance}) +
+              ' ' +
+              (canWatch
+                  ? trf('Watch a short video to earn {n} coins, or watch several videos for a pass that opens every tool.', {'n': CoinRules.rewardPerAd})
+                  : tr('You have used today\'s videos; more are available tomorrow.')),
+        ),
+        if (canWatch) ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              key: const ValueKey('unlock-watch'),
+              style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+              onPressed: () => Navigator.pop(context, _Choice.watch),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(AppIcons.video, size: 20),
+                  const SizedBox(width: 8),
+                  Flexible(child: Text(trf('Watch video (+{n})', {'n': CoinRules.rewardPerAd}), textAlign: TextAlign.center)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
     ),
     actions: [
       TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
       if (AppConfig.billingEnabled) TextButton(onPressed: () => Navigator.pop(context, _Choice.upgrade), child: const Text('Go Premium')),
       if (canWatch) TextButton(key: const ValueKey('unlock-passes'), onPressed: () => Navigator.pop(context, _Choice.passes), child: const Text('Passes')),
-      if (canWatch) FilledButton(onPressed: () => Navigator.pop(context, _Choice.watch), child: Text(trf('Watch video (+{n})', {'n': CoinRules.rewardPerAd}))),
     ],
   );
 }

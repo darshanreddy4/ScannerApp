@@ -5,39 +5,19 @@ import '../../../core/i18n/tr.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/utils/format.dart';
-import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/style_kit.dart';
-import '../../monetization/domain/repositories/monetization_contracts.dart';
 import '../domain/coin_rules.dart';
 import 'coin_burst.dart';
 import 'coins_cubit.dart';
-import 'consent_needed.dart';
 import 'passes_sheet.dart';
+import 'watch_for_coins.dart';
 import '../../../core/widgets/text.dart';
 
 /// Balance, a way to earn more, the passes, and what costs what.
 class CoinsCard extends StatelessWidget {
   const CoinsCard({super.key});
 
-  Future<void> _watch(BuildContext context) async {
-    final coins = context.read<CoinsCubit>();
-    final result = await runBusy(context, 'Loading video', coins.watchAd);
-    if (!context.mounted) return;
-    if (result == RewardResult.earned) {
-      showCoinsEarned(context, CoinRules.rewardPerAd);
-      return;
-    }
-    if (result == RewardResult.consentNeeded) {
-      await showConsentNeeded(context);
-      return;
-    }
-    showMessage(context, switch (result) {
-      RewardResult.earned || RewardResult.consentNeeded => '',
-      RewardResult.dismissed => 'Watch the video to the end to earn coins',
-      RewardResult.unavailable => 'No video could load. Turn on mobile data or Wi-Fi and try again. Coins you earn can be used offline.',
-      RewardResult.limitReached => 'You have used today\'s videos. Come back tomorrow.',
-    });
-  }
+  Future<void> _watch(BuildContext context) => watchForCoins(context);
 
   Future<void> _claim(BuildContext context) async {
     final added = await context.read<CoinsCubit>().claimDaily();
