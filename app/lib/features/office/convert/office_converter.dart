@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import '../../../core/error/failures.dart';
 import '../sheets/data/csv.dart';
 import '../sheets/data/sheet_renderer.dart';
+import '../sheets/data/xlsx_merge.dart';
 import '../sheets/data/xlsx_reader.dart';
 import '../sheets/data/xlsx_writer.dart';
 import '../sheets/domain/formula.dart';
@@ -43,6 +44,14 @@ enum OfficeConversion {
     extensions: ['csv', 'tsv', 'txt'],
     pickLabel: 'Choose a CSV file',
   ),
+  mergeXlsx(
+    title: 'Merge Excel files',
+    description: 'Join the sheets of two or more Excel workbooks into one new workbook. Your original files stay as they are.',
+    extensions: ['xlsx'],
+    pickLabel: 'Choose Excel files',
+    multiple: true,
+    actionLabel: 'Merge',
+  ),
   pptxToPdf(
     title: 'PowerPoint to PDF',
     description: 'Turn every slide of a presentation into a page of a PDF.',
@@ -64,7 +73,15 @@ enum OfficeConversion {
     pickLabel: 'Choose a PDF',
   );
 
-  const OfficeConversion({required this.title, required this.description, required this.extensions, required this.pickLabel, this.multiple = false});
+  const OfficeConversion({
+    required this.title,
+    required this.description,
+    required this.extensions,
+    required this.pickLabel,
+    this.multiple = false,
+    this.actionLabel = 'Convert',
+  });
+  final String actionLabel;
   final String title;
   final String description;
   final List<String> extensions;
@@ -78,6 +95,8 @@ const _xlsxMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.s
 
 /// Top level so the closure cannot capture the caller's callbacks, which cannot be sent to another isolate.
 Future<Uint8List> _csvToXlsxInBackground(Uint8List bytes) => Isolate.run(() => writeXlsx(workbookFromCsv(parseCsv(decodeCsvBytes(bytes)))));
+
+Future<MergeResult> _mergeInBackground(List<MergeInput> files) => Isolate.run(() => mergeXlsx(files));
 
 /// Runs the Office conversions. Everything happens on the device.
 class OfficeConverter {
@@ -124,6 +143,14 @@ class OfficeConverter {
           final name = '${p.basenameWithoutExtension(inputs.first)}.xlsx';
           final path = p.join(out.path, name);
           await File(path).writeAsBytes(data, flush: true);
+          return [ConvertedFile(path: path, name: name, mimeType: _xlsxMime, openAs: 'sheet')];
+        case OfficeConversion.mergeXlsx:
+          if (inputs.length < 2) throw const ImportFailure('Choose at least two Excel files to merge.');
+          final files = [for (final path in inputs) MergeInput(p.basename(path), await File(path).readAsBytes())];
+          final result = await _mergeInBackground(files);
+          final name = '${p.basenameWithoutExtension(inputs.first)}_merged.xlsx';
+          final path = p.join(out.path, name);
+          await File(path).writeAsBytes(result.bytes, flush: true);
           return [ConvertedFile(path: path, name: name, mimeType: _xlsxMime, openAs: 'sheet')];
         default:
           final handler = slideConversions;
