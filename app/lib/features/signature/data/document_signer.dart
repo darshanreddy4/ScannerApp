@@ -9,7 +9,7 @@ import '../../../core/error/failures.dart';
 import '../../../core/error/result.dart';
 import '../../export/data/document_builders.dart';
 import '../../export/domain/entities/export_options.dart';
-import '../../photo_tools/data/watermark_compositor.dart' show readPictureSize;
+import '../../photo_tools/data/watermark_compositor.dart' show readPictureSizeInBackground;
 import '../domain/signature.dart';
 
 /// Opens PDFs and photos for signing and puts a signature picture on chosen pages.
@@ -28,9 +28,9 @@ class DocumentSignerProcessor implements DocumentSigner {
     if (isPdf(path)) {
       final pages = await pdfToImages(path);
       if (pages.isEmpty) throw const ExportFailure('Nothing could be read from this PDF.');
-      return SignDocument(name: name, pages: pages, sizes: [for (final page in pages) await Isolate.run(() => readPictureSize(page))], isPdf: true);
+      return SignDocument(name: name, pages: pages, sizes: [for (final page in pages) await readPictureSizeInBackground(page)], isPdf: true);
     }
-    final size = await Isolate.run(() => readPictureSize(path));
+    final size = await readPictureSizeInBackground(path);
     return SignDocument(name: name, pages: [path], sizes: [size], isPdf: false);
   }, onError: (e) => e is Failure ? e : ExportFailure('This file could not be opened. It may be damaged or unsupported.', cause: e));
 
@@ -54,13 +54,13 @@ class DocumentSignerProcessor implements DocumentSigner {
       final original = document.pages[i];
       if (!signing.contains(i)) {
         if (document.isPdf) {
-          final size = await Isolate.run(() => readPictureSize(original));
+          final size = await readPictureSizeInBackground(original);
           sources.add(PageSource(path: original, width: size.width, height: size.height));
         }
         continue;
       }
       final out = p.join(dir.path, '${document.name.replaceAll(RegExp(r'[^\w\-. ]', unicode: true), '_')}_signed_$unique-$i.jpg');
-      final size = await Isolate.run(() => signPage(original, signaturePath, out, placement));
+      final size = await _signPageInBackground(original, signaturePath, out, placement);
       sources.add(PageSource(path: out, width: size.width, height: size.height));
       onProgress?.call(++done, signing.length);
     }
@@ -82,6 +82,10 @@ class DocumentSignerProcessor implements DocumentSigner {
     );
   }, onError: (e) => e is Failure ? e : ExportFailure('The signature could not be added. A page or the signature may be damaged.', cause: e));
 }
+
+/// Top level, so the isolate closure holds only these values and not the caller's progress callback, which cannot be sent.
+Future<({int width, int height})> _signPageInBackground(String pagePath, String signaturePath, String outputPath, SignPlacement placement) =>
+    Isolate.run(() => signPage(pagePath, signaturePath, outputPath, placement));
 
 /// Draws the signature on a page picture and saves it as JPG. Runs in a background isolate.
 ({int width, int height}) signPage(String pagePath, String signaturePath, String outputPath, SignPlacement placement) {

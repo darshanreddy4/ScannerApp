@@ -10,8 +10,12 @@ import '../../../core/error/failures.dart';
 import '../../../core/error/result.dart';
 import '../../export/data/document_builders.dart';
 import '../../export/domain/entities/export_options.dart';
-import '../../photo_tools/data/watermark_compositor.dart' show readPictureSize;
+import '../../photo_tools/data/watermark_compositor.dart' show readPictureSizeInBackground;
 import '../domain/pdf_compressor.dart';
+
+/// Top level, so the isolate closure holds only these values and not the caller's progress callback, which cannot be sent.
+Future<List<PageSource>> _redrawInBackground(List<PageSource> inputs, int maxSide, int quality, String pageDir) =>
+    Isolate.run(() => redrawPages(inputs, maxSide, quality, pageDir));
 
 /// Makes a PDF smaller by redrawing every page as a picture and lowering the picture quality step by step until the size limit is met.
 /// Text stays readable but is no longer selectable, because the pages become pictures.
@@ -45,7 +49,7 @@ class PdfCompressProcessor implements PdfCompressor {
 
     final pages = await pdfToImages(sourcePath);
     if (pages.isEmpty) throw const ExportFailure('Nothing could be read from this PDF.');
-    final sizes = [for (final path in pages) await Isolate.run(() => readPictureSize(path))];
+    final sizes = [for (final path in pages) await readPictureSizeInBackground(path)];
 
     final tried = target == null ? [balancedLevel] : [for (var i = 0; i < levels.length; i++) i];
     final dir = await Directory(p.join(p.dirname(outputPath), '.pdf_work_${DateTime.now().microsecondsSinceEpoch}')).create(recursive: true);
@@ -57,7 +61,7 @@ class PdfCompressProcessor implements PdfCompressor {
         final (maxSide, quality) = levels[tried[n]];
         final pageDir = (await Directory(p.join(dir.path, 'l$n')).create()).path;
         final inputs = [for (var i = 0; i < pages.length; i++) PageSource(path: pages[i], width: sizes[i].width, height: sizes[i].height)];
-        final redrawn = await Isolate.run(() => redrawPages(inputs, maxSide, quality, pageDir));
+        final redrawn = await _redrawInBackground(inputs, maxSide, quality, pageDir);
         final candidate = p.join(dir.path, 'c$n.pdf');
         await buildPdfInBackground(redrawn, ExportQuality.high, candidate);
         await Directory(pageDir).delete(recursive: true);

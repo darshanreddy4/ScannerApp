@@ -62,7 +62,7 @@ class PdfPagesProcessor implements PdfPageService {
           final index = part.pages[position];
           final turns = (rotations[index] ?? 0) % 4;
           final original = source.pages[index];
-          final size = sizes[index] ??= await Isolate.run(() => readPictureSize(original));
+          final size = sizes[index] ??= await readPictureSizeInBackground(original);
           final turnedW = turns.isOdd ? size.height : size.width, turnedH = turns.isOdd ? size.width : size.height;
           final stampsForPage = await _marksFor(
             marks,
@@ -76,7 +76,7 @@ class PdfPagesProcessor implements PdfPageService {
             sources.add(PageSource(path: original, width: size.width, height: size.height));
           } else {
             final out = p.join(work.path, 'p$position.jpg');
-            final drawn = await Isolate.run(() => composePage(original, out, turns, stampsForPage));
+            final drawn = await _composePageInBackground(original, out, turns, stampsForPage);
             sources.add(PageSource(path: out, width: drawn.width, height: drawn.height));
           }
           onProgress?.call(++done, total);
@@ -142,6 +142,10 @@ class PageMark {
   final int height;
   final WatermarkPosition position;
 }
+
+/// Top level, so the isolate closure holds only these values and not the caller's progress callback, which cannot be sent.
+Future<({int width, int height})> _composePageInBackground(String sourcePath, String outputPath, int quarterTurns, List<PageMark> marks) =>
+    Isolate.run(() => composePage(sourcePath, outputPath, quarterTurns, marks));
 
 /// Turns a page picture by quarter turns and prints marks on it. Runs in a background isolate.
 ({int width, int height}) composePage(String sourcePath, String outputPath, int quarterTurns, List<PageMark> marks) {

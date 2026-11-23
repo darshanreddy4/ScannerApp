@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
@@ -22,6 +23,31 @@ typedef WatermarkedFile = ({int width, int height, int bytes});
   }
   return (width: w, height: h);
 }
+
+/// Top level, so the isolate closure holds only the path and not the caller's progress callback, which cannot be sent.
+Future<({int width, int height})> readPictureSizeInBackground(String path) => Isolate.run(() => readPictureSize(path));
+
+Future<WatermarkedFile> applyStampInBackground({
+  required String sourcePath,
+  required String outputPath,
+  required Uint8List stampRgba,
+  required int stampWidth,
+  required int stampHeight,
+  required WatermarkLayout layout,
+  required WatermarkPosition position,
+  PhotoFormat format = PhotoFormat.jpg,
+}) => Isolate.run(
+  () => applyStamp(
+    sourcePath: sourcePath,
+    outputPath: outputPath,
+    stampRgba: stampRgba,
+    stampWidth: stampWidth,
+    stampHeight: stampHeight,
+    layout: layout,
+    position: position,
+    format: format,
+  ),
+);
 
 /// Lays [stamp] over the picture at every spot and saves the result.
 WatermarkedFile applyStamp({

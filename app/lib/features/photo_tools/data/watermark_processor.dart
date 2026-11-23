@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:path/path.dart' as p;
 
@@ -84,21 +83,19 @@ class WatermarkProcessor implements WatermarkService {
     Future<Stamp?> Function(int) stampFor,
     PhotoFormat format,
   ) async {
-    final size = await Isolate.run(() => readPictureSize(source));
+    final size = await readPictureSizeInBackground(source);
     final stamp = await stampFor(size.width < size.height ? size.width : size.height);
     if (stamp == null) throw const ExportFailure('Type the words for the watermark or add a logo first.');
     final rgba = stamp.rgba, sw = stamp.width, sh = stamp.height;
-    final done = await Isolate.run(
-      () => applyStamp(
-        sourcePath: source,
-        outputPath: out,
-        stampRgba: rgba,
-        stampWidth: sw,
-        stampHeight: sh,
-        layout: style.layout,
-        position: style.position,
-        format: format,
-      ),
+    final done = await applyStampInBackground(
+      sourcePath: source,
+      outputPath: out,
+      stampRgba: rgba,
+      stampWidth: sw,
+      stampHeight: sh,
+      layout: style.layout,
+      position: style.position,
+      format: format,
     );
     return (width: done.width, height: done.height);
   }
