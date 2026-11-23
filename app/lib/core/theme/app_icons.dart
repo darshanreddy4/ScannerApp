@@ -63,7 +63,7 @@ abstract final class AppIcons {
 
   static const IconData pdf = LucideIcons.fileText;
   static const IconData pdfCompress = LucideIcons.fileArchive;
-  static const IconData pdfPages = LucideIcons.scissors;
+  static const IconData pdfPages = LucideIcons.scissorsLineDashed;
   static const IconData signature = LucideIcons.signature;
   static const IconData markup = LucideIcons.penLine;
   static const IconData markPen = LucideIcons.pen;
