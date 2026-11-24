@@ -288,15 +288,15 @@ void main() {
       final wallet = MemoryWallet(balance: 12);
       final coins = coinsCubit(wallet: wallet);
       final results = await run(tester, coins, heavy);
-      expect(find.text('Use 5 coins?'), findsOneWidget);
-      await tester.tap(find.text('Use 5 coins'));
+      expect(find.text('Opens with 5 coins'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('unlock-use')));
       await tester.pumpAndSettle();
       expect(results, [true]);
       expect(wallet.balance, 7);
 
       await tester.tap(find.text('go'));
       await tester.pumpAndSettle();
-      expect(find.text('Use 5 coins?'), findsNothing);
+      expect(find.text('Opens with 5 coins'), findsNothing);
       expect(results, [true, true]);
       expect(wallet.balance, 7, reason: 'the same tool again within five minutes is free');
     });
@@ -306,21 +306,21 @@ void main() {
       final coins = coinsCubit(wallet: wallet);
       final results = await run(tester, coins, light);
       expect(results, [true]);
-      expect(find.text('This is your free use of it for today'), findsOneWidget);
+      expect(find.text('Free today'), findsOneWidget);
       expect(wallet.balance, 3);
 
       final other = CoinFeature.tool('Signature', CoinTier.light);
       wallet.freeUsed.add(other.id);
       final again = coinsCubit(wallet: wallet);
       await run(tester, again, other);
-      expect(find.text('Use 1 coin?'), findsOneWidget);
+      expect(find.text('Opens with 1 coin'), findsOneWidget);
     });
 
     testWidgets('with too few coins the choices are cancel, passes and a video', (tester) async {
       final coins = coinsCubit(wallet: MemoryWallet(balance: 2));
       final results = await run(tester, coins, heavy);
-      expect(find.text('Not enough coins'), findsOneWidget);
-      expect(find.textContaining('costs 5 coins and you have 2'), findsOneWidget);
+      expect(find.byKey(const ValueKey('unlock-not-enough')), findsOneWidget);
+      expect(find.text('2 / 5'), findsOneWidget);
       expect(find.byKey(const ValueKey('unlock-passes')), findsOneWidget);
       expect(find.text('Watch video (+10)'), findsOneWidget);
       await tester.tap(find.text('Cancel'));
@@ -334,8 +334,8 @@ void main() {
       final results = await run(tester, coins, heavy);
       await tester.tap(find.text('Watch video (+10)'));
       await tester.pumpAndSettle();
-      expect(find.text('Use 5 coins?'), findsOneWidget);
-      await tester.tap(find.text('Use 5 coins'));
+      expect(find.text('Opens with 5 coins'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('unlock-use')));
       await tester.pumpAndSettle();
       expect(results, [true]);
       expect(wallet.balance, 5);
@@ -386,7 +386,7 @@ void main() {
       final wallet = MemoryWallet(balance: 5);
       final coins = coinsCubit(wallet: wallet, ads: ScriptedAds());
       final results = await run(tester, coins, heavy);
-      await tester.tap(find.text('Use 5 coins'));
+      await tester.tap(find.byKey(const ValueKey('unlock-use')));
       await tester.pumpAndSettle();
       expect(results, [true]);
       expect(wallet.balance, 0);
@@ -485,7 +485,7 @@ void main() {
     testWidgets('a heavy tool asks for coins, and cancelling opens nothing', (tester) async {
       await open(tester, wallet: MemoryWallet(balance: 1));
       await tapTool(tester, 'Compress PDF');
-      expect(find.text('Not enough coins'), findsOneWidget);
+      expect(find.byKey(const ValueKey('unlock-not-enough')), findsOneWidget);
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
       expect(find.text('compress opened'), findsNothing);
@@ -495,7 +495,7 @@ void main() {
       final wallet = MemoryWallet(balance: 6);
       await open(tester, wallet: wallet);
       await tapTool(tester, 'Compress PDF');
-      await tester.tap(find.text('Use 5 coins'));
+      await tester.tap(find.byKey(const ValueKey('unlock-use')));
       await tester.pumpAndSettle();
       expect(find.text('compress opened'), findsOneWidget);
       expect(wallet.balance, 1);
@@ -520,7 +520,7 @@ void main() {
       await open(tester, wallet: wallet, plan: PlanStatus.premium);
       await tapTool(tester, 'Compress PDF');
       expect(find.text('compress opened'), findsOneWidget);
-      expect(find.text('Not enough coins'), findsNothing);
+      expect(find.byKey(const ValueKey('unlock-not-enough')), findsNothing);
     });
 
     testWidgets('a running pass opens every tool without coins', (tester) async {

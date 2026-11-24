@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/widgets/style_kit.dart';
+import '../../../core/widgets/gold_coin.dart';
 import '../domain/coin_rules.dart';
 import 'coin_burst.dart';
 import 'coins_cubit.dart';
@@ -60,7 +61,7 @@ class CoinsCard extends StatelessWidget {
             const Divider(height: AppSpacing.lg),
             Row(
               children: [
-                const GradientIconTile(icon: AppIcons.coins, color: Color(0xFFF59E0B), size: 38),
+                const GoldCoin(size: 42),
                 const SizedBox(width: AppSpacing.sm),
                 // Counts up to the new balance when coins are added.
                 Expanded(

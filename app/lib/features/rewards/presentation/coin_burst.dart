@@ -4,8 +4,8 @@ import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_icons.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../../core/widgets/gold_coin.dart';
 import '../../../core/widgets/text.dart';
 
 /// Plays a short "coins added" animation over the screen. Falls back to a message when animations are turned off.
@@ -97,7 +97,7 @@ class _CoinBurstState extends State<_CoinBurst> with SingleTickerProviderStateMi
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(AppIcons.coins, color: AppColors.warning, size: 28),
+                const GoldCoin(size: 40),
                 const SizedBox(width: 8),
                 Text(
                   '+${widget.amount}',
@@ -126,15 +126,17 @@ class _CoinBurstState extends State<_CoinBurst> with SingleTickerProviderStateMi
     final dx = math.cos(angle) * distance * out;
     final dy = math.sin(angle) * distance * out + drop;
     final fade = local < 0.7 ? 1.0 : (1 - (local - 0.7) / 0.3);
-    final coin = 20 + rnd.nextDouble() * 14;
+    final coin = 26 + rnd.nextDouble() * 18;
+    final spin = math.cos(local * math.pi * (3 + rnd.nextInt(3))).abs().clamp(0.12, 1.0);
     return Positioned(
       left: origin.dx + dx - coin / 2,
       top: origin.dy + dy - coin / 2,
       child: Opacity(
         opacity: fade.clamp(0.0, 1.0),
-        child: Transform.rotate(
-          angle: local * math.pi * (rnd.nextBool() ? 2 : -2),
-          child: Icon(AppIcons.coins, size: coin, color: AppColors.warning),
+        child: Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.diagonal3Values(spin, 1, 1),
+          child: GoldCoin(size: coin, glint: local),
         ),
       ),
     );

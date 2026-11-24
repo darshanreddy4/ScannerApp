@@ -6,6 +6,7 @@ import 'lang/office4.dart';
 import 'lang/office5.dart';
 import 'lang/office6.dart';
 import 'lang/office7.dart';
+import 'lang/coinsui.dart';
 import 'lang/cvdesigns.dart';
 import 'lang/sharepdf.dart';
 import 'lang/coinsv2.dart';
@@ -67,6 +68,7 @@ const Map<String, Map<String, String>> translations = {
     ...hiOffice5,
     ...hiOffice6,
     ...hiOffice7,
+    ...hiCoinsUi,
     ...hiUpi,
   },
   'es': {
@@ -89,6 +91,7 @@ const Map<String, Map<String, String>> translations = {
     ...esOffice5,
     ...esOffice6,
     ...esOffice7,
+    ...esCoinsUi,
   },
   'fr': {
     ...frTexts,
@@ -110,6 +113,7 @@ const Map<String, Map<String, String>> translations = {
     ...frOffice5,
     ...frOffice6,
     ...frOffice7,
+    ...frCoinsUi,
   },
   'de': {
     ...deTexts,
@@ -131,6 +135,7 @@ const Map<String, Map<String, String>> translations = {
     ...deOffice5,
     ...deOffice6,
     ...deOffice7,
+    ...deCoinsUi,
   },
   'pt': {
     ...ptTexts,
@@ -152,6 +157,7 @@ const Map<String, Map<String, String>> translations = {
     ...ptOffice5,
     ...ptOffice6,
     ...ptOffice7,
+    ...ptCoinsUi,
   },
   'ar': {
     ...arTexts,
@@ -172,6 +178,7 @@ const Map<String, Map<String, String>> translations = {
     ...arOffice5,
     ...arOffice6,
     ...arOffice7,
+    ...arCoinsUi,
   },
   'ur': {
     ...urTexts,
@@ -182,6 +189,7 @@ const Map<String, Map<String, String>> translations = {
     ...urOffice5,
     ...urOffice6,
     ...urOffice7,
+    ...urCoinsUi,
     ...urWords,
     ...urStamps,
     ...urCards,
@@ -202,6 +210,7 @@ const Map<String, Map<String, String>> translations = {
     ...zhOffice5,
     ...zhOffice6,
     ...zhOffice7,
+    ...zhCoinsUi,
     ...zhWords,
     ...zhStamps,
     ...zhCards,
@@ -222,6 +231,7 @@ const Map<String, Map<String, String>> translations = {
     ...jaOffice5,
     ...jaOffice6,
     ...jaOffice7,
+    ...jaCoinsUi,
     ...jaWords,
     ...jaStamps,
     ...jaCards,
@@ -243,6 +253,7 @@ const Map<String, Map<String, String>> translations = {
     ...knOffice5,
     ...knOffice6,
     ...knOffice7,
+    ...knCoinsUi,
     ...knWords,
     ...knStamps,
     ...knCards,
@@ -264,6 +275,7 @@ const Map<String, Map<String, String>> translations = {
     ...mrOffice5,
     ...mrOffice6,
     ...mrOffice7,
+    ...mrCoinsUi,
     ...mrWords,
     ...mrStamps,
     ...mrCards,
@@ -284,6 +296,7 @@ const Map<String, Map<String, String>> translations = {
     ...taOffice5,
     ...taOffice6,
     ...taOffice7,
+    ...taCoinsUi,
     ...taWords,
     ...taStamps,
     ...taCards,
@@ -305,6 +318,7 @@ const Map<String, Map<String, String>> translations = {
     ...teOffice5,
     ...teOffice6,
     ...teOffice7,
+    ...teCoinsUi,
     ...teWords,
     ...teStamps,
     ...teCards,
@@ -326,6 +340,7 @@ const Map<String, Map<String, String>> translations = {
     ...mlOffice5,
     ...mlOffice6,
     ...mlOffice7,
+    ...mlCoinsUi,
     ...mlWords,
     ...mlStamps,
     ...mlCards,
@@ -358,6 +373,7 @@ const Map<String, Map<String, String>> translations = {
     ...itOffice5,
     ...itOffice6,
     ...itOffice7,
+    ...itCoinsUi,
   },
   'nl': {
     ...nlTexts,
@@ -379,6 +395,7 @@ const Map<String, Map<String, String>> translations = {
     ...nlOffice5,
     ...nlOffice6,
     ...nlOffice7,
+    ...nlCoinsUi,
   },
   'pl': {
     ...plTexts,
@@ -400,6 +417,7 @@ const Map<String, Map<String, String>> translations = {
     ...plOffice5,
     ...plOffice6,
     ...plOffice7,
+    ...plCoinsUi,
   },
   'tr': {
     ...trTexts,
@@ -421,6 +439,7 @@ const Map<String, Map<String, String>> translations = {
     ...trOffice5,
     ...trOffice6,
     ...trOffice7,
+    ...trCoinsUi,
   },
   'ru': {
     ...ruTexts,
@@ -442,5 +461,6 @@ const Map<String, Map<String, String>> translations = {
     ...ruOffice5,
     ...ruOffice6,
     ...ruOffice7,
+    ...ruCoinsUi,
   },
 };

@@ -13,6 +13,7 @@ import '../library_actions.dart';
 import '../../../../core/error/result.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
+import '../../../../core/widgets/gold_coin.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/dialogs.dart';
 import '../../../../core/widgets/feedback.dart';
@@ -757,7 +758,7 @@ class _PremiumChip extends StatelessWidget {
       ? Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(AppIcons.coins, size: 16, color: AppColors.warning),
+            const GoldCoin(size: 22),
             const SizedBox(width: 4),
             Text(
               '${CoinFeature.editSavedDocument.cost}',

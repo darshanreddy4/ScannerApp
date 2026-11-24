@@ -346,8 +346,8 @@ void main() {
 
     testWidgets('a Free user without coins is offered a video, and walking away starts no share', (tester) async {
       final server = await setUp(tester);
-      expect(find.text('Not enough coins'), findsOneWidget);
-      expect(find.textContaining('costs 1 coin and you have 0'), findsOneWidget);
+      expect(find.byKey(const ValueKey('unlock-not-enough')), findsOneWidget);
+      expect(find.text('0 / 1'), findsOneWidget);
       expect(find.text('Watch video (+10)'), findsOneWidget);
 
       await tester.tap(find.text('Cancel'));
@@ -359,8 +359,8 @@ void main() {
     testWidgets('every new share costs 1 coin, and its time can then be changed at no extra cost', (tester) async {
       final wallet = MemoryWallet(balance: 5);
       final server = await setUp(tester, wallet: wallet);
-      expect(find.text('Use 1 coin?'), findsOneWidget);
-      await tester.tap(find.text('Use 1 coin'));
+      expect(find.text('Opens with 1 coin'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('unlock-use')));
       await tester.pumpAndSettle();
 
       expect(server.ttls, [const Duration(minutes: 5)]);
@@ -369,7 +369,7 @@ void main() {
 
       await tester.tap(find.text('1 hour'));
       await tester.pumpAndSettle();
-      expect(find.text('Use 1 coin?'), findsNothing);
+      expect(find.text('Opens with 1 coin'), findsNothing);
       expect(server.ttls.last, const Duration(hours: 1));
       expect(wallet.balance, 4);
     });
@@ -390,8 +390,8 @@ void main() {
       await tester.tap(find.text('Watch video (+10)'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Use 1 coin?'), findsOneWidget, reason: 'now affordable, so it asks to spend');
-      await tester.tap(find.text('Use 1 coin'));
+      expect(find.text('Opens with 1 coin'), findsOneWidget, reason: 'now affordable, so it asks to spend');
+      await tester.tap(find.byKey(const ValueKey('unlock-use')));
       await tester.pumpAndSettle();
       expect(wallet.balance, 9);
       expect(wallet.adsToday, 1);
@@ -424,7 +424,7 @@ void main() {
     testWidgets('coins are given back when the share could not start', (tester) async {
       final wallet = MemoryWallet(balance: 5);
       final server = await setUp(tester, wallet: wallet, serverFailure: const ExportFailure('Connect to Wi-Fi first.'));
-      await tester.tap(find.text('Use 1 coin'));
+      await tester.tap(find.byKey(const ValueKey('unlock-use')));
       await tester.pumpAndSettle();
       expect(server.ttls, isEmpty);
       expect(wallet.balance, 5, reason: 'nothing was shared, so nothing was paid');
@@ -433,7 +433,7 @@ void main() {
     testWidgets('opening a file that is already being shared shows the same share and costs nothing', (tester) async {
       final wallet = MemoryWallet(balance: 5);
       final server = await setUp(tester, wallet: wallet);
-      await tester.tap(find.text('Use 1 coin'));
+      await tester.tap(find.byKey(const ValueKey('unlock-use')));
       await tester.pumpAndSettle();
       expect(wallet.balance, 4);
       expect(server.handles.length, 1);
@@ -446,7 +446,7 @@ void main() {
         await tester.tap(find.text('OPEN'));
         await tester.pumpAndSettle();
         expect(find.byKey(const ValueKey('already-sharing')), findsOneWidget);
-        expect(find.text('Use 1 coin?'), findsNothing);
+        expect(find.text('Opens with 1 coin'), findsNothing);
         expect(find.byType(QrImageView), findsOneWidget);
         await tester.pageBack();
         await tester.pumpAndSettle();
@@ -459,7 +459,7 @@ void main() {
     testWidgets('after Stop sharing, sharing the file again is a new share that is paid for again', (tester) async {
       final wallet = MemoryWallet(balance: 5);
       final server = await setUp(tester, wallet: wallet);
-      await tester.tap(find.text('Use 1 coin'));
+      await tester.tap(find.byKey(const ValueKey('unlock-use')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Stop sharing'));
       await tester.pumpAndSettle();
@@ -467,8 +467,8 @@ void main() {
 
       await tester.tap(find.text('OPEN'));
       await tester.pumpAndSettle();
-      expect(find.text('Use 1 coin?'), findsOneWidget);
-      await tester.tap(find.text('Use 1 coin'));
+      expect(find.text('Opens with 1 coin'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('unlock-use')));
       await tester.pumpAndSettle();
       expect(server.handles.length, 2);
       expect(wallet.balance, 3);
@@ -482,7 +482,7 @@ void main() {
 
     testWidgets('after a configured daily limit there is no video offer', (tester) async {
       final server = await setUp(tester, wallet: MemoryWallet(adsToday: 10), dailyAdCap: 10);
-      expect(find.text('Not enough coins'), findsOneWidget);
+      expect(find.byKey(const ValueKey('unlock-not-enough')), findsOneWidget);
       expect(find.textContaining('used today'), findsOneWidget);
       expect(find.textContaining('Watch video'), findsNothing);
       await tester.tap(find.text('Cancel'));

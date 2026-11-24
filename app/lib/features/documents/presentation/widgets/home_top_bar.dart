@@ -6,6 +6,7 @@ import '../../../../core/i18n/app_language.dart';
 import '../../../../core/i18n/tr.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
+import '../../../../core/widgets/gold_coin.dart';
 import '../../../../core/widgets/style_kit.dart';
 import '../../../../core/widgets/text.dart';
 import '../../../monetization/domain/entities/plan_status.dart';
@@ -164,7 +165,7 @@ class _CoinsPill extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(AppIcons.coins, size: 16, color: Colors.white),
+                    const GoldCoin(size: 24),
                     const SizedBox(width: 5),
                     Text(
                       '$balance',
