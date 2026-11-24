@@ -39,6 +39,7 @@ class AdMobService implements AdService {
 
   final AdPolicy _policy;
   InterstitialAd? _interstitial;
+  DateTime? _interstitialLoadedAt;
   RewardedAd? _rewarded;
   bool _rewardedLoading = false;
   DateTime? _lastShownAt;
@@ -57,7 +58,6 @@ class AdMobService implements AdService {
       await MobileAds.instance.initialize();
       _initialized = true;
       adsReady.value = true;
-      _loadInterstitial();
       unawaited(_loadRewarded());
     } catch (e) {
       debugPrint('Ads unavailable: $e');
@@ -175,6 +175,7 @@ class AdMobService implements AdService {
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
           _interstitial = ad;
+          _interstitialLoadedAt = DateTime.now();
           _loading = false;
         },
         onAdFailedToLoad: (error) {
@@ -187,6 +188,12 @@ class AdMobService implements AdService {
 
   @override
   Future<void> showInterstitialIfEligible(PlanStatus plan) async {
+    // An ad that waited more than 50 minutes is about to expire; showing it would fail, so it is replaced.
+    final loadedAt = _interstitialLoadedAt;
+    if (_interstitial != null && loadedAt != null && DateTime.now().difference(loadedAt) > const Duration(minutes: 50)) {
+      _interstitial?.dispose();
+      _interstitial = null;
+    }
     final ad = _interstitial;
     if (plan.showsAds) _actionsSinceAd++;
     final eligible = _policy.shouldShowInterstitial(
@@ -199,7 +206,14 @@ class AdMobService implements AdService {
       adFree: AdPass.active,
     );
     if (!eligible || ad == null) {
-      _loadInterstitial();
+      final preload = _policy.shouldPreloadInterstitial(
+        plan: plan,
+        lastShownAt: _lastShownAt,
+        now: DateTime.now(),
+        actionsSinceLastAd: _actionsSinceAd,
+        adFree: AdPass.active,
+      );
+      if (preload) _loadInterstitial();
       return;
     }
 
@@ -223,6 +237,5 @@ class AdMobService implements AdService {
     _actionsSinceAd = 0;
     await ad.show();
     await done.future.timeout(const Duration(minutes: 1), onTimeout: () {});
-    _loadInterstitial();
   }
 }

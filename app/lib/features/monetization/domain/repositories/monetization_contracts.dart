@@ -32,6 +32,20 @@ class AdPolicy {
   }
 
   bool shouldShowBanner(PlanStatus plan) => plan.showsAds;
+
+  /// An ad is requested only when the next finished action could show it, so no request is wasted on a session that never gets that far.
+  bool shouldPreloadInterstitial({
+    required PlanStatus plan,
+    required DateTime? lastShownAt,
+    required DateTime now,
+    required int actionsSinceLastAd,
+    bool adFree = false,
+  }) {
+    if (!plan.showsAds || adFree) return false;
+    if (actionsSinceLastAd + 1 < everyNthAction) return false;
+    if (lastShownAt == null) return true;
+    return now.difference(lastShownAt) >= interstitialCooldown - const Duration(seconds: 30);
+  }
 }
 
 /// Outcome of offering a rewarded video.
