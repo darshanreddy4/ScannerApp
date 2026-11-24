@@ -19,7 +19,7 @@ PDF TOOLS
 • Read PDF and Word files without importing them
 
 OFFICE AND PHOTO TOOLS
-• Open, edit and convert Excel, CSV and PowerPoint files
+• Open, edit, merge and convert Excel, CSV and PowerPoint files
 • Table to Excel from a photo, and receipts to a spreadsheet
 • Passport and ID photos in the right size for about 40 countries
 • Compress photos to a target size, add a watermark, remove hidden data from photos
